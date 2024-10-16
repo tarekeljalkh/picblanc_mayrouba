@@ -57,7 +57,6 @@
                         <thead>
                             <tr>
                                 <th>Item</th>
-                                <th>Description</th>
                                 <th>Cost</th>
                                 <th>Qty</th>
                                 <th>Subtotal</th>
@@ -70,7 +69,6 @@
                             @foreach ($invoice->items as $item)
                                 <tr>
                                     <td class="text-nowrap text-heading">{{ $item->product->name }}</td>
-                                    <td class="text-nowrap">{{ $item->product->description ?? 'N/A' }}</td>
                                     <td>${{ number_format($item->price, 2) }}</td>
                                     <td>{{ $item->quantity }}</td>
                                     <td>${{ number_format($item->subtotal, 2) }}</td>

@@ -9,6 +9,7 @@ use App\Models\Product;
 use App\Traits\FileUploadTrait;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
+use Carbon\Carbon;
 
 class InvoiceController extends Controller
 {
@@ -84,8 +85,12 @@ class InvoiceController extends Controller
         // Step 2: Create the Invoice
         $invoice = new Invoice();
         $invoice->customer_id = $customer->id; // Link to the selected or newly created customer
-        $invoice->rental_start_date = $request->rental_start_date; // Set rental start date
-        $invoice->rental_end_date = $request->rental_end_date; // Set rental end date
+        //$invoice->rental_start_date = $request->rental_start_date; // Set rental start date
+        //$invoice->rental_end_date = $request->rental_end_date; // Set rental end date
+        // Convert dates to the correct format
+        $invoice->rental_start_date = Carbon::createFromFormat('d-m-Y', $request->rental_start_date)->format('Y-m-d');
+        $invoice->rental_end_date = Carbon::createFromFormat('d-m-Y', $request->rental_end_date)->format('Y-m-d');
+
         $invoice->total = array_sum($request->total_price); // Calculate the total from the invoice items
         $invoice->paid = false; // Set the invoice as unpaid by default
         $invoice->status = 'active'; // Set initial status to active
@@ -113,7 +118,7 @@ class InvoiceController extends Controller
             $product->decrement('stock', $request->quantities[$index]);
         }
 
-        return redirect()->route('invoices.index')->with('success', 'Invoice created successfully');
+        return redirect()->route('invoices.show', $invoice->id)->with('success', 'Invoice created successfully');
     }
 
     /**
@@ -288,5 +293,36 @@ class InvoiceController extends Controller
         $total = $subtotal + $vatAmount - $discountAmount;
 
         return round($total, 2);
+    }
+
+
+    public function customer_store(Request $request)
+    {
+        // Validate incoming request data
+        $request->validate([
+            'name' => 'required|string|min:3',
+            'email' => 'nullable|email|unique:customers,email',
+            'phone' => 'required|numeric|unique:customers,phone',
+            'address' => 'nullable|string',
+            'deposit_card' => 'nullable|file|mimes:jpeg,png,jpg,gif|max:2048', // Optional file validation
+        ]);
+
+        // Handle file upload if provided
+        $filePath = null;
+        if ($request->hasFile('deposit_card')) {
+            $filePath = $this->uploadImage($request, 'deposit_card', null, '/uploads/customers');
+        }
+
+        // Create new customer
+        $customer = new Customer();
+        $customer->name = $request->name;
+        $customer->email = $request->email;
+        $customer->phone = $request->phone;
+        $customer->address = $request->address;
+        $customer->deposit_card = $filePath;
+        $customer->save();
+
+        // Redirect back to POS page with the new customer pre-selected
+        return redirect()->route('invoices.create')->with('new_customer_id', $customer->id);
     }
 }

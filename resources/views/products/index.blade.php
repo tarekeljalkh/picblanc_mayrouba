@@ -39,13 +39,18 @@
                                 <td>{{ $product->rentedQuantity() }}</td> <!-- Display rented quantity -->
                                 <td>{{ $product->price }}</td>
                                 <td>
-                                    <a href="{{ route('products.edit', $product->id) }}" class="btn btn-warning">Edit</a>
                                     <!-- Conditional Button for Rental Details -->
                                     @if ($product->rentedQuantity() > 0)
-                                        <a href="{{ route('products.rentalDetails', $product->id) }}" class="btn btn-info">View Rental Details</a>
+                                        <a href="{{ route('products.rentalDetails', $product->id) }}"
+                                            class="btn btn-info">View Rental Details</a>
                                     @endif
-                                    <a href="{{ route('products.destroy', $product->id) }}"
-                                        class="btn btn-danger delete-item">Delete</a>
+
+                                    @if (auth()->user()->role === 'admin')
+                                        <a href="{{ route('products.edit', $product->id) }}"
+                                            class="btn btn-warning">Edit</a>
+                                        <a href="{{ route('products.destroy', $product->id) }}"
+                                            class="btn btn-danger delete-item">Delete</a>
+                                    @endif
                                 </td>
                             </tr>
                         @endforeach
