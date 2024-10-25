@@ -28,6 +28,27 @@
                     <form action="{{ route('invoices.store') }}" method="POST" enctype="multipart/form-data">
                         @csrf
 
+                        {{-- Select Existing Customer --}}
+                        <div class="mb-4 row">
+                            <label for="select_customer" class="col-md-2 col-form-label">Select Existing Customer</label>
+                            <div class="col-md-10">
+                                <select class="form-select" id="select_customer" name="customer_id" class=""
+                                    data-allow-clear="true">
+                                    <option value="">Select Existing Customer</option>
+                                    @foreach ($customers as $customer)
+                                        <option value="{{ $customer->id }}" data-name="{{ $customer->name }}"
+                                            data-email="{{ $customer->email }}" data-phone="{{ $customer->phone }}"
+                                            data-address="{{ $customer->address }}"
+                                            data-deposit-card="{{ $customer->deposit_card }}">{{ $customer->name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                                <button type="button" class="btn btn-warning mt-2" id="clear_customer_form">Clear
+                                    Form</button>
+                            </div>
+                        </div>
+                        {{-- End Select Existing Customer --}}
+
                         {{-- Customer Inputs --}}
                         <div class="mb-4 row">
                             <label for="customer_name" class="col-md-2 col-form-label">Customer Name</label>
@@ -88,24 +109,6 @@
                             </div>
                         </div>
 
-                        {{-- Select Existing Customer --}}
-                        <div class="mb-4 row">
-                            <label for="select_customer" class="col-md-2 col-form-label">Select Existing Customer</label>
-                            <div class="col-md-10">
-                                <select class="form-select" id="select_customer" name="customer_id">
-                                    <option value="">Select Existing Customer</option>
-                                    @foreach ($customers as $customer)
-                                        <option value="{{ $customer->id }}" data-name="{{ $customer->name }}"
-                                            data-email="{{ $customer->email }}" data-phone="{{ $customer->phone }}"
-                                            data-address="{{ $customer->address }}"
-                                            data-deposit-card="{{ $customer->deposit_card }}">{{ $customer->name }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                                <button type="button" class="btn btn-warning mt-2" id="clear_customer_form">Clear
-                                    Form</button>
-                            </div>
-                        </div>
 
                         {{-- Invoice Items --}}
                         <div class="mb-4 row">
@@ -242,7 +245,8 @@
         document.addEventListener('DOMContentLoaded', function() {
             document.querySelectorAll('.product-select').forEach(function(select) {
                 select.addEventListener('change', function() {
-                    let price = parseFloat(select.options[select.selectedIndex].getAttribute('data-price')) || 0;
+                    let price = parseFloat(select.options[select.selectedIndex].getAttribute(
+                        'data-price')) || 0;
                     let row = select.closest('tr');
                     row.querySelector('.price').value = price.toFixed(2);
                     calculateTotalPrice(row);
@@ -278,7 +282,9 @@
                 tableBody.appendChild(newRow);
 
                 newRow.querySelector('.product-select').addEventListener('change', function() {
-                    let price = parseFloat(newRow.querySelector('.product-select').options[newRow.querySelector('.product-select').selectedIndex].getAttribute('data-price')) || 0;
+                    let price = parseFloat(newRow.querySelector('.product-select').options[newRow
+                        .querySelector('.product-select').selectedIndex].getAttribute(
+                        'data-price')) || 0;
                     newRow.querySelector('.price').value = price.toFixed(2);
                     calculateTotalPrice(newRow);
                 });

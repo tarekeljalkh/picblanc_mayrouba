@@ -23,8 +23,8 @@ Route::get('/', function () {
     return view('auth.login');
 });
 
-Route::get('/invoice', function(){
- return view('create-invoice');
+Route::get('/invoice', function () {
+    return view('create-invoice');
 });
 
 Route::get('/dashboard', [DashbboardController::class, 'index'])->middleware(['auth', 'verified'])->name('dashboard');
@@ -46,14 +46,17 @@ Route::middleware('auth')->group(function () {
     //Invoices
     Route::get('/invoices/{id}/print', [InvoiceController::class, 'print'])->name('invoices.print');
     Route::get('/invoices/{id}/download', [InvoiceController::class, 'download'])->name('invoices.download');
+    // Route for storing a new customer from the POS page
+    Route::post('/invoices/customer/store', [InvoiceController::class, 'customer_store'])->name('invoices.customer.store');
     Route::resource('invoices', InvoiceController::class);
 
-    Route::get('/pos', [POSController::class, 'index']);
-    Route::post('/pos', [InvoiceController::class, 'store']);
+    Route::get('/pos', [POSController::class, 'index'])->name('pos.index');
+    Route::post('/pos/checkout', [POSController::class, 'checkout'])->name('pos.checkout');
+    // Route for storing a new customer from the POS page
+    Route::post('/pos/customer/store', [POSController::class, 'store'])->name('pos.store');
 
     //Trial balance
     Route::get('/trial-balance', [DashbboardController::class, 'trialBalance'])->name('trialbalance.index');
-
 });
 
-require __DIR__.'/auth.php';
+require __DIR__ . '/auth.php';

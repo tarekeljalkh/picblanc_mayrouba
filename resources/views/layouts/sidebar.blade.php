@@ -23,6 +23,20 @@
             </a>
         </li>
 
+        <!-- POS -->
+        <li class="menu-header small text-uppercase">
+            <span class="menu-header-text">POS</span>
+        </li>
+
+        <!-- POS -->
+        <li class="menu-item {{ Route::is('pos.index') ? 'active' : '' }}">
+            <a href="{{ route('pos.index') }}" class="menu-link">
+                <i class="menu-icon tf-icons bx bx-cart"></i>
+                <div class="text-truncate" data-i18n="POS">POS</div>
+                <div class="badge rounded-pill bg-label-primary text-uppercase fs-tiny ms-auto"></div>
+            </a>
+        </li>
+
         <!-- Apps & Pages -->
         <li class="menu-header small text-uppercase">
             <span class="menu-header-text">Apps &amp; Pages</span>
@@ -53,6 +67,8 @@
                 <div class="badge rounded-pill bg-label-primary text-uppercase fs-tiny ms-auto"></div>
             </a>
         </li>
+
+
 
         <!-- Trial Balance -->
         <li class="menu-item {{ Route::is('trialbalance.index') ? 'active' : '' }}">
