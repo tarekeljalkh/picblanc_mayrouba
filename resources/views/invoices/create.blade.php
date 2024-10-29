@@ -3,11 +3,8 @@
 @section('title', 'Create Invoice')
 
 @push('styles')
-    <!-- Page CSS -->
     <link rel="stylesheet" href="{{ asset('assets/vendor/css/pages/app-invoice.css') }}" />
-    <!-- Flatpickr CSS -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-    <!-- Select2 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 @endpush
 
@@ -32,35 +29,24 @@
                         <div class="mb-4 row">
                             <label for="select_customer" class="col-md-2 col-form-label">Select Existing Customer</label>
                             <div class="col-md-10">
-                                <select class="form-select" id="select_customer" name="customer_id" class=""
-                                    data-allow-clear="true">
+                                <select class="form-select" id="select_customer" name="customer_id">
                                     <option value="">Select Existing Customer</option>
                                     @foreach ($customers as $customer)
                                         <option value="{{ $customer->id }}" data-name="{{ $customer->name }}"
-                                            data-email="{{ $customer->email }}" data-phone="{{ $customer->phone }}"
-                                            data-address="{{ $customer->address }}"
-                                            data-deposit-card="{{ $customer->deposit_card }}">{{ $customer->name }}
+                                            data-phone="{{ $customer->phone }}" data-address="{{ $customer->address }}">
+                                            {{ $customer->name }}
                                         </option>
                                     @endforeach
                                 </select>
-                                <button type="button" class="btn btn-warning mt-2" id="clear_customer_form">Clear
-                                    Form</button>
+                                <button type="button" class="btn btn-warning mt-2" id="clear_customer_form">Clear Form</button>
                             </div>
                         </div>
-                        {{-- End Select Existing Customer --}}
 
-                        {{-- Customer Inputs --}}
+                        {{-- Customer Information --}}
                         <div class="mb-4 row">
                             <label for="customer_name" class="col-md-2 col-form-label">Customer Name</label>
                             <div class="col-md-10">
                                 <input class="form-control" type="text" id="customer_name" name="customer_name" />
-                            </div>
-                        </div>
-
-                        <div class="mb-4 row">
-                            <label for="customer_email" class="col-md-2 col-form-label">Customer Email</label>
-                            <div class="col-md-10">
-                                <input class="form-control" type="email" id="customer_email" name="customer_email" />
                             </div>
                         </div>
 
@@ -78,37 +64,22 @@
                             </div>
                         </div>
 
-                        {{-- Rental Start Date --}}
+                        {{-- Rental Dates --}}
                         <div class="mb-4 row">
                             <label for="rental_start_date" class="col-md-2 col-form-label">Rental Start Date</label>
                             <div class="col-md-10">
                                 <input class="form-control" type="text" id="rental_start_date" name="rental_start_date"
-                                    placeholder="Enter Rental Start Date" required />
+                                    placeholder="Enter Rental Start Date" autocomplete="off" required />
                             </div>
                         </div>
 
-                        {{-- Rental End Date --}}
                         <div class="mb-4 row">
                             <label for="rental_end_date" class="col-md-2 col-form-label">Rental End Date</label>
                             <div class="col-md-10">
                                 <input class="form-control" type="text" id="rental_end_date" name="rental_end_date"
-                                    placeholder="Enter Rental End Date" required />
+                                    placeholder="Enter Rental End Date" autocomplete="off" required />
                             </div>
                         </div>
-
-                        {{-- Deposit Card Image --}}
-                        <div class="mb-4 row">
-                            <label for="deposit_card" class="col-md-2 col-form-label">Deposit Card</label>
-                            <div class="col-md-10">
-                                <div id="existing_deposit_card_section" style="display: none;">
-                                    <img id="existing_deposit_card" src="" alt="Deposit Card"
-                                        style="max-width: 200px; margin-bottom: 10px;" />
-                                </div>
-                                <input class="form-control" type="file" id="deposit_card" name="deposit_card"
-                                    accept="image/*" capture="camera" />
-                            </div>
-                        </div>
-
 
                         {{-- Invoice Items --}}
                         <div class="mb-4 row">
@@ -120,8 +91,6 @@
                                             <th>Product</th>
                                             <th>Quantity</th>
                                             <th>Price</th>
-                                            <th>VAT (%)</th>
-                                            <th>Discount (%)</th>
                                             <th>Total Price</th>
                                             <th>Action</th>
                                         </tr>
@@ -132,24 +101,14 @@
                                                 <select class="form-select product-select" name="products[]">
                                                     <option value="">Select Product</option>
                                                     @foreach ($products as $product)
-                                                        <option value="{{ $product->id }}"
-                                                            data-price="{{ $product->price }}">{{ $product->name }}
-                                                        </option>
+                                                        <option value="{{ $product->id }}" data-price="{{ $product->price }}">{{ $product->name }}</option>
                                                     @endforeach
                                                 </select>
                                             </td>
-                                            <td><input type="number" class="form-control quantity" name="quantities[]"
-                                                    value="1" /></td>
-                                            <td><input type="text" class="form-control price" name="prices[]"
-                                                    value="0.00" readonly /></td>
-                                            <td><input type="number" class="form-control vat" name="vat[]"
-                                                    value="10" /></td>
-                                            <td><input type="number" class="form-control discount" name="discount[]"
-                                                    value="0" /></td>
-                                            <td><input type="text" class="form-control total-price"
-                                                    name="total_price[]" value="0.00" readonly /></td>
-                                            <td><button type="button" class="btn btn-danger remove-item">Remove</button>
-                                            </td>
+                                            <td><input type="number" class="form-control quantity" name="quantities[]" value="1" /></td>
+                                            <td><input type="text" class="form-control price" name="prices[]" value="0.00" readonly /></td>
+                                            <td><input type="text" class="form-control total-price" name="total_price[]" value="0.00" readonly /></td>
+                                            <td><button type="button" class="btn btn-danger remove-item">Remove</button></td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -157,10 +116,62 @@
                             </div>
                         </div>
 
+                        {{-- Total VAT, Discount, Amount Per Day --}}
+                        <div class="mb-4 row">
+                            <label for="total_vat" class="col-md-2 col-form-label">Total VAT (%)</label>
+                            <div class="col-md-10">
+                                <input type="number" class="form-control" id="total_vat" name="total_vat" value="10" />
+                            </div>
+                        </div>
+
+                        <div class="mb-4 row">
+                            <label for="total_discount" class="col-md-2 col-form-label">Total Discount (%)</label>
+                            <div class="col-md-10">
+                                <input type="number" class="form-control" id="total_discount" name="total_discount" value="0" />
+                            </div>
+                        </div>
+
+                        <div class="mb-4 row">
+                            <label for="amount_per_day" class="col-md-2 col-form-label">Amount Per Day</label>
+                            <div class="col-md-10">
+                                <input type="text" class="form-control" id="amount_per_day" name="amount_per_day" value="0.00" readonly />
+                            </div>
+                        </div>
+
+                        {{-- Days and Total Amount --}}
+                        <div class="mb-4 row">
+                            <label for="days" class="col-md-2 col-form-label">Days</label>
+                            <div class="col-md-10">
+                                <input type="text" class="form-control" id="days" name="days" value="0" readonly />
+                            </div>
+                        </div>
+
+                        <div class="mb-4 row">
+                            <label for="total_amount" class="col-md-2 col-form-label">Total Amount</label>
+                            <div class="col-md-10">
+                                <input type="text" class="form-control" id="total_amount" name="total_amount" value="0.00" readonly />
+                            </div>
+                        </div>
+
+                        {{-- Payment Status --}}
+                        <div class="mb-4 row">
+                            <label class="col-md-2 col-form-label">Payment Status</label>
+                            <div class="col-md-10">
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="paid" id="paid" value="1" {{ old('paid', 0) == 1 ? 'checked' : '' }}>
+                                    <label class="form-check-label" for="paid">Paid</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="paid" id="unpaid" value="0" {{ old('paid', 0) == 0 ? 'checked' : '' }}>
+                                    <label class="form-check-label" for="unpaid">Unpaid</label>
+                                </div>
+                            </div>
+                        </div>
+
                         {{-- Create Button --}}
                         <div class="mt-4 row">
                             <div class="col-md-12 text-end">
-                                <button type="submit" class="btn btn-primary">Create Invoice</button>
+                                <button type="submit" class="btn btn-primary" id="create-invoice-button" disabled>Create Invoice</button>
                             </div>
                         </div>
 
@@ -176,94 +187,93 @@
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
     <script>
-        // Initialize Flatpickr for Rental Start and End Dates
-        flatpickr("#rental_start_date", {
-            dateFormat: "d-m-Y", // Use the date format dd-mm-yyyy
-            defaultDate: "today", // Set today's date as default
-            allowInput: true // Allow manual input of dates
-        });
-        flatpickr("#rental_end_date", {
-            dateFormat: "d-m-Y", // Use the date format dd-mm-yyyy
-            defaultDate: "today", // Set today's date as default
-            allowInput: true
-        });
-
-        // Initialize Select2 on the select_customer element for searchable dropdown
-        $(document).ready(function() {
-            $('#select_customer').select2({
-                placeholder: 'Select Existing Customer',
-                allowClear: true
-            });
-        });
-
-        // Auto-fill customer data when selecting an existing customer
-        document.getElementById('select_customer').addEventListener('change', function() {
-            let selectedCustomer = this.options[this.selectedIndex];
-
-            document.getElementById('customer_name').value = selectedCustomer.getAttribute('data-name') || '';
-            document.getElementById('customer_email').value = selectedCustomer.getAttribute('data-email') || '';
-            document.getElementById('customer_phone').value = selectedCustomer.getAttribute('data-phone') || '';
-            document.getElementById('customer_address').value = selectedCustomer.getAttribute('data-address') || '';
-
-            let depositCardUrl = selectedCustomer.getAttribute('data-deposit-card');
-            let existingDepositCardSection = document.getElementById('existing_deposit_card_section');
-            let existingDepositCard = document.getElementById('existing_deposit_card');
-
-            if (depositCardUrl) {
-                existingDepositCardSection.style.display = 'block';
-                existingDepositCard.src = depositCardUrl;
-            } else {
-                existingDepositCardSection.style.display = 'none';
+        flatpickr("#rental_start_date, #rental_end_date", {
+            dateFormat: "Y-m-d",
+            altInput: true,
+            altFormat: "d-m-Y",
+            allowInput: true,
+            onChange: function(selectedDates, dateStr, instance) {
+                calculateInvoiceTotal();
             }
         });
 
-        // Clear customer form
-        document.getElementById('clear_customer_form').addEventListener('click', function() {
-            document.getElementById('customer_name').value = '';
-            document.getElementById('customer_email').value = '';
-            document.getElementById('customer_phone').value = '';
-            document.getElementById('customer_address').value = '';
-            $('#select_customer').val(null).trigger('change');
-            document.getElementById('existing_deposit_card_section').style.display = 'none';
+        $('#select_customer').select2({
+            placeholder: 'Select Existing Customer',
+            allowClear: true
         });
 
-        // Invoice item handling
-        function calculateTotalPrice(row) {
-            let quantity = parseFloat(row.querySelector('.quantity').value) || 0;
-            let price = parseFloat(row.querySelector('.price').value) || 0;
-            let vat = parseFloat(row.querySelector('.vat').value) || 0;
-            let discount = parseFloat(row.querySelector('.discount').value) || 0;
+        $('#select_customer').on('change', function() {
+            let selectedCustomer = $('#select_customer option:selected');
+            $('#customer_name').val(selectedCustomer.data('name') || '');
+            $('#customer_phone').val(selectedCustomer.data('phone') || '');
+            $('#customer_address').val(selectedCustomer.data('address') || '');
+            checkFormValidity();
+        });
 
-            let subtotal = quantity * price;
-            let vatAmount = (subtotal * vat) / 100;
-            let discountAmount = (subtotal * discount) / 100;
-            let total = subtotal + vatAmount - discountAmount;
+        $('#clear_customer_form').on('click', function() {
+            $('#select_customer').val(null).trigger('change');
+            $('#customer_name, #customer_phone, #customer_address').val('');
+            checkFormValidity();
+        });
 
-            row.querySelector('.total-price').value = total.toFixed(2);
+        function calculateRowTotal(row) {
+            let quantity = parseFloat(row.find('.quantity').val()) || 0;
+            let price = parseFloat(row.find('.price').val()) || 0;
+            row.find('.total-price').val((quantity * price).toFixed(2));
+            calculateInvoiceTotal();
         }
 
-        document.addEventListener('DOMContentLoaded', function() {
-            document.querySelectorAll('.product-select').forEach(function(select) {
-                select.addEventListener('change', function() {
-                    let price = parseFloat(select.options[select.selectedIndex].getAttribute(
-                        'data-price')) || 0;
-                    let row = select.closest('tr');
-                    row.querySelector('.price').value = price.toFixed(2);
-                    calculateTotalPrice(row);
-                });
+        function calculateInvoiceTotal() {
+            let subtotal = 0;
+            $('#invoice-items-table tbody tr').each(function() {
+                subtotal += parseFloat($(this).find('.total-price').val()) || 0;
             });
 
-            document.querySelectorAll('.quantity, .vat, .discount').forEach(function(input) {
-                input.addEventListener('input', function() {
-                    let row = input.closest('tr');
-                    calculateTotalPrice(row);
-                });
+            let vat = parseFloat($('#total_vat').val()) || 0;
+            let discount = parseFloat($('#total_discount').val()) || 0;
+            let vatAmount = (subtotal * vat) / 100;
+            let discountAmount = (subtotal * discount) / 100;
+            let amountPerDay = subtotal + vatAmount - discountAmount;
+            $('#amount_per_day').val(amountPerDay.toFixed(2));
+
+            let startDate = new Date($('#rental_start_date').val());
+            let endDate = new Date($('#rental_end_date').val());
+            let days = (startDate && endDate) ? Math.floor((endDate - startDate) / (1000 * 60 * 60 * 24) + 1) : 0;
+            $('#days').val(days);
+
+            let grandTotal = amountPerDay * days;
+            $('#total_amount').val(grandTotal.toFixed(2));
+            checkFormValidity();
+        }
+
+        function checkFormValidity() {
+            let hasCustomer = $('#select_customer').val() || ($('#customer_name').val() && $('#customer_phone').val() && $('#customer_address').val());
+            let hasProducts = false;
+
+            $('#invoice-items-table .product-select').each(function() {
+                if ($(this).val() && parseFloat($(this).closest('tr').find('.quantity').val()) > 0) {
+                    hasProducts = true;
+                    return false;
+                }
             });
 
-            document.getElementById('add-item').addEventListener('click', function() {
-                var tableBody = document.querySelector('#invoice-items-table tbody');
-                var newRow = document.createElement('tr');
-                newRow.innerHTML = `
+            $('#create-invoice-button').prop('disabled', !(hasCustomer && hasProducts));
+        }
+
+        $(document).on('change', '.product-select', function() {
+            let row = $(this).closest('tr');
+            let price = parseFloat($(this).find('option:selected').data('price')) || 0;
+            row.find('.price').val(price.toFixed(2));
+            calculateRowTotal(row);
+        });
+
+        $(document).on('input', '.quantity', function() {
+            calculateRowTotal($(this).closest('tr'));
+        });
+
+        $('#add-item').on('click', function() {
+            let newRow = `
+                <tr>
                     <td>
                         <select class="form-select product-select" name="products[]">
                             <option value="">Select Product</option>
@@ -274,37 +284,18 @@
                     </td>
                     <td><input type="number" class="form-control quantity" name="quantities[]" value="1" /></td>
                     <td><input type="text" class="form-control price" name="prices[]" value="0.00" readonly /></td>
-                    <td><input type="number" class="form-control vat" name="vat[]" value="10" /></td>
-                    <td><input type="number" class="form-control discount" name="discount[]" value="0" /></td>
                     <td><input type="text" class="form-control total-price" name="total_price[]" value="0.00" readonly /></td>
                     <td><button type="button" class="btn btn-danger remove-item">Remove</button></td>
-                `;
-                tableBody.appendChild(newRow);
-
-                newRow.querySelector('.product-select').addEventListener('change', function() {
-                    let price = parseFloat(newRow.querySelector('.product-select').options[newRow
-                        .querySelector('.product-select').selectedIndex].getAttribute(
-                        'data-price')) || 0;
-                    newRow.querySelector('.price').value = price.toFixed(2);
-                    calculateTotalPrice(newRow);
-                });
-
-                newRow.querySelectorAll('.quantity, .vat, .discount').forEach(function(input) {
-                    input.addEventListener('input', function() {
-                        calculateTotalPrice(newRow);
-                    });
-                });
-
-                newRow.querySelector('.remove-item').addEventListener('click', function() {
-                    newRow.remove();
-                });
-            });
-
-            document.querySelectorAll('.remove-item').forEach(function(button) {
-                button.addEventListener('click', function() {
-                    this.closest('tr').remove();
-                });
-            });
+                </tr>`;
+            $('#invoice-items-table tbody').append(newRow);
+            checkFormValidity();
         });
+
+        $(document).on('click', '.remove-item', function() {
+            $(this).closest('tr').remove();
+            calculateInvoiceTotal();
+        });
+
+        $('#total_vat, #total_discount').on('input', calculateInvoiceTotal);
     </script>
 @endsection

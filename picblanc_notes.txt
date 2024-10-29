@@ -1,39 +1,34 @@
-daily and season as categories and in the trial balance each one is different 
+daily and season as categories and in the trial balance each one is different
+
+3 dates , now , rental date,
 
 
-invoice # -> rental agreement
-
-3 dates , now , rental date, 
-
-email remove
-
-
-renove cost in Invoice -> Unit price
-remove vat from invoice table
-remove discount from invoice table
-
-remove discount and vat from each item 
 
 notes in invoices, m
 
-
-send invoice via whatsapp 
+send invoice via whatsapp
 
 make filter invoices by date
 
-
 each invoice total will be multiple by days of rentals
-
 
 what if customer takes the invoice and returns in half an hour to change i want to see the old price to see how much i will repay him
 
-
-product - > brand , product - > descirption
-
-product->stock remove
-
-
 balance by item, balance by invoice
 
-
 payment methods , cash or credit card
+
+
+Update Process:
+
+* email remove -> DONE
+* rename product - > brand to :  product - > descirption
+* product->stock remove
+* remove discount and vat from each item
+* rename cost in Invoice -> Unit price
+* invoice # -> rental agreement
+* remove vat from invoice table
+* remove discount from invoice table
+
+me:
+post product image removed

@@ -28,23 +28,14 @@
                         </div>
                         {{-- End Name --}}
 
-                        {{-- Brand --}}
+                        {{-- Description --}}
                         <div class="mb-4 row">
-                            <label for="brand" class="col-md-2 col-form-label">Brand</label>
+                            <label for="description" class="col-md-2 col-form-label">Description</label>
                             <div class="col-md-10">
-                                <input class="form-control" type="text" id="brand" name="brand" value="{{ old('brand', $product->brand) }}" />
+                                <input class="form-control" type="text" id="description" name="description" value="{{ old('description', $product->description) }}" />
                             </div>
                         </div>
-                        {{-- End Brand --}}
-
-                        {{-- Stock --}}
-                        <div class="mb-4 row">
-                            <label for="stock" class="col-md-2 col-form-label">Stock</label>
-                            <div class="col-md-10">
-                                <input class="form-control" type="number" id="stock" name="stock" value="{{ old('stock', $product->stock) }}" />
-                            </div>
-                        </div>
-                        {{-- End Stock --}}
+                        {{-- End Description --}}
 
                         {{-- Price --}}
                         <div class="mb-4 row">

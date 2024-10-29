@@ -8,20 +8,16 @@
             <!-- Left Column: Products -->
             <div class="col-md-8">
                 <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h2 class="my-4">POS - Select Products</h2>
                     <!-- Real-Time Search Input -->
-                    <input type="text" id="search-product" class="form-control w-50" placeholder="Search products...">
+                    <input type="text" id="search-product" class="form-control" placeholder="Search products...">
                 </div>
 
                 <!-- Products Grid -->
                 <div class="row" id="product-list">
-                    @foreach($products as $product)
+                    @foreach ($products as $product)
                         <div class="col-md-3 col-sm-6 col-12 mb-4 product-card-container">
-                            <div class="card product-card clickable-card"
-                                 data-id="{{ $product->id }}"
-                                 data-name="{{ $product->name }}"
-                                 data-price="{{ $product->price }}">
-                                <img src="{{ $product->image_url }}" class="card-img-top" alt="{{ $product->name }}">
+                            <div class="card product-card clickable-card" data-id="{{ $product->id }}"
+                                data-name="{{ $product->name }}" data-price="{{ $product->price }}">
                                 <div class="card-body text-center">
                                     <h5 class="card-title">{{ $product->name }}</h5>
                                     <p class="card-text">${{ number_format($product->price, 2) }}</p>
@@ -38,14 +34,15 @@
                 <div class="mb-4 d-flex justify-content-between">
                     <select id="customer-select" class="form-select">
                         <option value="" disabled selected>Select a customer</option>
-                        @foreach($customers as $customer)
-                            <option value="{{ $customer->id }}" {{ session('new_customer_id') == $customer->id ? 'selected' : '' }}>
+                        @foreach ($customers as $customer)
+                            <option value="{{ $customer->id }}"
+                                {{ session('new_customer_id') == $customer->id ? 'selected' : '' }}>
                                 {{ $customer->name }}
                             </option>
                         @endforeach
                     </select>
-                    <!-- Button to open modal for new customer -->
-                    <button class="btn btn-primary ms-2" data-bs-toggle="modal" data-bs-target="#newCustomerModal">Create New Customer</button>
+                    <button class="btn btn-primary ms-2" data-bs-toggle="modal" data-bs-target="#newCustomerModal">Create
+                        New Customer</button>
                 </div>
 
                 <!-- Cart Section -->
@@ -54,227 +51,222 @@
                     <p>No items in the cart.</p>
                 </div>
 
+                <!-- Rental Dates and Days Calculation -->
+                <div class="mb-3">
+                    <label for="rental-start-date" class="form-label">Rental Start Date</label>
+                    <input type="date" class="form-control" id="rental-start-date">
+                </div>
+
+                <div class="mb-3">
+                    <label for="rental-end-date" class="form-label">Rental End Date</label>
+                    <input type="date" class="form-control" id="rental-end-date">
+                </div>
+
+                <div class="mb-3">
+                    <label for="rental-days" class="form-label">Days</label>
+                    <input type="number" class="form-control" id="rental-days" readonly>
+                </div>
+
+                <!-- VAT, Discount, and Total Amount -->
+                <div class="mb-3">
+                    <label for="total-vat" class="form-label">Total VAT (%)</label>
+                    <input type="number" class="form-control" id="total-vat" value="10">
+                </div>
+                <div class="mb-3">
+                    <label for="total-discount" class="form-label">Total Discount (%)</label>
+                    <input type="number" class="form-control" id="total-discount" value="0">
+                </div>
+
+                <!-- Payment Status and Method -->
+                <div class="mb-4">
+                    <label class="form-label">Payment Status</label><br>
+                    <input class="form-check-input" type="radio" name="payment_status" id="paid-radio" value="paid">
+                    <label class="form-check-label" for="paid-radio">Paid</label>
+
+                    <input class="form-check-input ms-2" type="radio" name="payment_status" id="unpaid-radio"
+                        value="unpaid" checked>
+                    <label class="form-check-label" for="unpaid-radio">Unpaid</label>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label">Payment Method</label><br>
+                    <input class="form-check-input" type="radio" name="payment_method" id="cash-radio" value="cash">
+                    <label class="form-check-label" for="cash-radio">Cash</label>
+
+                    <input class="form-check-input ms-2" type="radio" name="payment_method" id="credit-radio" value="credit_card">
+                    <label class="form-check-label" for="credit-radio">Credit Card</label>
+                </div>
+
+                <!-- Total Amount -->
+                <div class="mb-3">
+                    <label for="total-amount" class="form-label">Total Amount</label>
+                    <input type="text" class="form-control" id="total-amount" readonly>
+                </div>
+
                 <!-- Checkout Button -->
                 <button class="btn btn-success w-100" id="checkout-btn" disabled>Checkout</button>
             </div>
         </div>
     </div>
 
-    <!-- Modal for creating a new customer -->
-    <div class="modal fade" id="newCustomerModal" tabindex="-1" aria-labelledby="newCustomerModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="newCustomerModalLabel">Create New Customer</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <form action="{{ route('pos.store') }}" method="POST" enctype="multipart/form-data">
-                        @csrf
-                        <div class="mb-3">
-                            <label for="customer_name" class="form-label">Name</label>
-                            <input type="text" class="form-control" id="customer_name" name="name" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="customer_email" class="form-label">Email</label>
-                            <input type="email" class="form-control" id="customer_email" name="email">
-                        </div>
-                        <div class="mb-3">
-                            <label for="customer_phone" class="form-label">Phone</label>
-                            <input type="text" class="form-control" id="customer_phone" name="phone" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="customer_address" class="form-label">Address</label>
-                            <input type="text" class="form-control" id="customer_address" name="address">
-                        </div>
-                        <div class="mb-3">
-                            <label for="deposit_card" class="form-label">Deposit Card</label>
-                            <input type="file" class="form-control" id="deposit_card" name="deposit_card">
-                        </div>
-                        <button type="submit" class="btn btn-primary">Save Customer</button>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-@endsection
+    @push('scripts')
+        <script>
+            let cart = [];
 
+            $(document).ready(function() {
+                $('#rental-start-date, #rental-end-date').on('change', calculateDays);
+                $('#total-vat, #total-discount').on('input', calculateTotalAmount);
+                $('input[name="payment_method"]').on('change', enableCheckoutButton);
+                $('#customer-select').on('change', enableCheckoutButton);
 
-@push('scripts')
-    <script>
-        let cart = [];
-        let selectedCustomer = null;
-
-        $(document).ready(function() {
-            // Pre-select customer if passed through session
-            let newCustomerId = "{{ session('new_customer_id') }}";
-            if (newCustomerId) {
-                $('#customer-select').val(newCustomerId);
-                selectedCustomer = newCustomerId; // Set the selected customer
-                enableCheckoutButton(); // Enable the checkout button if a customer is selected
-            }
-
-            // Enable checkout button on customer selection
-            $('#customer-select').on('change', function() {
-                selectedCustomer = $(this).val();
-                enableCheckoutButton(); // Enable checkout if a customer is selected
-            });
-
-            // Make the full product card clickable
-            $('.clickable-card').on('click', function() {
-                const productId = $(this).data('id');
-                const productName = $(this).data('name');
-                const productPrice = parseFloat($(this).data('price'));
-
-                // Check if product is already in the cart
-                let productInCart = cart.find(item => item.id === productId);
-
-                if (productInCart) {
-                    productInCart.quantity += 1;
-                } else {
-                    cart.push({
-                        id: productId,
-                        name: productName,
-                        price: productPrice,
-                        quantity: 1,
-                        vat: 10, // Default VAT
-                        discount: 0 // Default discount
+                // Search filter for products
+                $('#search-product').on('input', function() {
+                    const searchTerm = $(this).val().toLowerCase();
+                    $('#product-list .product-card-container').each(function() {
+                        const productName = $(this).find('.card-title').text().toLowerCase();
+                        $(this).toggle(productName.includes(searchTerm));
                     });
+                });
+
+                $('.clickable-card').on('click', function() {
+                    const productId = $(this).data('id');
+                    const productName = $(this).data('name');
+                    const productPrice = parseFloat($(this).data('price'));
+
+                    let productInCart = cart.find(item => item.id === productId);
+                    if (productInCart) {
+                        productInCart.quantity += 1;
+                    } else {
+                        cart.push({
+                            id: productId,
+                            name: productName,
+                            price: productPrice,
+                            quantity: 1
+                        });
+                    }
+                    renderCart();
+                });
+
+                function calculateDays() {
+                    const startDate = new Date($('#rental-start-date').val());
+                    const endDate = new Date($('#rental-end-date').val());
+
+                    if (!isNaN(startDate) && !isNaN(endDate) && startDate <= endDate) {
+                        const days = (endDate - startDate) / (1000 * 60 * 60 * 24) + 1;
+                        $('#rental-days').val(days);
+                    } else {
+                        $('#rental-days').val(0);
+                    }
+                    calculateTotalAmount();
                 }
 
-                renderCart(); // Render cart immediately after adding a product
-            });
+                function calculateTotalAmount() {
+                    let total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+                    const days = parseInt($('#rental-days').val()) || 1;
+                    const totalVat = parseFloat($('#total-vat').val()) || 0;
+                    const totalDiscount = parseFloat($('#total-discount').val()) || 0;
 
-            // Render the cart and attach event listeners
-            function renderCart() {
-                let cartHtml = '';
-                let total = 0;
+                    total *= days;
+                    const vatAmount = (total * totalVat) / 100;
+                    const discountAmount = (total * totalDiscount) / 100;
+                    const grandTotal = total + vatAmount - discountAmount;
 
-                if (cart.length > 0) {
-                    cart.forEach((item, index) => {
-                        let priceWithVat = item.price + (item.price * (item.vat / 100)); // Apply VAT
-                        let priceAfterDiscount = priceWithVat - (priceWithVat * (item.discount / 100)); // Apply discount
-                        let itemTotal = priceAfterDiscount * item.quantity;
+                    $('#total-amount').val(grandTotal.toFixed(2));
+                    enableCheckoutButton();
+                }
 
-                        total += itemTotal;
-
-                        cartHtml += `
+                function renderCart() {
+                    let cartHtml = '';
+                    if (cart.length > 0) {
+                        cart.forEach((item, index) => {
+                            cartHtml += `
                             <div class="cart-item mb-3">
                                 <div class="d-flex justify-content-between align-items-center">
                                     <span><strong>${item.name}</strong></span>
                                     <button class="btn btn-danger btn-sm remove-from-cart" data-index="${index}">Remove</button>
                                 </div>
                                 <div class="form-row mt-2">
-                                    <!-- First Row: Quantity and VAT -->
                                     <div class="d-flex justify-content-between">
                                         <div class="col">
                                             <label>Qty</label>
                                             <input type="number" class="form-control form-control-sm quantity" data-index="${index}" value="${item.quantity}" />
                                         </div>
                                         <div class="col">
-                                            <label>VAT (%)</label>
-                                            <input type="number" class="form-control form-control-sm vat" data-index="${index}" value="${item.vat}" />
-                                        </div>
-                                    </div>
-                                    <!-- Second Row: Discount and Price -->
-                                    <div class="d-flex justify-content-between mt-2">
-                                        <div class="col">
-                                            <label>Discount (%)</label>
-                                            <input type="number" class="form-control form-control-sm discount" data-index="${index}" value="${item.discount}" />
-                                        </div>
-                                        <div class="col">
                                             <label>Price</label>
-                                            <input type="text" class="form-control form-control-sm price" value="${itemTotal.toFixed(2)}" readonly />
+                                            <input type="text" class="form-control form-control-sm price" value="${(item.price * item.quantity).toFixed(2)}" readonly />
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         `;
+                        });
+                    } else {
+                        cartHtml = '<p>No items in the cart.</p>';
+                    }
+
+                    $('#cart').html(cartHtml);
+                    attachInputListeners();
+                    calculateTotalAmount();
+                }
+
+                function attachInputListeners() {
+                    $('.quantity').on('input', function() {
+                        const index = $(this).data('index');
+                        cart[index].quantity = parseFloat($(this).val()) || 0;
+                        renderCart();
                     });
 
-                    cartHtml += `<p class="text-end"><strong>Total: $${total.toFixed(2)}</strong></p>`;
-                } else {
-                    cartHtml = '<p>No items in the cart.</p>';
+                    $('.remove-from-cart').on('click', function() {
+                        const index = $(this).data('index');
+                        cart.splice(index, 1);
+                        renderCart();
+                    });
                 }
 
-                $('#cart').html(cartHtml);
-                enableCheckoutButton(); // Enable the checkout button if the cart is not empty
+                function enableCheckoutButton() {
+                    const selectedCustomer = $('#customer-select').val();
+                    const paymentMethod = $('input[name="payment_method"]:checked').val();
+                    const isCheckoutEnabled = cart.length > 0 && selectedCustomer && paymentMethod;
 
-                // Attach event listeners to input fields after rendering cart
-                attachInputListeners();
-            }
-
-            // Attach event listeners for quantity, VAT, discount changes
-            function attachInputListeners() {
-                $('.quantity').on('input', function() {
-                    const index = $(this).data('index');
-                    cart[index].quantity = parseFloat($(this).val()) || 0;
-                    renderCart(); // Re-render the cart to update prices
-                });
-
-                $('.vat').on('input', function() {
-                    const index = $(this).data('index');
-                    cart[index].vat = parseFloat($(this).val()) || 0;
-                    renderCart(); // Re-render the cart to update prices
-                });
-
-                $('.discount').on('input', function() {
-                    const index = $(this).data('index');
-                    cart[index].discount = parseFloat($(this).val()) || 0;
-                    renderCart(); // Re-render the cart to update prices
-                });
-
-                // Handle remove item
-                $('.remove-from-cart').on('click', function() {
-                    const index = $(this).data('index');
-                    cart.splice(index, 1);
-                    renderCart();
-                });
-            }
-
-            // Function to enable/disable checkout button
-            function enableCheckoutButton() {
-                if (cart.length > 0 && selectedCustomer) {
-                    $('#checkout-btn').prop('disabled', false); // Enable button
-                } else {
-                    $('#checkout-btn').prop('disabled', true); // Disable button
+                    $('#checkout-btn').prop('disabled', !isCheckoutEnabled);
                 }
-            }
 
-            // Handle real-time search for products
-            $('#search-product').on('input', function() {
-                const query = $(this).val().toLowerCase();
-                $('#product-list .product-card-container').each(function() {
-                    const productName = $(this).find('.product-card').data('name').toLowerCase();
-                    $(this).toggleClass('d-none', !productName.includes(query)); // Hide products that don't match the query
+                $('#checkout-btn').on('click', function() {
+                    const selectedCustomer = $('#customer-select').val();
+                    const paymentStatus = $('input[name="payment_status"]:checked').val();
+                    const paymentMethod = $('input[name="payment_method"]:checked').val();
+
+                    // Add current time to date inputs
+                    const now = new Date();
+                    const currentTime = now.toTimeString().split(' ')[0]; // Get time in HH:MM:SS format
+                    const startDateWithTime = $('#rental-start-date').val() + 'T' + currentTime;
+                    const endDateWithTime = $('#rental-end-date').val() + 'T' + currentTime;
+
+                    $.ajax({
+                        url: '{{ route('pos.checkout') }}',
+                        method: 'POST',
+                        data: {
+                            _token: '{{ csrf_token() }}',
+                            cart: cart,
+                            customer_id: selectedCustomer,
+                            total_vat: $('#total-vat').val(),
+                            total_discount: $('#total-discount').val(),
+                            status: paymentStatus,
+                            payment_method: paymentMethod,
+                            rental_days: $('#rental-days').val(),
+                            rental_start_date: startDateWithTime,
+                            rental_end_date: endDateWithTime,
+                            total_amount: $('#total-amount').val()
+                        },
+                        success: function(response) {
+                            window.location.href = '{{ route('invoices.show', ':id') }}'.replace(':id', response.invoice_id);
+                        },
+                        error: function() {
+                            alert('Error processing checkout.');
+                        }
+                    });
                 });
             });
-
-            // Handle checkout
-            $('#checkout-btn').on('click', function() {
-                if (!selectedCustomer) {
-                    alert('Please select a customer before checking out.');
-                    return;
-                }
-
-                // Send cart data and selected customer to the backend for processing
-                $.ajax({
-                    url: '{{ route("pos.checkout") }}',
-                    method: 'POST',
-                    data: {
-                        _token: '{{ csrf_token() }}',
-                        cart: cart,
-                        customer_id: selectedCustomer
-                    },
-                    success: function(response) {
-                        // Redirect to the new invoice page after checkout is successful
-                        window.location.href = '/invoices/' + response.invoice_id;
-                    },
-                    error: function() {
-                        alert('Error processing checkout.');
-                    }
-                });
-            });
-        });
-    </script>
-@endpush
+        </script>
+    @endpush
+@endsection

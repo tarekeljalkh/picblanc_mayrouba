@@ -25,14 +25,6 @@
                         </div>
                         {{-- End Name --}}
 
-                        {{-- Email --}}
-                        <div class="mb-4 row">
-                            <label for="email" class="col-md-2 col-form-label">Email</label>
-                            <div class="col-md-10">
-                                <input class="form-control" type="email" id="email" name="email" />
-                            </div>
-                        </div>
-                        {{-- End Email --}}
 
                         {{-- Phone --}}
                         <div class="mb-4 row">

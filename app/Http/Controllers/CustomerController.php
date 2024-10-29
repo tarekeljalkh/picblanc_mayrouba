@@ -47,7 +47,6 @@ class CustomerController extends Controller
         // Validate incoming request data
         $request->validate([
             'name' => 'required|string|min:3',
-            'email' => 'required|email',
             'phone' => 'required|numeric',
             'address' => 'required|string',
             'deposit_card' => 'required|file|mimes:jpeg,png,jpg,gif', // Validate image upload
@@ -59,7 +58,6 @@ class CustomerController extends Controller
         // Create a new customer
         $customer = new Customer();
         $customer->name = $request->name;
-        $customer->email = $request->email;
         $customer->phone = $request->phone;
         $customer->address = $request->address;
         $customer->deposit_card = $filePath; // Save the file path if uploaded
@@ -92,8 +90,7 @@ class CustomerController extends Controller
         // Validate incoming request data
         $request->validate([
             'name' => 'required|min:3',
-            'email' => 'required|email',
-            'phone' => 'required|min:10|max:15',
+            'phone' => 'required|numeric',
             'address' => 'required|string',
             'deposit_card' => 'nullable|image|max:2048', // Optional image file upload
         ]);
@@ -105,7 +102,6 @@ class CustomerController extends Controller
 
         // Update customer details
         $customer->name = $request->name;
-        $customer->email = $request->email;
         $customer->phone = $request->phone;
         $customer->address = $request->address;
         $customer->deposit_card = $filePath ?? $customer->deposit_card; // Keep old file if no new one uploaded

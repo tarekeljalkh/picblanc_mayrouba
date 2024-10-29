@@ -14,11 +14,17 @@ return new class extends Migration
         Schema::create('invoices', function (Blueprint $table) {
             $table->id();
             $table->foreignId('customer_id')->constrained('customers')->onDelete('cascade');
-            $table->decimal('total', 10, 2); // Total amount of the invoice
+            $table->decimal('total_vat', 5, 2)->default(0); // VAT percentage
+            $table->decimal('total_discount', 5, 2)->default(0); // Discount percentage
+            $table->decimal('amount_per_day', 10, 2); // Total amount of the invoice per day
+            $table->decimal('total_amount', 10, 2); // Total amount of the invoice
             $table->boolean('paid')->default(false); // Paid status
+            $table->enum('payment_method', ['cash', 'credit_card']);
             $table->enum('status', ['active', 'returned', 'overdue'])->default('active'); // Rental status
-            $table->date('rental_start_date')->nullable(); // Start of the rental period
-            $table->date('rental_end_date')->nullable(); // End of the rental period
+            $table->datetime('rental_start_date')->nullable(); // Start of the rental period
+            $table->datetime('rental_end_date')->nullable(); // End of the rental period
+            $table->integer('days')->nullable();
+            $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->timestamps();
         });
     }

@@ -14,19 +14,19 @@ class ProductSeeder extends Seeder
     public function run(): void
     {
         // Create dummy products
-        Product::create(['name' => 'Ski', 'brand' => 'Salomon', 'stock' => 50, 'price' => 150.00]);
-        Product::create(['name' => 'Ski Boots', 'brand' => 'Burton', 'stock' => 30, 'price' => 200.00]);
-        Product::create(['name' => 'Poles', 'brand' => 'Atomic', 'stock' => 70, 'price' => 100.00]);
-        Product::create(['name' => 'Snowboard', 'brand' => 'Giro', 'stock' => 100, 'price' => 50.00]);
-        Product::create(['name' => 'Snowboard Boots', 'brand' => 'North Face', 'stock' => 200, 'price' => 20.00]);
-        Product::create(['name' => 'Sled', 'brand' => 'North Face', 'stock' => 200, 'price' => 200.00]);
-        Product::create(['name' => 'Hiking Racket', 'brand' => 'North Face', 'stock' => 200, 'price' => 10.00]);
-        Product::create(['name' => 'Gloves', 'brand' => 'North Face', 'stock' => 200, 'price' => 150.00]);
-        Product::create(['name' => 'Helmet', 'brand' => 'Marmot', 'stock' => 200, 'price' => 30.00]);
-        Product::create(['name' => 'Goggles', 'brand' => 'Marmot', 'stock' => 200, 'price' => 60.00]);
-        Product::create(['name' => 'Jacket', 'brand' => 'Columbia', 'stock' => 200, 'price' => 20.00]);
-        Product::create(['name' => 'Pants', 'brand' => 'Columbia', 'stock' => 200, 'price' => 70.00]);
-        Product::create(['name' => 'Apres Ski', 'brand' => 'Columbia', 'stock' => 200, 'price' => 180.00]);
+        Product::create(['name' => 'Ski', 'description' => 'Salomon', 'price' => 150.00]);
+        Product::create(['name' => 'Ski Boots', 'description' => 'Burton', 'price' => 200.00]);
+        Product::create(['name' => 'Poles', 'description' => 'Atomic', 'price' => 100.00]);
+        Product::create(['name' => 'Snowboard', 'description' => 'Giro', 'price' => 50.00]);
+        Product::create(['name' => 'Snowboard Boots', 'description' => 'North Face', 'price' => 20.00]);
+        Product::create(['name' => 'Sled', 'description' => 'North Face', 'price' => 200.00]);
+        Product::create(['name' => 'Hiking Racket', 'description' => 'North Face', 'price' => 10.00]);
+        Product::create(['name' => 'Gloves', 'description' => 'North Face', 'price' => 150.00]);
+        Product::create(['name' => 'Helmet', 'description' => 'Marmot', 'price' => 30.00]);
+        Product::create(['name' => 'Goggles', 'description' => 'Marmot', 'price' => 60.00]);
+        Product::create(['name' => 'Jacket', 'description' => 'Columbia', 'price' => 20.00]);
+        Product::create(['name' => 'Pants', 'description' => 'Columbia', 'price' => 70.00]);
+        Product::create(['name' => 'Apres Ski', 'description' => 'Columbia', 'price' => 180.00]);
 
     }
 }

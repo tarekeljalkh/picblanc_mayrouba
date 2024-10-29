@@ -6,21 +6,17 @@ use App\Models\Customer;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\Product;
-use App\Traits\FileUploadTrait;
-use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 
 class InvoiceController extends Controller
 {
-    use FileUploadTrait;
-
     /**
      * Display a listing of the resource.
      */
     public function index()
     {
-        $invoices = Invoice::with('customer')->get(); // Eager load customer data
+        $invoices = Invoice::with('customer')->get();
         return view('invoices.index', compact('invoices'));
     }
 
@@ -39,84 +35,71 @@ class InvoiceController extends Controller
      */
     public function store(Request $request)
     {
-        // Validate the input
+        // Validate input
         $request->validate([
             'customer_id' => 'nullable|exists:customers,id',
-            'customer_name' => 'nullable|required_without:customer_id|string|max:255',
-            'customer_email' => 'nullable|email|max:255|required_without:customer_id',
+            'customer_name' => 'nullable|string|max:255|required_without:customer_id',
             'customer_phone' => 'nullable|string|max:255|required_without:customer_id',
             'customer_address' => 'nullable|string|max:255|required_without:customer_id',
-            'rental_start_date' => 'required|date', // Validate rental start date
-            'rental_end_date' => 'required|date|after_or_equal:rental_start_date', // Validate rental end date
-            'deposit_card' => 'nullable|file|mimes:jpeg,png,jpg,gif|max:2048', // Validate image upload
-            'products' => 'required|array|min:1', // Ensure at least one product is selected
+            'rental_start_date' => 'required|date',
+            'rental_end_date' => 'required|date|after_or_equal:rental_start_date',
+            'products' => 'required|array|min:1',
             'products.*' => 'exists:products,id',
             'quantities' => 'required|array|min:1',
             'quantities.*' => 'integer|min:1',
             'prices' => 'required|array|min:1',
             'prices.*' => 'numeric|min:0',
-            'vat' => 'required|array|min:1',
-            'vat.*' => 'numeric|min:0',
-            'discount' => 'nullable|array',
-            'discount.*' => 'numeric|min:0',
+            'total_vat' => 'nullable|numeric|min:0',
+            'total_discount' => 'nullable|numeric|min:0',
+            'paid' => 'required|in:0,1',
+            'amount_per_day' => 'required|numeric', // Validating amount per day from the form
+            'days' => 'required|integer', // Validating days from the form
+            'total_amount' => 'required|numeric' // Validating total from the form
         ]);
 
-        // Step 1: Handle Customer (Existing or New)
+        // Handle Customer
         if ($request->filled('customer_id')) {
-            // Use the existing customer, no updates to the customer data
             $customer = Customer::findOrFail($request->customer_id);
         } else {
-            // Create a new customer if no existing customer was selected
-            $customer = new Customer();
-            $customer->name = $request->customer_name;
-            $customer->email = $request->customer_email;
-            $customer->phone = $request->customer_phone;
-            $customer->address = $request->customer_address;
-
-            // Handle file upload for the deposit card
-            if ($request->hasFile('deposit_card')) {
-                $filePath = $this->uploadImage($request, 'deposit_card', null, '/uploads/customers');
-                $customer->deposit_card = $filePath;
-            }
-
-            $customer->save();
+            $customer = Customer::create([
+                'name' => $request->customer_name,
+                'phone' => $request->customer_phone,
+                'address' => $request->customer_address,
+            ]);
         }
 
-        // Step 2: Create the Invoice
-        $invoice = new Invoice();
-        $invoice->customer_id = $customer->id; // Link to the selected or newly created customer
-        //$invoice->rental_start_date = $request->rental_start_date; // Set rental start date
-        //$invoice->rental_end_date = $request->rental_end_date; // Set rental end date
-        // Convert dates to the correct format
-        $invoice->rental_start_date = Carbon::createFromFormat('d-m-Y', $request->rental_start_date)->format('Y-m-d');
-        $invoice->rental_end_date = Carbon::createFromFormat('d-m-Y', $request->rental_end_date)->format('Y-m-d');
+        // Calculate and add Invoice Items
+        $invoiceItems = [];
+        foreach ($request->products as $index => $product_id) {
+            $quantity = $request->quantities[$index];
+            $price = $request->prices[$index];
+            $totalPrice = $quantity * $price;
 
-        $invoice->total = array_sum($request->total_price); // Calculate the total from the invoice items
-        $invoice->paid = false; // Set the invoice as unpaid by default
-        $invoice->status = 'active'; // Set initial status to active
+            $invoiceItems[] = new InvoiceItem([
+                'product_id' => $product_id,
+                'quantity' => $quantity,
+                'price' => $price,
+                'total_price' => $totalPrice,
+            ]);
+        }
+
+        // Create the Invoice using values directly from the form
+        $invoice = new Invoice([
+            'customer_id' => $customer->id,
+            'rental_start_date' => $request->rental_start_date,
+            'rental_end_date' => $request->rental_end_date,
+            'total_vat' => $request->total_vat ?? 0,
+            'total_discount' => $request->total_discount ?? 0,
+            'amount_per_day' => $request->amount_per_day,
+            'total_amount' => $request->total_amount,
+            'paid' => $request->paid,
+            'status' => 'active',
+            'days' => $request->days,
+        ]);
         $invoice->save();
 
-        // Step 3: Add Invoice Items and decrease stock
-        foreach ($request->products as $index => $product_id) {
-            // Create invoice items
-            $invoice->items()->create([
-                'product_id' => $product_id,
-                'quantity' => $request->quantities[$index],
-                'price' => $request->prices[$index],
-                'vat' => $request->vat[$index],
-                'discount' => $request->discount[$index] ?? 0,
-                'total_price' => $this->calculateTotalPrice(
-                    $request->quantities[$index],
-                    $request->prices[$index],
-                    $request->vat[$index],
-                    $request->discount[$index] ?? 0
-                ),
-            ]);
-
-            // Decrease product stock
-            $product = Product::findOrFail($product_id);
-            $product->decrement('stock', $request->quantities[$index]);
-        }
+        // Attach items to the invoice
+        $invoice->items()->saveMany($invoiceItems);
 
         return redirect()->route('invoices.show', $invoice->id)->with('success', 'Invoice created successfully');
     }
@@ -128,94 +111,20 @@ class InvoiceController extends Controller
     {
         $invoice = Invoice::with('items.product')->findOrFail($id);
 
-        // Initialize totals
-        $subtotal = 0;
-        $discountTotal = 0;
-        $vatTotal = 0;
-        $total = 0;
+        // Calculate subtotal, VAT, discount, and total
+        $subtotal = $invoice->items->sum(fn($item) => $item->quantity * $item->price);
+        $vatTotal = ($subtotal * $invoice->total_vat) / 100;
+        $discountTotal = ($subtotal * $invoice->total_discount) / 100;
+        $total = $subtotal + $vatTotal - $discountTotal;
 
-        foreach ($invoice->items as $item) {
-            $itemSubtotal = $item->quantity * $item->price;
-            $itemVat = ($itemSubtotal * $item->vat) / 100;
-            $itemDiscount = ($itemSubtotal * $item->discount) / 100;
-            $itemTotal = $itemSubtotal + $itemVat - $itemDiscount;
-
-            $subtotal += $itemSubtotal;
-            $discountTotal += $itemDiscount;
-            $vatTotal += $itemVat;
-            $total += $itemTotal;
-        }
-
-        return view('invoices.show', compact('invoice', 'subtotal', 'discountTotal', 'vatTotal', 'total'));
-    }
-
-    /**
-     * Print the invoice.
-     */
-    public function print($id)
-    {
-        $invoice = Invoice::with('items.product')->findOrFail($id);
-
-        // Initialize totals
-        $subtotal = 0;
-        $discountTotal = 0;
-        $vatTotal = 0;
-        $total = 0;
-
-        foreach ($invoice->items as $item) {
-            $itemSubtotal = $item->quantity * $item->price;
-            $itemVat = ($itemSubtotal * $item->vat) / 100;
-            $itemDiscount = ($itemSubtotal * $item->discount) / 100;
-            $itemTotal = $itemSubtotal + $itemVat - $itemDiscount;
-
-            $subtotal += $itemSubtotal;
-            $discountTotal += $itemDiscount;
-            $vatTotal += $itemVat;
-            $total += $itemTotal;
-        }
-
-        return view('invoices.print', compact('invoice', 'subtotal', 'discountTotal', 'vatTotal', 'total'));
-    }
-
-    /**
-     * Download the invoice as PDF.
-     */
-    public function download($id)
-    {
-        // Fetch the invoice and its associated items
-        $invoice = Invoice::with('items.product')->findOrFail($id);
-
-        // Calculate totals (as in your current logic)
-        $subtotal = 0;
-        $discountTotal = 0;
-        $vatTotal = 0;
-        $total = 0;
-
-        foreach ($invoice->items as $item) {
-            $itemSubtotal = $item->quantity * $item->price;
-            $itemVat = ($itemSubtotal * $item->vat) / 100;
-            $itemDiscount = ($itemSubtotal * $item->discount) / 100;
-            $itemTotal = $itemSubtotal + $itemVat - $itemDiscount;
-
-            $subtotal += $itemSubtotal;
-            $discountTotal += $itemDiscount;
-            $vatTotal += $itemVat;
-            $total += $itemTotal;
-        }
-
-        // Generate the PDF using the 'invoices.download' view
-        $pdf = Pdf::loadView('invoices.download', compact('invoice', 'subtotal', 'discountTotal', 'vatTotal', 'total'));
-
-        // Return the PDF download response
-        return $pdf->download('invoice-' . $invoice->id . '.pdf');
+        return view('invoices.show', compact('invoice', 'subtotal', 'vatTotal', 'discountTotal', 'total'));
     }
 
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(string $id)
+    public function edit($id)
     {
-        // Fetch the invoice, customers, and products for editing
         $invoice = Invoice::with('items')->findOrFail($id);
         $customers = Customer::all();
         $products = Product::all();
@@ -226,43 +135,66 @@ class InvoiceController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, string $id)
+    public function update(Request $request, $id)
     {
-        // Validate the input
         $request->validate([
-            'customer_id' => 'required|exists:customers,id',
+            'customer_id' => 'nullable|exists:customers,id',
             'products' => 'required|array|min:1',
+            'products.*' => 'exists:products,id',
             'quantities' => 'required|array|min:1',
+            'quantities.*' => 'integer|min:1',
             'prices' => 'required|array|min:1',
-            'vat' => 'required|array|min:1',
-            'discount' => 'nullable|array',
+            'prices.*' => 'numeric|min:0',
+            'total_vat' => 'nullable|numeric|min:0',
+            'total_discount' => 'nullable|numeric|min:0',
+            'paid' => 'required|in:0,1',
         ]);
 
-        // Find the invoice
         $invoice = Invoice::findOrFail($id);
 
-        // Update customer information
-        $invoice->customer_id = $request->customer_id; // Ensure the correct customer is assigned
-        $invoice->total = array_sum($request->total_price); // Recalculate the total based on items
-        $invoice->save();
+        // Update customer if a new customer_id is provided
+        if ($request->filled('customer_id') && $request->customer_id != $invoice->customer_id) {
+            $invoice->customer_id = $request->customer_id;
+        }
 
-        // Step 2: Remove existing items and re-add updated ones
+        // Calculate rental days for updated items
+        $rentalStartDate = Carbon::parse($request->rental_start_date);
+        $rentalEndDate = Carbon::parse($request->rental_end_date);
+        $rentalDays = $rentalStartDate->diffInDays($rentalEndDate) + 1;
+
+        // Update invoice details
+        $invoice->total_vat = $request->total_vat ?? 0;
+        $invoice->total_discount = $request->total_discount ?? 0;
+        $invoice->paid = (bool) $request->paid;
+        $invoice->status = 'active';
+
+        // Recalculate subtotal, VAT, discount, and total for updated items
+        $subtotal = 0;
         $invoice->items()->delete();
+        $invoiceItems = [];
+
         foreach ($request->products as $index => $product_id) {
-            $invoice->items()->create([
+            $quantity = $request->quantities[$index];
+            $price = $request->prices[$index];
+            $totalPrice = $quantity * $price * $rentalDays;
+            $subtotal += $totalPrice;
+
+            $invoiceItems[] = new InvoiceItem([
                 'product_id' => $product_id,
-                'quantity' => $request->quantities[$index],
-                'price' => $request->prices[$index],
-                'vat' => $request->vat[$index],
-                'discount' => $request->discount[$index] ?? 0,
-                'total_price' => $this->calculateTotalPrice(
-                    $request->quantities[$index],
-                    $request->prices[$index],
-                    $request->vat[$index],
-                    $request->discount[$index] ?? 0
-                ),
+                'quantity' => $quantity,
+                'price' => $price,
+                'total_price' => $totalPrice,
             ]);
         }
+
+        // Calculate total with VAT and discount
+        $vatAmount = ($subtotal * $invoice->total_vat) / 100;
+        $discountAmount = ($subtotal * $invoice->total_discount) / 100;
+        $invoice->total = $subtotal + $vatAmount - $discountAmount;
+        $invoice->save();
+
+        // Attach updated items to the invoice
+        $invoice->items()->saveMany($invoiceItems);
 
         return redirect()->route('invoices.index')->with('success', 'Invoice updated successfully');
     }
@@ -270,7 +202,7 @@ class InvoiceController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(string $id)
+    public function destroy($id)
     {
         try {
             $invoice = Invoice::findOrFail($id);
@@ -280,49 +212,5 @@ class InvoiceController extends Controller
         } catch (\Exception $e) {
             return response()->json(['status' => 'error', 'message' => 'Something went wrong!']);
         }
-    }
-
-    /**
-     * Calculate total price based on quantity, price, VAT, and discount.
-     */
-    private function calculateTotalPrice($quantity, $price, $vat, $discount = 0)
-    {
-        $subtotal = $quantity * $price;
-        $vatAmount = ($subtotal * $vat) / 100;
-        $discountAmount = ($subtotal * $discount) / 100;
-        $total = $subtotal + $vatAmount - $discountAmount;
-
-        return round($total, 2);
-    }
-
-
-    public function customer_store(Request $request)
-    {
-        // Validate incoming request data
-        $request->validate([
-            'name' => 'required|string|min:3',
-            'email' => 'nullable|email|unique:customers,email',
-            'phone' => 'required|numeric|unique:customers,phone',
-            'address' => 'nullable|string',
-            'deposit_card' => 'nullable|file|mimes:jpeg,png,jpg,gif|max:2048', // Optional file validation
-        ]);
-
-        // Handle file upload if provided
-        $filePath = null;
-        if ($request->hasFile('deposit_card')) {
-            $filePath = $this->uploadImage($request, 'deposit_card', null, '/uploads/customers');
-        }
-
-        // Create new customer
-        $customer = new Customer();
-        $customer->name = $request->name;
-        $customer->email = $request->email;
-        $customer->phone = $request->phone;
-        $customer->address = $request->address;
-        $customer->deposit_card = $filePath;
-        $customer->save();
-
-        // Redirect back to POS page with the new customer pre-selected
-        return redirect()->route('invoices.create')->with('new_customer_id', $customer->id);
     }
 }

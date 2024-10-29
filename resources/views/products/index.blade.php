@@ -23,8 +23,7 @@
                     <thead>
                         <tr>
                             <th>Name</th>
-                            <th>Brand</th>
-                            <th>Stock</th>
+                            <th>Description</th>
                             <th>Rented Quantity</th> <!-- New column -->
                             <th>Price</th>
                             <th>Action</th>
@@ -34,8 +33,7 @@
                         @foreach ($products as $product)
                             <tr>
                                 <td>{{ $product->name }}</td>
-                                <td>{{ $product->brand }}</td>
-                                <td>{{ $product->stock }}</td>
+                                <td>{{ $product->description }}</td>
                                 <td>{{ $product->rentedQuantity() }}</td> <!-- Display rented quantity -->
                                 <td>{{ $product->price }}</td>
                                 <td>

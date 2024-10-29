@@ -17,8 +17,6 @@ return new class extends Migration
             $table->foreignId('product_id')->constrained('products')->onDelete('cascade');
             $table->integer('quantity'); // Quantity of the product
             $table->decimal('price', 10, 2); // Price per unit
-            $table->decimal('vat', 5, 2)->default(10); // VAT percentage
-            $table->decimal('discount', 5, 2)->default(0); // Discount percentage
             $table->decimal('total_price', 10, 2); // Total price after VAT and discount
             $table->boolean('damaged')->default(false); // Damage status
             $table->decimal('damage_charge', 10, 2)->default(0); // Charge for damage

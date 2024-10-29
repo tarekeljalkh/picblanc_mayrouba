@@ -32,16 +32,14 @@ class ProductController extends Controller
         // Validate incoming request data
         $request->validate([
             'name' => 'required|string|min:3',
-            'brand' => 'required|string',
-            'stock' => 'required|numeric',
+            'description' => 'nullable|string',
             'price' => 'required|numeric',
         ]);
 
         // Create a new Product
         $product = new Product();
         $product->name = $request->name;
-        $product->brand = $request->brand;
-        $product->stock = $request->stock;
+        $product->description = $request->description;
         $product->price = $request->price;
         $product->save();
 
@@ -75,8 +73,7 @@ class ProductController extends Controller
         // Validate incoming request data
         $request->validate([
             'name' => 'required|min:3',
-            'brand' => 'required|string',
-            'stock' => 'required|numeric',
+            'description' => 'nullable|string',
             'price' => 'required|numeric',
         ]);
 
@@ -84,8 +81,7 @@ class ProductController extends Controller
 
         // Update customer details
         $product->name = $request->name;
-        $product->brand = $request->brand;
-        $product->stock = $request->stock;
+        $product->description = $request->description;
         $product->price = $request->price;
         $product->save();
 

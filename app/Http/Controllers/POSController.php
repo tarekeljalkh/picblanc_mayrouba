@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Http\Controllers;
 
 use App\Models\Customer;
@@ -7,6 +6,7 @@ use App\Models\Invoice;
 use App\Models\Product;
 use App\Traits\FileUploadTrait;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class POSController extends Controller
 {
@@ -28,30 +28,59 @@ class POSController extends Controller
             'cart.*.id' => 'required|exists:products,id',
             'cart.*.quantity' => 'required|integer|min:1',
             'cart.*.price' => 'required|numeric|min:0',
+            'total_vat' => 'required|numeric|min:0',
+            'total_discount' => 'nullable|numeric|min:0',
+            'status' => 'required|in:paid,unpaid',
+            'payment_method' => 'required|in:cash,credit_card',
+            'rental_days' => 'required|integer|min:1', // Use rental_days from the request
+            'rental_start_date' => 'required|date',
+            'rental_end_date' => 'required|date|after_or_equal:rental_start_date',
         ]);
 
-        // Create the invoice
-        $invoice = new Invoice();
-        $invoice->customer_id = $request->customer_id;
-        $invoice->total = array_sum(array_column($request->cart, 'total_price')); // Calculate total
-        $invoice->status = 'active'; // Set default status
-        $invoice->save();
+        // Calculate the subtotal for one day
+        $subtotal = array_sum(array_map(function ($item) {
+            return $item['price'] * $item['quantity'];
+        }, $request->cart));
 
-        // Save the invoice items
+        // Calculate the rental total based on rental_days
+        $rentalTotal = $subtotal * $request->rental_days;
+
+        // Calculate VAT and discount amounts
+        $vatAmount = ($rentalTotal * $request->total_vat) / 100;
+        $discountAmount = ($rentalTotal * ($request->total_discount ?? 0)) / 100;
+
+        // Calculate the final total amount including VAT and discount
+        $totalAmount = $rentalTotal + $vatAmount - $discountAmount;
+
+        // Create the invoice with rental_days
+        $invoice = Invoice::create([
+            'customer_id' => $request->customer_id,
+            'user_id' => Auth::id(),
+            'total_vat' => $request->total_vat,
+            'total_discount' => $request->total_discount ?? 0,
+            'amount_per_day' => $subtotal,
+            'total_amount' => $totalAmount, // Final total with VAT and discount applied
+            'paid' => $request->status === 'paid',
+            'payment_method' => $request->payment_method,
+            'days' => $request->rental_days, // Store rental_days as days in the database
+            'rental_start_date' => $request->rental_start_date,
+            'rental_end_date' => $request->rental_end_date,
+            'status' => 'active',
+        ]);
+
+        // Save invoice items
         foreach ($request->cart as $item) {
             $invoice->items()->create([
                 'product_id' => $item['id'],
                 'quantity' => $item['quantity'],
                 'price' => $item['price'],
-                'total_price' => $item['price'] * $item['quantity'], // Calculate item total price
-                'vat' => $item['vat'],
-                'discount' => $item['discount'],
+                'total_price' => $item['price'] * $item['quantity'],
             ]);
         }
 
-        // Return the newly created invoice ID to the front-end
         return response()->json(['invoice_id' => $invoice->id]);
     }
+
 
     public function store(Request $request)
     {
