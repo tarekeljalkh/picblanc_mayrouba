@@ -1,23 +1,8 @@
 daily and season as categories and in the trial balance each one is different
 
-3 dates , now , rental date,
-
-
-
-notes in invoices, m
-
-send invoice via whatsapp
-
-make filter invoices by date
-
-each invoice total will be multiple by days of rentals
-
 what if customer takes the invoice and returns in half an hour to change i want to see the old price to see how much i will repay him
 
-balance by item, balance by invoice
-
-payment methods , cash or credit card
-
+send invoice via whatsapp
 
 Update Process:
 
@@ -29,6 +14,13 @@ Update Process:
 * invoice # -> rental agreement
 * remove vat from invoice table
 * remove discount from invoice table
+* each invoice total will be multiple by days of rentals
+* payment methods , cash or credit card
+* 3 dates , now , rental date,
+* notes in invoices
+* make filter invoices by date
+* balance by item, balance by invoice
 
 me:
 post product image removed
+changed cart background to white

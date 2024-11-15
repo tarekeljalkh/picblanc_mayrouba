@@ -24,6 +24,7 @@ return new class extends Migration
             $table->datetime('rental_start_date')->nullable(); // Start of the rental period
             $table->datetime('rental_end_date')->nullable(); // End of the rental period
             $table->integer('days')->nullable();
+            $table->string('note')->nullable();
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->timestamps();
         });

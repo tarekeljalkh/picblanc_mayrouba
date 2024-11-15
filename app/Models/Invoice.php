@@ -23,6 +23,7 @@ class Invoice extends Model
         'rental_end_date',
         'days',
         'payment_method', // Added payment method
+        'note',
         'user_id'         // Added user ID
     ];
 
@@ -71,6 +72,22 @@ class Invoice extends Model
     public function getTotalPriceAttribute()
     {
         return $this->subtotal + $this->vatAmount - $this->discountAmount;
+    }
+
+    // In the Invoice model
+    public function getBalanceAttribute()
+    {
+        return $this->paid ? 0 : $this->total;
+    }
+
+    public function getFormattedCreatedAtAttribute()
+    {
+        return $this->created_at->format('Y-m-d');
+    }
+
+    public function getFormattedTotalAttribute()
+    {
+        return number_format($this->total, 2);
     }
 
     public function user()

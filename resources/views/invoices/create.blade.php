@@ -168,6 +168,14 @@
                             </div>
                         </div>
 
+                        <div class="mb-4 row">
+                            <label for="note" class="col-md-2 col-form-label">Note</label>
+                            <div class="col-md-10">
+                                <input class="form-control" type="text" id="note" name="note" />
+                            </div>
+                        </div>
+
+
                         {{-- Create Button --}}
                         <div class="mt-4 row">
                             <div class="col-md-12 text-end">

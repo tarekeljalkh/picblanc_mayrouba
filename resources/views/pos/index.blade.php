@@ -29,7 +29,7 @@
             </div>
 
             <!-- Right Column: Customer Selection and Cart -->
-            <div class="col-md-4">
+            <div class="col-md-4" style="background-color: #ffffff;">
                 <h4 class="my-4">Select Customer</h4>
                 <div class="mb-4 d-flex justify-content-between">
                     <select id="customer-select" class="form-select">
@@ -77,6 +77,7 @@
                     <input type="number" class="form-control" id="total-discount" value="0">
                 </div>
 
+
                 <!-- Payment Status and Method -->
                 <div class="mb-4">
                     <label class="form-label">Payment Status</label><br>
@@ -93,7 +94,8 @@
                     <input class="form-check-input" type="radio" name="payment_method" id="cash-radio" value="cash">
                     <label class="form-check-label" for="cash-radio">Cash</label>
 
-                    <input class="form-check-input ms-2" type="radio" name="payment_method" id="credit-radio" value="credit_card">
+                    <input class="form-check-input ms-2" type="radio" name="payment_method" id="credit-radio"
+                        value="credit_card">
                     <label class="form-check-label" for="credit-radio">Credit Card</label>
                 </div>
 
@@ -102,6 +104,13 @@
                     <label for="total-amount" class="form-label">Total Amount</label>
                     <input type="text" class="form-control" id="total-amount" readonly>
                 </div>
+
+                <!-- Note -->
+                <div class="mb-3">
+                    <label for="note" class="form-label">Note</label>
+                    <input type="text" class="form-control" id="note">
+                </div>
+                <!-- End Note -->
 
                 <!-- Checkout Button -->
                 <button class="btn btn-success w-100" id="checkout-btn" disabled>Checkout</button>
@@ -256,10 +265,12 @@
                             rental_days: $('#rental-days').val(),
                             rental_start_date: startDateWithTime,
                             rental_end_date: endDateWithTime,
-                            total_amount: $('#total-amount').val()
+                            total_amount: $('#total-amount').val(),
+                            note: $('#note').val() // Include the note
                         },
                         success: function(response) {
-                            window.location.href = '{{ route('invoices.show', ':id') }}'.replace(':id', response.invoice_id);
+                            window.location.href = '{{ route('invoices.show', ':id') }}'.replace(
+                                ':id', response.invoice_id);
                         },
                         error: function() {
                             alert('Error processing checkout.');

@@ -57,6 +57,7 @@ Route::middleware('auth')->group(function () {
 
     //Trial balance
     Route::get('/trial-balance', [DashbboardController::class, 'trialBalance'])->name('trialbalance.index');
+    Route::get('/trial-balance/products', [DashbboardController::class, 'trialBalanceByProducts'])->name('trialbalance.products');
 });
 
 require __DIR__ . '/auth.php';

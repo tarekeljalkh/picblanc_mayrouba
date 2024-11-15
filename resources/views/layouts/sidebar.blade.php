@@ -79,6 +79,16 @@
             </a>
         </li>
 
+        <!-- Trial Balance by Products -->
+        <li class="menu-item {{ Route::is('trialbalance.products') ? 'active' : '' }}">
+            <a href="{{ route('trialbalance.products') }}" class="menu-link">
+                <i class="menu-icon tf-icons bx bx-cart"></i> <!-- Use a different icon as appropriate -->
+                <div class="text-truncate" data-i18n="Trial Balance by Products">Trial Balance by Products</div>
+                <div class="badge rounded-pill bg-label-primary text-uppercase fs-tiny ms-auto"></div>
+            </a>
+        </li>
+
+
     </ul>
 
 

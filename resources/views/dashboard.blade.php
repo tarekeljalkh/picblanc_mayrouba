@@ -86,9 +86,7 @@
                             <th>#</th>
                             <th>Client</th>
                             <th>Total</th>
-                            <th>Status</th>
                             <th>Issued Date</th>
-                            <th>Balance</th>
                             <th>Invoice Status</th>
                             <th class="cell-fit">Action</th>
                         </tr>
@@ -97,17 +95,15 @@
                         @foreach ($invoices as $invoice)
                             <tr>
                                 <td>{{ $invoice->id }}</td>
-                                <td>{{ $invoice->customer->name }}</td>
-                                <td>${{ number_format($invoice->total, 2) }}</td>
-                                <td>{{ $invoice->paid ? 'Paid' : 'Unpaid' }}</td>
-                                <td>{{ $invoice->created_at->format('Y-m-d') }}</td>
-                                <td>${{ number_format($invoice->total - ($invoice->paid ? $invoice->total : 0), 2) }}</td>
+                                <td>{{ $invoice->customer->name ?? 'N/A' }}</td>
+                                <td>${{ number_format($invoice->total_amount ?? 0, 2) }}</td>
+                                <!-- Ensure correct total field -->
+                                <td>{{ $invoice->created_at->format('d/m/Y') }}</td> <!-- Date format adjusted to d/m/y -->
+                                </td> <!-- Correct balance calculation -->
                                 <td>
-                                    @if ($invoice->paid)
-                                        <span class="badge bg-success">Paid</span>
-                                    @else
-                                        <span class="badge bg-danger">Unpaid</span>
-                                    @endif
+                                    <span class="badge {{ $invoice->paid ? 'bg-success' : 'bg-danger' }}">
+                                        {{ $invoice->paid ? 'Paid' : 'Unpaid' }}
+                                    </span>
                                 </td>
                                 <td>
                                     <a href="{{ route('invoices.show', $invoice->id) }}" class="btn btn-info">View</a>
@@ -116,8 +112,19 @@
                         @endforeach
                     </tbody>
                 </table>
+                <div class="mt-3">
+                    <!-- Custom Pagination Styling -->
+                    <nav>
+                        <ul class="pagination justify-content-center">
+                            {{ $invoices->onEachSide(1)->links('pagination::bootstrap-4') }}
+                            <!-- Bootstrap styled pagination -->
+                        </ul>
+                    </nav>
+                </div>
             </div>
         </div>
+        <!-- End Invoice List Table -->
+
 
     </div>
 @endsection

@@ -66,6 +66,7 @@ class POSController extends Controller
             'rental_start_date' => $request->rental_start_date,
             'rental_end_date' => $request->rental_end_date,
             'status' => 'active',
+            'note' => $request->note, // Save the note
         ]);
 
         // Save invoice items

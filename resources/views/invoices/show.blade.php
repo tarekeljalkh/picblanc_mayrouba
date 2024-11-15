@@ -98,11 +98,13 @@
                                 </td>
                                 <td class="text-end px-0 py-6 w-px-100 fw-medium text-heading">
                                     @php
-                                        // Calculate subtotal based on rental days and amount per day
-                                        $subtotal = $invoice->amount_per_day * $invoice->days;
+                                        // Calculate subtotal based on the sum of all item totals
+                                        $subtotal = $invoice->items->sum(fn($item) => $item->price * $item->quantity);
+
                                         // Calculate discount and VAT amounts
                                         $discountAmount = $subtotal * ($invoice->total_discount / 100);
                                         $vatAmount = $subtotal * ($invoice->total_vat / 100);
+
                                         // Calculate total with VAT and discount
                                         $total = $subtotal + $vatAmount - $discountAmount;
                                     @endphp

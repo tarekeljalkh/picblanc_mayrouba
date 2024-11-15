@@ -23,11 +23,13 @@
                     <div class="row">
                         <div class="col-md-4">
                             <label for="from_date" class="form-label">From Date</label>
-                            <input type="date" id="from_date" name="from_date" class="form-control" value="{{ old('from_date', $fromDate) }}">
+                            <input type="date" id="from_date" name="from_date" class="form-control"
+                                   value="{{ request('from_date', $fromDate ?? \Carbon\Carbon::today()->toDateString()) }}">
                         </div>
                         <div class="col-md-4">
                             <label for="to_date" class="form-label">To Date</label>
-                            <input type="date" id="to_date" name="to_date" class="form-control" value="{{ old('to_date', $toDate) }}">
+                            <input type="date" id="to_date" name="to_date" class="form-control"
+                                   value="{{ request('to_date', $toDate ?? \Carbon\Carbon::today()->toDateString()) }}">
                         </div>
                         <div class="col-md-4 d-flex align-items-end">
                             <button type="submit" class="btn btn-primary w-100">Filter</button>

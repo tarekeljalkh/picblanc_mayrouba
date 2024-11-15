@@ -19,7 +19,7 @@ class DashbboardController extends Controller
         $totalUnpaid = Invoice::where('paid', false)->count();
 
         // Fetch latest invoices (for the table)
-        $invoices = Invoice::with('customer')->orderBy('created_at', 'desc')->get();
+        $invoices = Invoice::with('customer')->orderBy('created_at', 'desc')->paginate(10);
 
         // Pass the data to the view
         return view('dashboard', compact('customersCount', 'invoicesCount', 'totalPaid', 'totalUnpaid', 'invoices'));
@@ -27,8 +27,8 @@ class DashbboardController extends Controller
 
     public function trialBalance(Request $request)
     {
-        // Set the default "from" date to the beginning of time (0000-01-01) and "to" date to today
-        $fromDate = $request->input('from_date', Carbon::createFromFormat('Y-m-d', '0000-01-01')->toDateString());
+        // Set default "from" and "to" dates to today if not provided
+        $fromDate = $request->input('from_date', Carbon::today()->toDateString());
         $toDate = $request->input('to_date', Carbon::today()->toDateString());
 
         // Parse the dates using Carbon
@@ -38,15 +38,14 @@ class DashbboardController extends Controller
         // Fetch total income (paid invoices) within the date range
         $totalIncome = Invoice::where('paid', true)
             ->whereBetween('created_at', [$from, $to])
-            ->sum('total');
+            ->sum('total_amount');
 
         // Fetch total unpaid amount (unpaid invoices) within the date range
         $totalUnpaid = Invoice::where('paid', false)
             ->whereBetween('created_at', [$from, $to])
-            ->sum('total');
+            ->sum('total_amount');
 
         // Assuming you have expenses model, filter total expenses within the date range
-        // For now, we're setting $totalExpenses to 0 if no expenses are tracked.
         $totalExpenses = 0;
 
         // Outstanding balances are essentially unpaid invoices
@@ -59,6 +58,42 @@ class DashbboardController extends Controller
         return view('trial-balance.index', compact('totalIncome', 'totalUnpaid', 'totalExpenses', 'outstandingBalances', 'netIncome', 'fromDate', 'toDate'));
     }
 
+
+    public function trialBalanceByProducts(Request $request)
+    {
+        // Set default "from" and "to" dates to today if not provided
+        $fromDate = $request->input('from_date', Carbon::today()->toDateString());
+        $toDate = $request->input('to_date', Carbon::today()->toDateString());
+
+        // Parse the dates using Carbon
+        $from = Carbon::parse($fromDate)->startOfDay();
+        $to = Carbon::parse($toDate)->endOfDay();
+
+        // Fetch product sales data within the date range
+        $productSales = Product::with(['invoiceItems' => function ($query) use ($from, $to) {
+            $query->whereBetween('created_at', [$from, $to]);
+        }])->get();
+
+        // Calculate total income and other data from product sales
+        $totalIncome = 0;
+        $productBalances = [];
+
+        foreach ($productSales as $product) {
+            $totalQuantity = $product->invoiceItems->sum('quantity');
+            $totalIncomeForProduct = $product->invoiceItems->sum(fn($item) => $item->quantity * $item->price);
+            $averagePrice = $totalQuantity > 0 ? $totalIncomeForProduct / $totalQuantity : 0;
+
+            $productBalances[] = [
+                'product' => $product->name,
+                'quantity' => $totalQuantity,
+                'price_per_unit' => $averagePrice,
+                'total' => $totalIncomeForProduct,
+            ];
+            $totalIncome += $totalIncomeForProduct;
+        }
+
+        return view('trial-balance.products', compact('productBalances', 'totalIncome', 'fromDate', 'toDate'));
+    }
 
 
 }

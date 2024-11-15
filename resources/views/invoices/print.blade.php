@@ -4,7 +4,6 @@
 
 @section('content')
 
-
     <div class="invoice-print p-12">
 
         <div class="d-flex justify-content-between flex-row">
@@ -59,19 +58,38 @@
                     </tr>
                 </thead>
                 <tbody>
+                    @php
+                        $subtotal = 0;
+                        $vatTotal = 0;
+                        $discountTotal = 0;
+                        $total = 0;
+                    @endphp
                     @foreach ($invoice->items as $item)
+                        @php
+                            // Calculate values if not already calculated/stored
+                            $itemSubtotal = $item->price * $item->quantity;
+                            $itemVatAmount = ($itemSubtotal * ($item->vat ?? $invoice->total_vat)) / 100;
+                            $itemDiscountAmount = ($itemSubtotal * ($item->discount ?? $invoice->total_discount)) / 100;
+                            $itemTotalPrice = $itemSubtotal + $itemVatAmount - $itemDiscountAmount;
+
+                            // Accumulate totals
+                            $subtotal += $itemSubtotal;
+                            $vatTotal += $itemVatAmount;
+                            $discountTotal += $itemDiscountAmount;
+                            $total += $itemTotalPrice;
+                        @endphp
                         <tr>
                             <td class="text-nowrap text-heading">{{ $item->product->name }}</td>
                             <td>${{ number_format($item->price, 2) }}</td>
                             <td>{{ $item->quantity }}</td>
-                            <td>${{ number_format($item->subtotal, 2) }}</td>
-                            <td>{{ $item->vat }}% (${{ number_format($item->vatAmount, 2) }})</td>
-                            <td>{{ $item->discount }}% (${{ number_format($item->discountAmount, 2) }})</td>
-                            <td>${{ number_format($item->totalPrice, 2) }}</td>
+                            <td>${{ number_format($itemSubtotal, 2) }}</td>
+                            <td>{{ number_format($item->vat ?? $invoice->total_vat, 2) }}%
+                                (${{ number_format($itemVatAmount, 2) }})</td>
+                            <td>{{ number_format($item->discount ?? $invoice->total_discount, 2) }}%
+                                (${{ number_format($itemDiscountAmount, 2) }})</td>
+                            <td>${{ number_format($itemTotalPrice, 2) }}</td>
                         </tr>
                     @endforeach
-
-
                 </tbody>
             </table>
         </div>
@@ -82,7 +100,7 @@
                         <td class="align-top px-6 py-6">
                             <p class="mb-1">
                                 <span class="me-2 fw-medium">Salesperson:</span>
-                                <span>{{ $invoice->salesperson->name ?? 'N/A' }}</span>
+                                <span>{{ $invoice->user->name ?? 'N/A' }}</span>
                             </p>
                             <span>Thanks for your business</span>
                         </td>
@@ -95,7 +113,7 @@
                         <td class="text-end px-0 py-6 w-px-100">
                             <p class="fw-medium mb-2">${{ number_format($subtotal, 2) }}</p>
                             <p class="fw-medium mb-2">${{ number_format($discountTotal, 2) }}</p>
-                            <p class="fw-medium mb-2 border-bottom pb-2">{{ number_format($vatTotal, 2) }}</p>
+                            <p class="fw-medium mb-2 border-bottom pb-2">${{ number_format($vatTotal, 2) }}</p>
                             <p class="fw-medium mb-0">${{ number_format($total, 2) }}</p>
                         </td>
                     </tr>
@@ -106,11 +124,16 @@
         <hr class="mt-0 mb-6">
         <div class="row">
             <div class="col-12">
-                <span class="fw-medium">Note:</span>
-                <span>It was a pleasure working with you. We hope you will keep us in mind for. Thank You!</span>
+                <span class="fw-medium">CONDITION:</span>
+                <span>I declare having received the merchandise mentioned above in good condition and I agree to
+                    return it on time. I will reimburse the value of any missing, damaged, or broken
+                    article.</span>
+                <br>
+                <hr>
+                <span>Mayrouba - Tel: 03 71 57 57 | Warde - Tel: 70 100 015 | Mzaar Intercontinental Hotel -
+                    Tel: 03 788 733</span>
             </div>
         </div>
     </div>
-
 
 @endsection
