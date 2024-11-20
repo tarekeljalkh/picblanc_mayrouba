@@ -92,25 +92,29 @@
                                 </td>
                                 <td class="px-0 py-6 w-px-100">
                                     <p class="mb-2">Subtotal:</p>
-                                    <p class="mb-2">Discount ({{ $invoice->total_discount }}%):</p>
-                                    <p class="mb-2 border-bottom pb-2">VAT ({{ $invoice->total_vat }}%):</p>
+                                    <p class="mb-2">VAT:</p>
+                                    <p class="mb-2">Discount:</p>
+                                    <p class="mb-2 border-bottom pb-2">Days:</p>
                                     <p class="mb-0">Total:</p>
                                 </td>
                                 <td class="text-end px-0 py-6 w-px-100 fw-medium text-heading">
                                     @php
                                         // Calculate subtotal based on the sum of all item totals
                                         $subtotal = $invoice->items->sum(fn($item) => $item->price * $item->quantity);
+                                        // Get Days
+                                        $days = $invoice->days;
 
                                         // Calculate discount and VAT amounts
                                         $discountAmount = $subtotal * ($invoice->total_discount / 100);
                                         $vatAmount = $subtotal * ($invoice->total_vat / 100);
 
                                         // Calculate total with VAT and discount
-                                        $total = $subtotal + $vatAmount - $discountAmount;
+                                        $total = ($subtotal + $vatAmount - $discountAmount) * $days;
                                     @endphp
                                     <p class="fw-medium mb-2">${{ number_format($subtotal, 2) }}</p>
+                                    <p class="fw-medium mb-2">+ ${{ number_format($vatAmount, 2) }}</p>
                                     <p class="fw-medium mb-2">- ${{ number_format($discountAmount, 2) }}</p>
-                                    <p class="fw-medium mb-2 border-bottom pb-2">+ ${{ number_format($vatAmount, 2) }}</p>
+                                    <p class="fw-medium mb-2 border-bottom pb-2">{{ $days }}</p>
                                     <p class="fw-medium mb-0">${{ number_format($total, 2) }}</p>
                                 </td>
                             </tr>

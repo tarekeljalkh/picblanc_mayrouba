@@ -16,14 +16,17 @@ return new class extends Migration
             $table->foreignId('invoice_item_id')->nullable()->constrained('invoice_items');
             $table->foreignId('invoice_id')->constrained('invoices')->onDelete('cascade');
             $table->foreignId('product_id')->nullable()->constrained('products')->onDelete('cascade');
-            $table->string('action'); // 'add', 'remove', 'update', 'partial_return'
+            $table->enum('action', ['add', 'remove', 'update', 'partial_return']);
             $table->integer('previous_quantity')->nullable(); // Previous quantity (for updates/returns)
             $table->integer('new_quantity')->nullable(); // New quantity (for adds/updates/returns)
             $table->decimal('previous_price', 10, 2)->nullable(); // Previous price per unit (for updates)
             $table->decimal('new_price', 10, 2)->nullable(); // New price per unit (for adds/updates)
+            $table->datetime('previous_rental_start_date')->nullable(); // Start of the rental period for this item
+            $table->datetime('previous_rental_end_date')->nullable(); // End of the rental period for this item
             $table->integer('previous_days')->nullable(); // Previous number of rental days (for updates/returns)
             $table->integer('new_days')->nullable(); // New number of rental days (for adds/updates)
-            $table->decimal('rental_cost', 10, 2)->nullable(); // Cost associated with the change
+            $table->date('return_date')->nullable(); // Date of return (for returns)
+
             $table->text('change_reason')->nullable(); // Optional reason for change
             $table->timestamps();
         });

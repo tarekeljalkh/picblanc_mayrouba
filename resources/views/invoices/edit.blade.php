@@ -16,6 +16,18 @@
             <div class="card">
                 <h5 class="card-header">Edit Invoice</h5>
                 <div class="card-body">
+
+                    {{-- Display Validation Errors --}}
+                    @if ($errors->any())
+                        <div class="alert alert-danger">
+                            <ul>
+                                @foreach ($errors->all() as $error)
+                                    <li>{{ $error }}</li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    @endif
+
                     <form id="invoice-form" action="{{ route('invoices.update', $invoice->id) }}" method="POST" enctype="multipart/form-data">
                         @csrf
                         @method('PUT')
@@ -31,6 +43,8 @@
                                             <th>Quantity</th>
                                             <th>Price</th>
                                             <th>Total Price</th>
+                                            <th>Return Quantity</th>
+                                            <th>Return Date</th>
                                             <th>Reason</th>
                                             <th>Action</th>
                                         </tr>
@@ -50,6 +64,8 @@
                                                 <td><input type="number" class="form-control quantity" name="quantities[]" value="{{ $item->quantity }}" /></td>
                                                 <td><input type="text" class="form-control price" name="prices[]" value="{{ number_format($item->price, 2) }}" readonly /></td>
                                                 <td><input type="text" class="form-control total-price" name="total_price[]" value="{{ number_format($item->total_price, 2) }}" readonly /></td>
+                                                <td><input type="number" class="form-control return-quantity" name="return_quantities[]" value="0" min="0" /></td>
+                                                <td><input type="date" class="form-control return-date" name="return_dates[]" /></td>
                                                 <td><input type="text" class="form-control reason" name="reasons[]" placeholder="Enter reason for change" /></td>
                                                 <td>
                                                     <input type="hidden" name="existing_items[]" value="{{ $item->id }}" />
@@ -67,21 +83,21 @@
                         <div class="mb-4 row">
                             <label for="total_vat" class="col-md-2 col-form-label">Total VAT (%)</label>
                             <div class="col-md-10">
-                                <input type="number" class="form-control" id="total_vat" name="total_vat" value="{{ $invoice->total_vat }}" />
+                                <input type="number" class="form-control" id="total_vat" name="total_vat" value="{{ old('total_vat', $invoice->total_vat) }}" />
                             </div>
                         </div>
 
                         <div class="mb-4 row">
                             <label for="total_discount" class="col-md-2 col-form-label">Total Discount (%)</label>
                             <div class="col-md-10">
-                                <input type="number" class="form-control" id="total_discount" name="total_discount" value="{{ $invoice->total_discount }}" />
+                                <input type="number" class="form-control" id="total_discount" name="total_discount" value="{{ old('total_discount', $invoice->total_discount) }}" />
                             </div>
                         </div>
 
                         <div class="mb-4 row">
                             <label for="grand_total" class="col-md-2 col-form-label">Total Amount</label>
                             <div class="col-md-10">
-                                <input type="text" class="form-control" id="grand_total" name="grand_total" value="{{ number_format($invoice->total_amount, 2) }}" readonly />
+                                <input type="text" class="form-control" id="grand_total" name="grand_total" value="{{ old('grand_total', number_format($invoice->total_amount, 2)) }}" readonly />
                             </div>
                         </div>
 
@@ -89,7 +105,7 @@
                         <div class="mb-4 row">
                             <label for="amount_paid" class="col-md-2 col-form-label">Amount Paid</label>
                             <div class="col-md-10">
-                                <input type="number" step="0.01" class="form-control" id="amount_paid" name="amount_paid" value="{{ $invoice->amount_paid ?? 0 }}" placeholder="Enter amount paid by customer" />
+                                <input type="number" step="0.01" class="form-control" id="amount_paid" name="amount_paid" value="{{ old('amount_paid', $invoice->amount_paid ?? 0) }}" placeholder="Enter amount paid by customer" />
                             </div>
                         </div>
 
@@ -106,11 +122,11 @@
                             <label class="col-md-2 col-form-label">Payment Status</label>
                             <div class="col-md-10">
                                 <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="radio" name="paid" id="paid" value="1" {{ $invoice->paid ? 'checked' : '' }}>
+                                    <input class="form-check-input" type="radio" name="paid" id="paid" value="1" {{ old('paid', $invoice->paid) ? 'checked' : '' }}>
                                     <label class="form-check-label" for="paid">Paid</label>
                                 </div>
                                 <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="radio" name="paid" id="unpaid" value="0" {{ !$invoice->paid ? 'checked' : '' }}>
+                                    <input class="form-check-input" type="radio" name="paid" id="unpaid" value="0" {{ old('paid', !$invoice->paid) ? 'checked' : '' }}>
                                     <label class="form-check-label" for="unpaid">Unpaid</label>
                                 </div>
                             </div>
@@ -191,7 +207,7 @@
             calculateRowTotal(row);
         });
 
-        $(document).on('input', '.quantity', function() {
+        $(document).on('input', '.quantity, .return-quantity', function() {
             calculateRowTotal($(this).closest('tr'));
         });
 
@@ -214,6 +230,8 @@
                     <td><input type="number" class="form-control quantity" name="quantities[]" value="1" /></td>
                     <td><input type="text" class="form-control price" name="prices[]" value="0.00" readonly /></td>
                     <td><input type="text" class="form-control total-price" name="total_price[]" value="0.00" readonly /></td>
+                    <td><input type="number" class="form-control return-quantity" name="return_quantities[]" value="0" min="0" /></td>
+                    <td><input type="date" class="form-control return-date" name="return_dates[]" /></td>
                     <td><input type="text" class="form-control reason" name="reasons[]" placeholder="Enter reason for change" /></td>
                     <td><button type="button" class="btn btn-danger remove-item">Remove</button></td>
                 </tr>`;
@@ -222,22 +240,19 @@
         });
 
         $(document).on('click', '.remove-item', function() {
-    let row = $(this).closest('tr');
-    let existingItemId = row.find('input[name="existing_items[]"]').val();
+            let row = $(this).closest('tr');
+            let existingItemId = row.find('input[name="existing_items[]"]').val();
 
-    if (existingItemId) {
-        // Add a hidden input field to the form for the removed item
-        $('<input>').attr({
-            type: 'hidden',
-            name: 'removed_items[]',
-            value: existingItemId
-        }).appendTo('#invoice-form');
+            if (existingItemId) {
+                $('<input>').attr({
+                    type: 'hidden',
+                    name: 'removed_items[]',
+                    value: existingItemId
+                }).appendTo('#invoice-form');
+            }
 
-        console.log('Hidden input added for removal:', existingItemId); // Debugging line to confirm addition
-    }
-
-    // Remove the row from the table
-    row.remove();
-});
+            row.remove();
+            calculateInvoiceTotal();
+        });
     </script>
 @endsection

@@ -9,11 +9,6 @@ class InvoiceItemHistory extends Model
 {
     use HasFactory;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array
-     */
     protected $fillable = [
         'invoice_item_id',
         'invoice_id',
@@ -24,6 +19,14 @@ class InvoiceItemHistory extends Model
         'previous_price',
         'new_price',
         'change_reason',
+    ];
+
+    // Casting for numeric fields to ensure consistent data types
+    protected $casts = [
+        'previous_quantity' => 'integer',
+        'new_quantity' => 'integer',
+        'previous_price' => 'decimal:2',
+        'new_price' => 'decimal:2',
     ];
 
     /**

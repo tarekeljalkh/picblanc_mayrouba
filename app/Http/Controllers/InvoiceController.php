@@ -7,22 +7,15 @@ use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\InvoiceItemHistory;
 use App\Models\Product;
-use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 
 class InvoiceController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
     public function index(Request $request)
     {
-        // Get the start and end dates from the request, defaulting to today's date if not provided
         $startDate = $request->input('start_date', Carbon::today()->toDateString());
         $endDate = $request->input('end_date', Carbon::today()->toDateString());
-
-        // Query invoices within the date range
         $invoices = Invoice::with('customer')
             ->whereDate('created_at', '>=', $startDate)
             ->whereDate('created_at', '<=', $endDate)
@@ -31,9 +24,6 @@ class InvoiceController extends Controller
         return view('invoices.index', compact('invoices', 'startDate', 'endDate'));
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
     public function create()
     {
         $customers = Customer::all();
@@ -41,13 +31,9 @@ class InvoiceController extends Controller
         return view('invoices.create', compact('customers', 'products'));
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request)
     {
-        // Validate input
-        $request->validate([
+        $validatedData = $request->validate([
             'customer_id' => 'nullable|exists:customers,id',
             'customer_name' => 'nullable|string|max:255|required_without:customer_id',
             'customer_phone' => 'nullable|string|max:255|required_without:customer_id',
@@ -63,40 +49,17 @@ class InvoiceController extends Controller
             'total_vat' => 'nullable|numeric|min:0',
             'total_discount' => 'nullable|numeric|min:0',
             'paid' => 'required|in:0,1',
-            'amount_per_day' => 'required|numeric', // Validating amount per day from the form
-            'days' => 'required|integer', // Validating days from the form
-            'total_amount' => 'required|numeric', // Validating total from the form
+            'amount_per_day' => 'required|numeric',
+            'days' => 'required|integer',
+            'total_amount' => 'required|numeric',
             'note' => 'nullable|string|max:255',
         ]);
 
-        // Handle Customer
-        if ($request->filled('customer_id')) {
-            $customer = Customer::findOrFail($request->customer_id);
-        } else {
-            $customer = Customer::create([
-                'name' => $request->customer_name,
-                'phone' => $request->customer_phone,
-                'address' => $request->customer_address,
-            ]);
-        }
+        $customer = $this->getOrCreateCustomer($request);
 
-        // Calculate and add Invoice Items
-        $invoiceItems = [];
-        foreach ($request->products as $index => $product_id) {
-            $quantity = $request->quantities[$index];
-            $price = $request->prices[$index];
-            $totalPrice = $quantity * $price;
+        $invoiceItems = $this->prepareInvoiceItems($request);
 
-            $invoiceItems[] = new InvoiceItem([
-                'product_id' => $product_id,
-                'quantity' => $quantity,
-                'price' => $price,
-                'total_price' => $totalPrice,
-            ]);
-        }
-
-        // Create the Invoice using values directly from the form
-        $invoice = new Invoice([
+        $invoice = Invoice::create([
             'customer_id' => $customer->id,
             'rental_start_date' => $request->rental_start_date,
             'rental_end_date' => $request->rental_end_date,
@@ -110,33 +73,20 @@ class InvoiceController extends Controller
             'note' => $request->note,
             'user_id' => auth()->id(),
         ]);
-        $invoice->save();
 
-        // Attach items to the invoice
         $invoice->items()->saveMany($invoiceItems);
 
         return redirect()->route('invoices.show', $invoice->id)->with('success', 'Invoice created successfully');
     }
 
-    /**
-     * Show the specified resource.
-     */
     public function show($id)
     {
         $invoice = Invoice::with('items.product')->findOrFail($id);
+        $totals = $this->calculateTotals($invoice->items, $invoice->total_vat, $invoice->total_discount);
 
-        // Calculate subtotal, VAT, discount, and total
-        $subtotal = $invoice->items->sum(fn($item) => $item->quantity * $item->price);
-        $vatTotal = ($subtotal * $invoice->total_vat) / 100;
-        $discountTotal = ($subtotal * $invoice->total_discount) / 100;
-        $total = $subtotal + $vatTotal - $discountTotal;
-
-        return view('invoices.show', compact('invoice', 'subtotal', 'vatTotal', 'discountTotal', 'total'));
+        return view('invoices.show', array_merge(['invoice' => $invoice], $totals));
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
     public function edit($id)
     {
         $invoice = Invoice::with('items')->findOrFail($id);
@@ -146,66 +96,56 @@ class InvoiceController extends Controller
         return view('invoices.edit', compact('invoice', 'customers', 'products'));
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
     public function update(Request $request, $id)
     {
-        // Validate the request
-        $request->validate([
-            'products' => 'required|array|min:1',
-            'products.*' => 'exists:products,id',
-            'quantities' => 'required|array|min:1',
-            'quantities.*' => 'integer|min:1',
-            'prices' => 'required|array|min:1',
-            'prices.*' => 'numeric|min:0',
-            'total_vat' => 'nullable|numeric|min:0',
-            'total_discount' => 'nullable|numeric|min:0',
-            'paid' => 'required|in:0,1',
-            'note' => 'nullable|string|max:255',
-        ]);
+        // $validatedData = $request->validate([
+        //     'rental_start_date' => 'required|date',
+        //     'rental_end_date' => 'required|date|after_or_equal:rental_start_date',
+        //     'products' => 'required|array|min:1',
+        //     'products.*' => 'exists:products,id',
+        //     'quantities' => 'required|array|min:1',
+        //     'quantities.*' => 'integer|min:1',
+        //     'prices' => 'required|array|min:1',
+        //     'prices.*' => 'numeric|min:0',
+        //     'return_quantities.*' => 'nullable|integer|min:0',
+        //     'return_dates.*' => 'nullable|date|before_or_equal:rental_end_date',
+        //     'total_vat' => 'nullable|numeric|min:0',
+        //     'total_discount' => 'nullable|numeric|min:0',
+        //     'paid' => 'required|in:0,1',
+        //     'amount_per_day' => 'required|numeric',
+        //     'days' => 'required|integer',
+        //     'total_amount' => 'required|numeric',
+        //     'note' => 'nullable|string|max:255',
+        // ]);
 
         $invoice = Invoice::with('items')->findOrFail($id);
         $newItemIds = [];
 
-        // Handle additions and updates
         foreach ($request->products as $index => $product_id) {
             $quantity = $request->quantities[$index];
             $price = $request->prices[$index];
             $totalPrice = $quantity * $price;
+            $returnQuantity = $request->return_quantities[$index] ?? 0;
+            $returnDate = $request->return_dates[$index] ?? null;
+            $reason = $request->reasons[$index] ?? null;
 
             if (!empty($request->existing_items[$index])) {
-                // Update existing item
                 $existingItem = $invoice->items()->find($request->existing_items[$index]);
                 if ($existingItem) {
                     $newItemIds[] = $existingItem->id;
                     $previousQuantity = $existingItem->quantity;
-                    $previousPrice = $existingItem->price;
 
-                    // Update the item
+                    if ($returnQuantity > 0) {
+                        $this->logInvoiceHistory($existingItem, 'partial_return', $previousQuantity, $quantity, $existingItem->price, $price, $reason, $returnQuantity, $returnDate);
+                    }
+
                     $existingItem->update([
                         'quantity' => $quantity,
                         'price' => $price,
                         'total_price' => $totalPrice,
                     ]);
-
-                    // Log changes if values have changed
-                    if ($previousQuantity != $quantity || $previousPrice != $price) {
-                        \App\Models\InvoiceItemHistory::create([
-                            'invoice_item_id' => $existingItem->id,
-                            'invoice_id' => $invoice->id,
-                            'product_id' => $product_id,
-                            'action' => 'update',
-                            'previous_quantity' => $previousQuantity,
-                            'new_quantity' => $quantity,
-                            'previous_price' => $previousPrice,
-                            'new_price' => $price,
-                            'change_reason' => $request->reasons[$index] ?? null,
-                        ]);
-                    }
                 }
             } else {
-                // Add new item
                 $newItem = $invoice->items()->create([
                     'product_id' => $product_id,
                     'quantity' => $quantity,
@@ -213,55 +153,23 @@ class InvoiceController extends Controller
                     'total_price' => $totalPrice,
                 ]);
 
-                // Log new addition
-                \App\Models\InvoiceItemHistory::create([
-                    'invoice_item_id' => $newItem->id,
-                    'invoice_id' => $invoice->id,
-                    'product_id' => $product_id,
-                    'action' => 'add',
-                    'new_quantity' => $quantity,
-                    'new_price' => $price,
-                    'change_reason' => $request->reasons[$index] ?? null,
-                ]);
+                $this->logInvoiceHistory($newItem, 'add', null, $quantity, null, $price, $reason);
             }
         }
 
-        // Handle removals
         if ($request->filled('removed_items')) {
-            //dd($request->input('removed_items'));
             foreach ($request->input('removed_items') as $removedItemId) {
                 $removedItem = $invoice->items()->find($removedItemId);
-
                 if ($removedItem) {
-                    try {
-                        // Log removal
-                        \App\Models\InvoiceItemHistory::create([
-                            'invoice_item_id' => $removedItem->id,
-                            'invoice_id' => $invoice->id,
-                            'product_id' => $removedItem->product_id,
-                            'action' => 'remove',
-                            'previous_quantity' => $removedItem->quantity,
-                            'previous_price' => $removedItem->price,
-                            'change_reason' => 'Item removed',
-                        ]);
-
-                        // Delete the item
-                        $removedItem->delete();
-                    } catch (\Exception $e) {
-                        \Log::error('Failed to remove item with ID ' . $removedItemId . ': ' . $e->getMessage());
-                    }
-                } else {
-                    \Log::warning("Item with ID {$removedItemId} not found for removal.");
+                    $this->logInvoiceHistory($removedItem, 'remove', $removedItem->quantity, null, $removedItem->price, null, 'Item removed');
+                    $removedItem->delete();
                 }
             }
         }
 
-        // Update invoice totals
-        $subtotal = $invoice->items->sum(fn($item) => $item->total_price);
-        $vatAmount = ($subtotal * $request->total_vat) / 100;
-        $discountAmount = ($subtotal * $request->total_discount) / 100;
+        $totals = $this->calculateTotals($invoice->items, $request->total_vat, $request->total_discount);
         $invoice->update([
-            'total_amount' => $subtotal + $vatAmount - $discountAmount,
+            'total_amount' => $totals['total'],
             'total_vat' => $request->total_vat ?? 0,
             'total_discount' => $request->total_discount ?? 0,
             'paid' => $request->paid,
@@ -272,9 +180,6 @@ class InvoiceController extends Controller
     }
 
 
-    /**
-     * Remove the specified resource from storage.
-     */
     public function destroy($id)
     {
         try {
@@ -287,66 +192,86 @@ class InvoiceController extends Controller
         }
     }
 
-        /**
-     * Download the invoice as PDF.
-     */
-    public function download($id)
+    private function validateInvoice(Request $request, $isCreate = true)
     {
-        // Fetch the invoice and its associated items
-        $invoice = Invoice::with('items.product')->findOrFail($id);
-
-        // Calculate totals (as in your current logic)
-        $subtotal = 0;
-        $discountTotal = 0;
-        $vatTotal = 0;
-        $total = 0;
-
-        foreach ($invoice->items as $item) {
-            $itemSubtotal = $item->quantity * $item->price;
-            $itemVat = ($itemSubtotal * $item->vat) / 100;
-            $itemDiscount = ($itemSubtotal * $item->discount) / 100;
-            $itemTotal = $itemSubtotal + $itemVat - $itemDiscount;
-
-            $subtotal += $itemSubtotal;
-            $discountTotal += $itemDiscount;
-            $vatTotal += $itemVat;
-            $total += $itemTotal;
-        }
-
-        // Generate the PDF using the 'invoices.download' view
-        $pdf = Pdf::loadView('invoices.download', compact('invoice', 'subtotal', 'discountTotal', 'vatTotal', 'total'));
-
-        // Return the PDF download response
-        return $pdf->download('invoice-' . $invoice->id . '.pdf');
+        return $request->validate([
+            'customer_id' => 'nullable|exists:customers,id',
+            'customer_name' => 'nullable|string|max:255|required_without:customer_id',
+            'customer_phone' => 'nullable|string|max:255|required_without:customer_id',
+            'customer_address' => 'nullable|string|max:255|required_without:customer_id',
+            'rental_start_date' => 'required|date',
+            'rental_end_date' => 'required|date|after_or_equal:rental_start_date',
+            'products' => 'required|array|min:1',
+            'products.*' => 'exists:products,id',
+            'quantities' => 'required|array|min:1',
+            'quantities.*' => 'integer|min:1',
+            'prices' => 'required|array|min:1',
+            'prices.*' => 'numeric|min:0',
+            'total_vat' => 'nullable|numeric|min:0',
+            'total_discount' => 'nullable|numeric|min:0',
+            'paid' => 'required|in:0,1',
+            'amount_per_day' => 'required|numeric',
+            'days' => 'required|integer',
+            'total_amount' => 'required|numeric',
+            'note' => 'nullable|string|max:255',
+        ]);
     }
 
-        /**
-     * Print the invoice.
-     */
-    public function print($id)
+    private function getOrCreateCustomer(Request $request)
     {
-        $invoice = Invoice::with('items.product')->findOrFail($id);
-
-        // Initialize totals
-        $subtotal = 0;
-        $discountTotal = 0;
-        $vatTotal = 0;
-        $total = 0;
-
-        foreach ($invoice->items as $item) {
-            $itemSubtotal = $item->quantity * $item->price;
-            $itemVat = ($itemSubtotal * $item->vat) / 100;
-            $itemDiscount = ($itemSubtotal * $item->discount) / 100;
-            $itemTotal = $itemSubtotal + $itemVat - $itemDiscount;
-
-            $subtotal += $itemSubtotal;
-            $discountTotal += $itemDiscount;
-            $vatTotal += $itemVat;
-            $total += $itemTotal;
+        if ($request->filled('customer_id')) {
+            return Customer::findOrFail($request->customer_id);
         }
-
-        return view('invoices.print', compact('invoice', 'subtotal', 'discountTotal', 'vatTotal', 'total'));
+        return Customer::create([
+            'name' => $request->customer_name,
+            'phone' => $request->customer_phone,
+            'address' => $request->customer_address,
+        ]);
     }
 
+    private function prepareInvoiceItems(Request $request)
+    {
+        $invoiceItems = [];
+        foreach ($request->products as $index => $product_id) {
+            $quantity = $request->quantities[$index];
+            $price = $request->prices[$index];
+            $totalPrice = $quantity * $price;
 
+            $invoiceItems[] = new InvoiceItem([
+                'product_id' => $product_id,
+                'quantity' => $quantity,
+                'price' => $price,
+                'total_price' => $totalPrice,
+                'rental_start_date' => $request->rental_start_date,
+                'rental_end_date' => $request->rental_end_date,
+                'days' => $request->days,
+            ]);
+        }
+        return $invoiceItems;
+    }
+
+    private function logInvoiceHistory($item, $action, $previousQuantity, $newQuantity, $previousPrice, $newPrice, $reason = null)
+    {
+        InvoiceItemHistory::create([
+            'invoice_item_id' => $item->id,
+            'invoice_id' => $item->invoice_id,
+            'product_id' => $item->product_id,
+            'action' => $action,
+            'previous_quantity' => $previousQuantity,
+            'new_quantity' => $newQuantity,
+            'previous_price' => $previousPrice,
+            'new_price' => $newPrice,
+            'change_reason' => $reason,
+        ]);
+    }
+
+    private function calculateTotals($items, $vatPercentage, $discountPercentage)
+    {
+        $subtotal = $items->sum(fn($item) => $item->quantity * $item->price);
+        $vatAmount = ($subtotal * $vatPercentage) / 100;
+        $discountAmount = ($subtotal * $discountPercentage) / 100;
+        $total = $subtotal + $vatAmount - $discountAmount;
+
+        return compact('subtotal', 'vatAmount', 'discountAmount', 'total');
+    }
 }

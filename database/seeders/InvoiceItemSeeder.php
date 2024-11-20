@@ -28,8 +28,6 @@ class InvoiceItemSeeder extends Seeder
             'quantity' => 2,
             'price' => 150.00,
             'total_price' => 2 * 150.00, // Calculate total price as quantity * price
-            'damaged' => false,
-            'damage_charge' => 0
         ]);
 
         InvoiceItem::create([
@@ -38,8 +36,6 @@ class InvoiceItemSeeder extends Seeder
             'quantity' => 1,
             'price' => 200.00,
             'total_price' => 1 * 200.00, // Calculate total price
-            'damaged' => false,
-            'damage_charge' => 0
         ]);
 
         // Add items to the second invoice
@@ -49,8 +45,6 @@ class InvoiceItemSeeder extends Seeder
             'quantity' => 3,
             'price' => 100.00,
             'total_price' => 3 * 100.00, // Calculate total price
-            'damaged' => true,
-            'damage_charge' => 20.00
         ]);
     }
 }

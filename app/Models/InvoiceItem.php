@@ -10,15 +10,21 @@ class InvoiceItem extends Model
 {
     use HasFactory, SoftDeletes;
 
-    // Fields that can be mass assigned
     protected $fillable = [
         'invoice_id',
         'product_id',
         'quantity',
         'price',
         'total_price',
-        'damaged',
-        'damage_charge'
+        'rental_start_date',
+        'rental_end_date',
+        'days'
+    ];
+
+    // Automatically cast dates to Carbon instances for easier date handling
+    protected $casts = [
+        'rental_start_date' => 'datetime',
+        'rental_end_date' => 'datetime',
     ];
 
     // Relationships
@@ -32,9 +38,14 @@ class InvoiceItem extends Model
         return $this->belongsTo(Product::class);
     }
 
-    // Calculate Subtotal for this item
+    // Calculate subtotal for this item
     public function getSubtotalAttribute()
     {
         return $this->price * $this->quantity;
+    }
+
+    public function histories()
+    {
+        return $this->hasMany(InvoiceItemHistory::class, 'invoice_item_id');
     }
 }
