@@ -2,13 +2,13 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class InvoiceItem extends Model
 {
-    use HasFactory, SoftDeletes;
+    use SoftDeletes;
 
     protected $fillable = [
         'invoice_id',
@@ -18,10 +18,11 @@ class InvoiceItem extends Model
         'total_price',
         'rental_start_date',
         'rental_end_date',
-        'days'
+        'days',
+        'returned_quantity',
+        'added_quantity',
     ];
 
-    // Automatically cast dates to Carbon instances for easier date handling
     protected $casts = [
         'rental_start_date' => 'datetime',
         'rental_end_date' => 'datetime',
@@ -38,14 +39,91 @@ class InvoiceItem extends Model
         return $this->belongsTo(Product::class);
     }
 
-    // Calculate subtotal for this item
-    public function getSubtotalAttribute()
+    public function returnDetails()
     {
-        return $this->price * $this->quantity;
+        return $this->hasMany(ReturnDetail::class, 'invoice_item_id');
     }
 
-    public function histories()
+    // Helper Methods
+
+    /**
+     * Calculate cost for the given quantity and days
+     */
+    public function calculateCost($quantity, $days)
     {
-        return $this->hasMany(InvoiceItemHistory::class, 'invoice_item_id');
+        return $this->price * $quantity * $days;
+    }
+
+    /**
+     * Get total cost of all returns
+     */
+    public function getTotalReturnCostAttribute()
+    {
+        return $this->returnDetails->sum('cost');
+    }
+
+    /**
+     * Get total quantity returned
+     */
+    public function getTotalReturnedQuantityAttribute()
+    {
+        return $this->returnDetails->sum('returned_quantity');
+    }
+
+    // Core Methods
+
+    /**
+     * Process a return for this invoice item
+     */
+    public function processReturn($returnedQuantity, $returnDate)
+    {
+        // Validate returned quantity
+        if ($returnedQuantity > ($this->quantity - $this->returned_quantity)) {
+            throw new \Exception("Returned quantity exceeds the remaining quantity.");
+        }
+
+        // Calculate days used
+        $usedDays = max(Carbon::parse($this->rental_start_date)->diffInDays($returnDate), 1);
+
+        // Calculate cost for the return
+        $usedCost = $this->calculateCost($returnedQuantity, $usedDays);
+
+        // Save the return details
+        ReturnDetail::create([
+            'invoice_item_id' => $this->id,
+            'returned_quantity' => $returnedQuantity,
+            'days_used' => $usedDays,
+            'cost' => $usedCost,
+            'return_date' => $returnDate->toDateString(),
+        ]);
+
+        // Update returned quantity
+        $this->returned_quantity += $returnedQuantity;
+        $this->save();
+
+        return [
+            'used_cost' => $usedCost,
+            'remaining_quantity' => $this->quantity - $this->returned_quantity,
+        ];
+    }
+
+    /**
+     * Add quantity to the invoice item
+     */
+    public function addQuantity($addedQuantity, $startDate)
+    {
+        // Update added quantity
+        $this->added_quantity += $addedQuantity;
+
+        // Calculate days for the added quantity
+        $totalDays = max(Carbon::parse($startDate)->diffInDays($this->rental_end_date), 1);
+
+        // Calculate the cost of the added quantity
+        $newCost = $this->calculateCost($addedQuantity, $totalDays);
+
+        // Save changes
+        $this->save();
+
+        return $newCost;
     }
 }

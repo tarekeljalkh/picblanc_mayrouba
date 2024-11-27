@@ -2,28 +2,22 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Carbon\Carbon;
 
 class Invoice extends Model
 {
-    use HasFactory;
-
     protected $fillable = [
         'customer_id',
+        'user_id',
         'total_vat',
         'total_discount',
         'total_amount',
         'amount_per_day',
         'paid',
-        'status',
         'rental_start_date',
         'rental_end_date',
         'days',
-        'payment_method',
         'note',
-        'user_id'
     ];
 
     protected $casts = [
@@ -31,6 +25,7 @@ class Invoice extends Model
         'rental_end_date' => 'datetime',
     ];
 
+    // Relationships
     public function customer()
     {
         return $this->belongsTo(Customer::class);
@@ -41,48 +36,124 @@ class Invoice extends Model
         return $this->hasMany(InvoiceItem::class);
     }
 
-    public function products()
+    public function additionalItems()
     {
-        return $this->hasManyThrough(Product::class, InvoiceItem::class, 'invoice_id', 'id', 'id', 'product_id');
+        return $this->hasMany(AdditionalItem::class, 'invoice_id');
     }
 
+    public function returnDetails()
+    {
+        return $this->hasManyThrough(
+            ReturnDetail::class,
+            InvoiceItem::class,
+            'invoice_id',     // Foreign key on InvoiceItem
+            'invoice_item_id' // Foreign key on ReturnDetail
+        );
+    }
+
+    // Accessors and Calculations
+
+    // Calculate the subtotal (sum of all items' total_price)
     public function getSubtotalAttribute()
     {
-        return $this->items->sum(fn($item) => $item->total_price);
+        return $this->items->sum('total_price');
     }
 
+    // Calculate the total amount of returns
+    public function getReturnedCostAttribute()
+    {
+        return $this->returnDetails()->sum('cost');
+    }
+
+    // Calculate the total amount of added items
+    public function getAddedCostAttribute()
+    {
+        return $this->additionalItems()->sum('total_price');
+    }
+
+    // Calculate VAT amount
     public function getVatAmountAttribute()
     {
-        return ($this->subtotal * $this->total_vat) / 100;
+        $baseAmount = $this->subtotal + $this->added_cost - $this->returned_cost;
+        return ($baseAmount * $this->total_vat) / 100;
     }
 
+    // Calculate discount amount
     public function getDiscountAmountAttribute()
     {
-        return ($this->subtotal * $this->total_discount) / 100;
+        $baseAmount = $this->subtotal + $this->added_cost - $this->returned_cost;
+        return ($baseAmount * $this->total_discount) / 100;
     }
 
+    // Calculate the final total
     public function getTotalPriceAttribute()
     {
-        return $this->subtotal + $this->vatAmount - $this->discountAmount;
+        $baseAmount = $this->subtotal + $this->added_cost - $this->returned_cost;
+        return $baseAmount + $this->vat_amount - $this->discount_amount;
     }
 
-    public function getBalanceAttribute()
+    // Get total returned quantity
+    public function getTotalReturnedQuantityAttribute()
     {
-        return $this->paid ? 0 : $this->totalPrice;
+        return $this->returnDetails->sum('returned_quantity');
     }
 
-    public function getFormattedCreatedAtAttribute()
+    // Get total added quantities
+    public function getTotalAddedQuantityAttribute()
     {
-        return $this->created_at->format('Y-m-d');
+        return $this->additionalItems->sum('quantity');
     }
 
-    public function getFormattedTotalAttribute()
+    // Update and save invoice totals
+    public function recalculateTotals()
     {
-        return number_format($this->totalPrice, 2);
+        $this->total_amount = $this->total_price; // Dynamically calculate total price
+        $this->save();
     }
 
-    public function user()
+    // Query Scopes for Filtering
+    public function scopePaid($query)
     {
-        return $this->belongsTo(User::class);
+        return $query->where('paid', 1);
     }
+
+    public function scopeUnpaid($query)
+    {
+        return $query->where('paid', 0);
+    }
+
+    public function scopeOverdue($query)
+    {
+        return $query->where('rental_end_date', '<', now())->where('paid', 0);
+    }
+
+    public function calculateTotals()
+{
+    $subtotal = $this->items->sum(function ($item) {
+        return $item->price * $item->quantity;
+    });
+
+    $additionalCost = $this->additionalItems->sum(function ($item) {
+        return $item->total_price;
+    });
+
+    $returnedCost = $this->returnDetails->sum(function ($return) {
+        return $return->cost;
+    });
+
+    $discountAmount = ($subtotal + $additionalCost - $returnedCost) * ($this->total_discount / 100);
+    $vatAmount = ($subtotal + $additionalCost - $returnedCost) * ($this->total_vat / 100);
+
+    $total = $subtotal + $additionalCost - $returnedCost + $vatAmount - $discountAmount;
+
+    return [
+        'subtotal' => $subtotal,
+        'additionalCost' => $additionalCost,
+        'returnedCost' => $returnedCost,
+        'discountAmount' => $discountAmount,
+        'vatAmount' => $vatAmount,
+        'total' => $total,
+    ];
+}
+
 }

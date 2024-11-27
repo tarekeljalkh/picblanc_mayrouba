@@ -19,7 +19,6 @@
             <a href="{{ route('dashboard') }}" class="menu-link">
                 <i class="menu-icon tf-icons bx bx-home-smile"></i>
                 <div class="text-truncate" data-i18n="Dashboards">Dashboard</div>
-                <span class="badge rounded-pill bg-danger ms-auto">5</span>
             </a>
         </li>
 

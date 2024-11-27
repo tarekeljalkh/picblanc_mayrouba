@@ -55,12 +55,12 @@
                             <td>${{ number_format($totalUnpaid, 2) }}</td>
                         </tr>
                         <tr>
-                            <td>Total Expenses</td>
-                            <td>${{ number_format($totalExpenses, 2) }}</td>
+                            <td>Additional Costs</td>
+                            <td>${{ number_format($additionalCosts, 2) }}</td>
                         </tr>
                         <tr>
-                            <td>Outstanding Balances</td>
-                            <td>${{ number_format($outstandingBalances, 2) }}</td>
+                            <td>Returned Costs</td>
+                            <td>${{ number_format($returnedCosts, 2) }}</td>
                         </tr>
                         <tr>
                             <td><strong>Net Income</strong></td>
@@ -76,7 +76,6 @@
 
 @push('scripts')
     <script>
-        // Initialize Flatpickr for both date inputs
         flatpickr('#from_date', {
             dateFormat: "Y-m-d"
         });

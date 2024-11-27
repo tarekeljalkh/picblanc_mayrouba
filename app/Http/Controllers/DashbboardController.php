@@ -45,17 +45,31 @@ class DashbboardController extends Controller
             ->whereBetween('created_at', [$from, $to])
             ->sum('total_amount');
 
-        // Assuming you have expenses model, filter total expenses within the date range
-        $totalExpenses = 0;
+        // Fetch additional costs from additionalItems within the date range
+        $additionalCosts = Invoice::whereBetween('created_at', [$from, $to])
+            ->with('additionalItems')
+            ->get()
+            ->sum(fn($invoice) => $invoice->additionalItems->sum('total_price'));
 
-        // Outstanding balances are essentially unpaid invoices
-        $outstandingBalances = $totalUnpaid;
+        // Fetch returned costs from returnDetails within the date range
+        $returnedCosts = Invoice::whereBetween('created_at', [$from, $to])
+            ->with('returnDetails')
+            ->get()
+            ->sum(fn($invoice) => $invoice->returnDetails->sum('cost'));
 
-        // Calculate net income (Total Income - Total Expenses)
-        $netIncome = $totalIncome - $totalExpenses;
+        // Calculate net income
+        $netIncome = $totalIncome - $returnedCosts + $additionalCosts;
 
         // Pass the data and date range to the view
-        return view('trial-balance.index', compact('totalIncome', 'totalUnpaid', 'totalExpenses', 'outstandingBalances', 'netIncome', 'fromDate', 'toDate'));
+        return view('trial-balance.index', compact(
+            'totalIncome',
+            'totalUnpaid',
+            'additionalCosts',
+            'returnedCosts',
+            'netIncome',
+            'fromDate',
+            'toDate'
+        ));
     }
 
 

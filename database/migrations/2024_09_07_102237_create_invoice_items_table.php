@@ -21,6 +21,9 @@ return new class extends Migration
             $table->datetime('rental_start_date')->nullable(); // Start of the rental period for this item
             $table->datetime('rental_end_date')->nullable(); // End of the rental period for this item
             $table->integer('days')->nullable();
+            $table->integer('returned_quantity')->default(0);
+            $table->integer('added_quantity')->default(0);
+            $table->text('details')->nullable();
             $table->timestamps();
             $table->softDeletes(); // Add this line to enable soft deletes
         });

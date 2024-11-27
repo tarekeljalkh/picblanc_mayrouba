@@ -120,14 +120,14 @@
                         <div class="mb-4 row">
                             <label for="total_vat" class="col-md-2 col-form-label">Total VAT (%)</label>
                             <div class="col-md-10">
-                                <input type="number" class="form-control" id="total_vat" name="total_vat" value="10" />
+                                <input type="number" class="form-control" id="total_vat" name="total_vat" value="0" min="0" max="100" />
                             </div>
                         </div>
 
                         <div class="mb-4 row">
                             <label for="total_discount" class="col-md-2 col-form-label">Total Discount (%)</label>
                             <div class="col-md-10">
-                                <input type="number" class="form-control" id="total_discount" name="total_discount" value="0" />
+                                <input type="number" class="form-control" id="total_discount" name="total_discount" value="0" min="0" max="100"/>
                             </div>
                         </div>
 
@@ -232,27 +232,37 @@
         }
 
         function calculateInvoiceTotal() {
-            let subtotal = 0;
-            $('#invoice-items-table tbody tr').each(function() {
-                subtotal += parseFloat($(this).find('.total-price').val()) || 0;
-            });
+    let subtotal = 0;
 
-            let vat = parseFloat($('#total_vat').val()) || 0;
-            let discount = parseFloat($('#total_discount').val()) || 0;
-            let vatAmount = (subtotal * vat) / 100;
-            let discountAmount = (subtotal * discount) / 100;
-            let amountPerDay = subtotal + vatAmount - discountAmount;
-            $('#amount_per_day').val(amountPerDay.toFixed(2));
+    // Calculate the subtotal of invoice items
+    $('#invoice-items-table tbody tr').each(function() {
+        subtotal += parseFloat($(this).find('.total-price').val()) || 0;
+    });
 
-            let startDate = new Date($('#rental_start_date').val());
-            let endDate = new Date($('#rental_end_date').val());
-            let days = (startDate && endDate) ? Math.floor((endDate - startDate) / (1000 * 60 * 60 * 24) + 1) : 0;
-            $('#days').val(days);
+    // Calculate the amount per day based on the subtotal
+    let amountPerDay = subtotal;
+    $('#amount_per_day').val(amountPerDay.toFixed(2));
 
-            let grandTotal = amountPerDay * days;
-            $('#total_amount').val(grandTotal.toFixed(2));
-            checkFormValidity();
-        }
+    // Calculate the rental duration in days
+    let startDate = new Date($('#rental_start_date').val());
+    let endDate = new Date($('#rental_end_date').val());
+    let days = (startDate && endDate) ? Math.floor((endDate - startDate) / (1000 * 60 * 60 * 24) + 1) : 0;
+    $('#days').val(days);
+
+    // Calculate VAT and discount for the total amount
+    let vat = parseFloat($('#total_vat').val()) || 0;
+    let discount = parseFloat($('#total_discount').val()) || 0;
+
+    let vatAmount = (subtotal * vat) / 100;
+    let discountAmount = (subtotal * discount) / 100;
+
+    // Calculate the final total amount
+    let totalAmount = (subtotal + vatAmount - discountAmount) * days;
+    $('#total_amount').val(totalAmount.toFixed(2));
+
+    checkFormValidity();
+}
+
 
         function checkFormValidity() {
             let hasCustomer = $('#select_customer').val() || ($('#customer_name').val() && $('#customer_phone').val() && $('#customer_address').val());

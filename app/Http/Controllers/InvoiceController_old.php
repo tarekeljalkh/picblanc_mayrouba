@@ -127,14 +127,16 @@ class InvoiceController extends Controller
      */
     public function show($id)
     {
-        $invoice = Invoice::with('items.product', 'additionalItems', 'returnDetails')->findOrFail($id);
+        $invoice = Invoice::with('items.product')->findOrFail($id);
 
-        $totals = $invoice->calculateTotals();
+        // Calculate subtotal, VAT, discount, and total
+        $subtotal = $invoice->items->sum(fn($item) => $item->quantity * $item->price);
+        $vatTotal = ($subtotal * $invoice->total_vat) / 100;
+        $discountTotal = ($subtotal * $invoice->total_discount) / 100;
+        $total = $subtotal + $vatTotal - $discountTotal;
 
-        return view('invoices.show', compact('invoice', 'totals'));
+        return view('invoices.show', compact('invoice', 'subtotal', 'vatTotal', 'discountTotal', 'total'));
     }
-
-
 
     /**
      * Show the form for editing the specified resource.
@@ -232,29 +234,73 @@ class InvoiceController extends Controller
 
     public function print($id)
     {
-        $invoice = Invoice::with('items.product', 'additionalItems', 'returnDetails')->findOrFail($id);
+        $invoice = Invoice::with('items.product')->findOrFail($id);
 
-        $totals = $invoice->calculateTotals();
+        // Initialize totals
+        $subtotal = 0;
+        $discountTotal = 0;
+        $vatTotal = 0;
+        $total = 0;
 
-        return view('invoices.print', compact('invoice', 'totals'));
+        foreach ($invoice->items as $item) {
+            $itemSubtotal = $item->quantity * $item->price;
+            $itemVat = ($itemSubtotal * $item->vat) / 100;
+            $itemDiscount = ($itemSubtotal * $item->discount) / 100;
+            $itemTotal = $itemSubtotal + $itemVat - $itemDiscount;
+
+            $subtotal += $itemSubtotal;
+            $discountTotal += $itemDiscount;
+            $vatTotal += $itemVat;
+            $total += $itemTotal;
+        }
+
+        return view('invoices.print', compact('invoice', 'subtotal', 'discountTotal', 'vatTotal', 'total'));
     }
-
 
     /**
      * Download the invoice as PDF.
      */
     public function download($id)
     {
-        $invoice = Invoice::with('items.product', 'additionalItems', 'returnDetails')->findOrFail($id);
+        // Fetch the invoice with related data
+        $invoice = Invoice::with(['items.product', 'additionalItems.product', 'returnDetails.invoiceItem.product'])->findOrFail($id);
 
-        $totals = $invoice->calculateTotals();
+        // Initialize totals
+        $subtotal = 0;
+        $discountTotal = 0;
+        $vatTotal = 0;
+        $total = 0;
 
-        $pdf = Pdf::loadView('invoices.download', compact('invoice', 'totals'));
+        // Calculate totals for items
+        foreach ($invoice->items as $item) {
+            $itemSubtotal = $item->price * $item->quantity;
+            $itemVat = ($itemSubtotal * $invoice->total_vat) / 100;
+            $itemDiscount = ($itemSubtotal * $invoice->total_discount) / 100;
+            $itemTotal = $itemSubtotal + $itemVat - $itemDiscount;
 
-        return $pdf->download("invoice-{$invoice->id}.pdf");
+            $subtotal += $itemSubtotal;
+            $discountTotal += $itemDiscount;
+            $vatTotal += $itemVat;
+            $total += $itemTotal;
+        }
+
+        // Add additional items to totals
+        foreach ($invoice->additionalItems as $addedItem) {
+            $subtotal += $addedItem->total_price;
+            $total += $addedItem->total_price; // VAT/discounts are assumed applied at the item level
+        }
+
+        // Subtract returned items from totals
+        foreach ($invoice->returnDetails as $return) {
+            $total -= $return->cost;
+        }
+
+        // Generate the PDF using the updated Blade view
+        $pdf = Pdf::loadView('invoices.download', compact('invoice', 'subtotal', 'discountTotal', 'vatTotal', 'total'));
+
+        // Return the PDF download response
+        return $pdf->download('invoice-' . $invoice->id . '.pdf');
     }
-
-
 
 
     public function processReturns(Request $request, $invoiceId)

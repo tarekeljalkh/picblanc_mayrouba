@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('name');         // Product name
             $table->string('description')->nullable();        // Description name
-            $table->decimal('price', 10, 2); // Price per unit
+            $table->decimal('price', 8, 2); // Price per unit
             $table->timestamps();
         });
     }
