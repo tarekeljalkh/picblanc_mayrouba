@@ -138,19 +138,21 @@ class CustomerController extends Controller
         // Find the customer by ID
         $customer = Customer::findOrFail($id);
 
-        // Query invoices related to this customer
-        $invoicesQuery = Invoice::where('customer_id', $id);
+        // Start building the invoices query
+        $invoicesQuery = Invoice::where('customer_id', $id)
+            ->with(['items.product', 'returnDetails.product']); // Eager-load necessary relationships
 
         // Apply date filtering if provided
         if ($request->has('start_date') && $request->has('end_date')) {
-            $startDate = $request->input('start_date');
-            $endDate = $request->input('end_date');
+            $startDate = Carbon::parse($request->input('start_date'))->startOfDay();
+            $endDate = Carbon::parse($request->input('end_date'))->endOfDay();
             $invoicesQuery->whereBetween('created_at', [$startDate, $endDate]);
         }
 
-        // Get the filtered invoices
-        $invoices = $invoicesQuery->with('items.product')->get();
+        // Execute the query to get invoices
+        $invoices = $invoicesQuery->get();
 
         return view('customers.rental_details', compact('customer', 'invoices'));
     }
+
 }

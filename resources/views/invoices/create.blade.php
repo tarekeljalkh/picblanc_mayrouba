@@ -116,13 +116,7 @@
                             </div>
                         </div>
 
-                        {{-- Total VAT, Discount, Amount Per Day --}}
-                        <div class="mb-4 row">
-                            <label for="total_vat" class="col-md-2 col-form-label">Total VAT (%)</label>
-                            <div class="col-md-10">
-                                <input type="number" class="form-control" id="total_vat" name="total_vat" value="0" min="0" max="100" />
-                            </div>
-                        </div>
+                        {{--Discount, Amount Per Day --}}
 
                         <div class="mb-4 row">
                             <label for="total_discount" class="col-md-2 col-form-label">Total Discount (%)</label>
@@ -249,15 +243,13 @@
     let days = (startDate && endDate) ? Math.floor((endDate - startDate) / (1000 * 60 * 60 * 24) + 1) : 0;
     $('#days').val(days);
 
-    // Calculate VAT and discount for the total amount
-    let vat = parseFloat($('#total_vat').val()) || 0;
+    // Calculate discount for the total amount
     let discount = parseFloat($('#total_discount').val()) || 0;
 
-    let vatAmount = (subtotal * vat) / 100;
     let discountAmount = (subtotal * discount) / 100;
 
     // Calculate the final total amount
-    let totalAmount = (subtotal + vatAmount - discountAmount) * days;
+    let totalAmount = (subtotal - discountAmount) * days;
     $('#total_amount').val(totalAmount.toFixed(2));
 
     checkFormValidity();
@@ -314,6 +306,6 @@
             calculateInvoiceTotal();
         });
 
-        $('#total_vat, #total_discount').on('input', calculateInvoiceTotal);
+        $('#total_discount').on('input', calculateInvoiceTotal);
     </script>
 @endsection

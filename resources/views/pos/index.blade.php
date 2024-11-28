@@ -67,11 +67,7 @@
                     <input type="number" class="form-control" id="rental-days" readonly>
                 </div>
 
-                <!-- VAT, Discount, and Total Amount -->
-                <div class="mb-3">
-                    <label for="total-vat" class="form-label">Total VAT (%)</label>
-                    <input type="number" class="form-control" id="total-vat" value="10">
-                </div>
+                <!-- Discount, and Total Amount -->
                 <div class="mb-3">
                     <label for="total-discount" class="form-label">Total Discount (%)</label>
                     <input type="number" class="form-control" id="total-discount" value="0">
@@ -118,13 +114,48 @@
         </div>
     </div>
 
+
+        <!-- Modal for creating a new customer -->
+        <div class="modal fade" id="newCustomerModal" tabindex="-1" aria-labelledby="newCustomerModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="newCustomerModalLabel">Create New Customer</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form action="{{ route('pos.store') }}" method="POST" enctype="multipart/form-data">
+                            @csrf
+                            <div class="mb-3">
+                                <label for="customer_name" class="form-label">Name</label>
+                                <input type="text" class="form-control" id="customer_name" name="name" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="customer_phone" class="form-label">Phone</label>
+                                <input type="text" class="form-control" id="customer_phone" name="phone" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="customer_address" class="form-label">Address</label>
+                                <input type="text" class="form-control" id="customer_address" name="address">
+                            </div>
+                            <div class="mb-3">
+                                <label for="deposit_card" class="form-label">Deposit Card</label>
+                                <input type="file" class="form-control" id="deposit_card" name="deposit_card">
+                            </div>
+                            <button type="submit" class="btn btn-primary">Save Customer</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     @push('scripts')
         <script>
             let cart = [];
 
             $(document).ready(function() {
                 $('#rental-start-date, #rental-end-date').on('change', calculateDays);
-                $('#total-vat, #total-discount').on('input', calculateTotalAmount);
+                $('#total-discount').on('input', calculateTotalAmount);
                 $('input[name="payment_method"]').on('change', enableCheckoutButton);
                 $('#customer-select').on('change', enableCheckoutButton);
 
@@ -172,13 +203,11 @@
                 function calculateTotalAmount() {
                     let total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
                     const days = parseInt($('#rental-days').val()) || 1;
-                    const totalVat = parseFloat($('#total-vat').val()) || 0;
                     const totalDiscount = parseFloat($('#total-discount').val()) || 0;
 
                     total *= days;
-                    const vatAmount = (total * totalVat) / 100;
                     const discountAmount = (total * totalDiscount) / 100;
-                    const grandTotal = total + vatAmount - discountAmount;
+                    const grandTotal = total - discountAmount;
 
                     $('#total-amount').val(grandTotal.toFixed(2));
                     enableCheckoutButton();
@@ -258,7 +287,6 @@
                             _token: '{{ csrf_token() }}',
                             cart: cart,
                             customer_id: selectedCustomer,
-                            total_vat: $('#total-vat').val(),
                             total_discount: $('#total-discount').val(),
                             status: paymentStatus,
                             payment_method: paymentMethod,

@@ -1,12 +1,11 @@
 daily and season as categories and in the trial balance each one is different
 
-what if customer takes the invoice and returns in half an hour to change i want to see the old price to see how much i will repay him
 
 send invoice via whatsapp
 
 Update Process:
 
-* email remove -> DONE
+* email remove
 * rename product - > brand to :  product - > descirption
 * product->stock remove
 * remove discount and vat from each item
@@ -20,7 +19,18 @@ Update Process:
 * notes in invoices
 * make filter invoices by date
 * balance by item, balance by invoice
+* items returns and additional items on invoice
+* POS product image removed
+* changed cart background to white
 
-me:
-post product image removed
-changed cart background to white
+New Updates:
+
+daily and seasons
+broken items in trial balance
+
+done:
+- create new customer from pos
+- remove vat from invoice
+- in products show returned quantities
+- paid and unpaid in edit
+- add credit card to trial balance

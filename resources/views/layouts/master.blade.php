@@ -65,9 +65,6 @@
 
             <!-- Layout container -->
             <div class="layout-page">
-                <!-- Navbar -->
-                @include('layouts.navbar')
-                <!-- / Navbar -->
 
                 <!-- Content wrapper -->
                 <div class="content-wrapper">

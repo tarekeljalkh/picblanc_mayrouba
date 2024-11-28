@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('invoice_id')->constrained('invoices')->onDelete('cascade'); // Link to invoices table
             $table->foreignId('invoice_item_id')->constrained()->onDelete('cascade'); // Link to invoice_items table
+            $table->foreignId('product_id')->constrained()->onDelete('cascade'); // Link to products table
             $table->integer('returned_quantity');
             $table->integer('days_used'); // Tracks how many days the item was used
             $table->decimal('cost', 10, 2); // Cost incurred for the returned items

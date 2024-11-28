@@ -25,6 +25,7 @@
                             <th>Name</th>
                             <th>Description</th>
                             <th>Rented Quantity</th> <!-- New column -->
+                            <th>Returned Quantity</th> <!-- New column -->
                             <th>Price</th>
                             <th>Action</th>
                         </tr>
@@ -35,6 +36,7 @@
                                 <td>{{ $product->name }}</td>
                                 <td>{{ $product->description }}</td>
                                 <td>{{ $product->rentedQuantity() }}</td> <!-- Display rented quantity -->
+                                <td>{{ $product->returnedQuantity() }}</td> <!-- Display returned quantity -->
                                 <td>{{ $product->price }}</td>
                                 <td>
                                     <!-- Conditional Button for Rental Details -->

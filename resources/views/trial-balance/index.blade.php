@@ -47,7 +47,7 @@
                     </thead>
                     <tbody>
                         <tr>
-                            <td>Total Income</td>
+                            <td>Total Paid Invoices</td>
                             <td>${{ number_format($totalIncome, 2) }}</td>
                         </tr>
                         <tr>
@@ -55,17 +55,9 @@
                             <td>${{ number_format($totalUnpaid, 2) }}</td>
                         </tr>
                         <tr>
-                            <td>Additional Costs</td>
-                            <td>${{ number_format($additionalCosts, 2) }}</td>
-                        </tr>
-                        <tr>
-                            <td>Returned Costs</td>
-                            <td>${{ number_format($returnedCosts, 2) }}</td>
-                        </tr>
-                        <tr>
-                            <td><strong>Net Income</strong></td>
-                            <td><strong>${{ number_format($netIncome, 2) }}</strong></td>
-                        </tr>
+                            <td>Total Paid by Credit Card</td>
+                            <td>${{ number_format($totalCreditCard, 2) }}</td> <!-- Add this row -->
+                                        </tr>
                     </tbody>
                 </table>
             </div>

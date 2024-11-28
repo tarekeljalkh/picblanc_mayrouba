@@ -1,13 +1,12 @@
 <?php
 
+use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DashbboardController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\POSController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\ReturnController;
-use App\Http\Controllers\AdditionController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -21,6 +20,11 @@ Route::get('/invoice', function () {
 Route::get('/dashboard', [DashbboardController::class, 'index'])->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
+
+        // Category
+    Route::post('/set-category', [CategoryController::class, 'setCategory'])->name('set.category');
+    Route::get('/get-category', [CategoryController::class, 'getCategory'])->name('category.get');
+
     // Profile
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
@@ -39,6 +43,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/invoices/{id}/print', [InvoiceController::class, 'print'])->name('invoices.print');
     Route::get('/invoices/{id}/download', [InvoiceController::class, 'download'])->name('invoices.download');
     Route::post('/invoices/customer/store', [InvoiceController::class, 'customer_store'])->name('invoices.customer.store');
+    Route::patch('/invoices/{id}/update-payment-status', [InvoiceController::class, 'updatePaymentStatus'])->name('invoices.updatePaymentStatus');
 
     // Manage returns
     Route::post('/invoices/{invoice}/process-returns', [InvoiceController::class, 'processReturns'])->name('invoices.process-returns');

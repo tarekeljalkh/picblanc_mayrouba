@@ -9,7 +9,7 @@ class Invoice extends Model
     protected $fillable = [
         'customer_id',
         'user_id',
-        'total_vat',
+        'category_id',
         'total_discount',
         'total_amount',
         'amount_per_day',
@@ -26,10 +26,22 @@ class Invoice extends Model
     ];
 
     // Relationships
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    // Relationships
     public function customer()
     {
         return $this->belongsTo(Customer::class);
     }
+
+    public function category()
+    {
+        return $this->belongsTo(Category::class);
+    }
+
 
     public function items()
     {
@@ -71,12 +83,6 @@ class Invoice extends Model
         return $this->additionalItems()->sum('total_price');
     }
 
-    // Calculate VAT amount
-    public function getVatAmountAttribute()
-    {
-        $baseAmount = $this->subtotal + $this->added_cost - $this->returned_cost;
-        return ($baseAmount * $this->total_vat) / 100;
-    }
 
     // Calculate discount amount
     public function getDiscountAmountAttribute()
@@ -89,7 +95,7 @@ class Invoice extends Model
     public function getTotalPriceAttribute()
     {
         $baseAmount = $this->subtotal + $this->added_cost - $this->returned_cost;
-        return $baseAmount + $this->vat_amount - $this->discount_amount;
+        return $baseAmount - $this->discount_amount;
     }
 
     // Get total returned quantity
@@ -128,32 +134,29 @@ class Invoice extends Model
     }
 
     public function calculateTotals()
-{
-    $subtotal = $this->items->sum(function ($item) {
-        return $item->price * $item->quantity;
-    });
+    {
+        $subtotal = $this->items->sum(function ($item) {
+            return $item->price * $item->quantity;
+        });
 
-    $additionalCost = $this->additionalItems->sum(function ($item) {
-        return $item->total_price;
-    });
+        $additionalCost = $this->additionalItems->sum(function ($item) {
+            return $item->total_price;
+        });
 
-    $returnedCost = $this->returnDetails->sum(function ($return) {
-        return $return->cost;
-    });
+        $returnedCost = $this->returnDetails->sum(function ($return) {
+            return $return->cost;
+        });
 
-    $discountAmount = ($subtotal + $additionalCost - $returnedCost) * ($this->total_discount / 100);
-    $vatAmount = ($subtotal + $additionalCost - $returnedCost) * ($this->total_vat / 100);
+        $discountAmount = ($subtotal + $additionalCost - $returnedCost) * ($this->total_discount / 100);
 
-    $total = $subtotal + $additionalCost - $returnedCost + $vatAmount - $discountAmount;
+        $total = $subtotal + $additionalCost - $returnedCost - $discountAmount;
 
-    return [
-        'subtotal' => $subtotal,
-        'additionalCost' => $additionalCost,
-        'returnedCost' => $returnedCost,
-        'discountAmount' => $discountAmount,
-        'vatAmount' => $vatAmount,
-        'total' => $total,
-    ];
-}
-
+        return [
+            'subtotal' => $subtotal,
+            'additionalCost' => $additionalCost,
+            'returnedCost' => $returnedCost,
+            'discountAmount' => $discountAmount,
+            'total' => $total,
+        ];
+    }
 }

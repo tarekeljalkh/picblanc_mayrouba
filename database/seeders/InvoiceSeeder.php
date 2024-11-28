@@ -1,8 +1,10 @@
 <?php
+
 namespace Database\Seeders;
 
 use App\Models\Customer;
 use App\Models\Invoice;
+use App\Models\Category;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Database\Seeder;
@@ -14,11 +16,15 @@ class InvoiceSeeder extends Seeder
      */
     public function run(): void
     {
-        // Ensure that at least two customers exist, otherwise create them
+        // Ensure at least two categories exist
+        $dailyCategory = Category::firstOrCreate(['name' => 'daily']);
+        $seasonCategory = Category::firstOrCreate(['name' => 'season']);
+
+        // Ensure that at least two customers exist
         $customer1 = Customer::first() ?? Customer::factory()->create();
         $customer2 = Customer::skip(1)->first() ?? Customer::factory()->create();
 
-        // Ensure there is a user for seeding purposes
+        // Ensure a user exists for seeding purposes
         $user = User::first() ?? User::factory()->create();
 
         // Set rental dates and calculate days between them
@@ -33,30 +39,30 @@ class InvoiceSeeder extends Seeder
         // Create dummy invoices
         Invoice::create([
             'customer_id' => $customer1->id,
-            'user_id' => $user->id, // Assigning user_id
-            'payment_method' => 'cash', // Setting payment method
+            'category_id' => $dailyCategory->id, // Associating with daily category
+            'user_id' => $user->id,
+            'payment_method' => 'cash',
             'rental_start_date' => $startDate1->format('Y-m-d'),
             'rental_end_date' => $endDate1->format('Y-m-d'),
             'days' => $days1,
-            'amount_per_day' => 100, // Assuming a fixed amount per day for seeding
-            'total_vat' => 10, // 10% VAT
-            'total_discount' => 5, // 5% Discount
-            'total_amount' => (100 * $days1) * 1.1 * 0.95, // Calculate total with VAT and discount
+            'amount_per_day' => 100,
+            'total_discount' => 5,
+            'total_amount' => (100 * $days1) * 1.1 * 0.95,
             'paid' => false,
             'status' => 'active'
         ]);
 
         Invoice::create([
             'customer_id' => $customer2->id,
-            'user_id' => $user->id, // Assigning user_id
-            'payment_method' => 'credit_card', // Setting payment method
+            'category_id' => $seasonCategory->id, // Associating with season category
+            'user_id' => $user->id,
+            'payment_method' => 'credit_card',
             'rental_start_date' => $startDate2->format('Y-m-d'),
             'rental_end_date' => $endDate2->format('Y-m-d'),
             'days' => $days2,
-            'amount_per_day' => 150, // Assuming a fixed amount per day for seeding
-            'total_vat' => 8, // 8% VAT
-            'total_discount' => 3, // 3% Discount
-            'total_amount' => (150 * $days2) * 1.08 * 0.97, // Calculate total with VAT and discount
+            'amount_per_day' => 150,
+            'total_discount' => 3,
+            'total_amount' => (150 * $days2) * 1.08 * 0.97,
             'paid' => true,
             'status' => 'returned'
         ]);

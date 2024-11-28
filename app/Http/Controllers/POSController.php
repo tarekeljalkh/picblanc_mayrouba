@@ -1,6 +1,8 @@
 <?php
+
 namespace App\Http\Controllers;
 
+use App\Models\Category;
 use App\Models\Customer;
 use App\Models\Invoice;
 use App\Models\Product;
@@ -28,7 +30,6 @@ class POSController extends Controller
             'cart.*.id' => 'required|exists:products,id',
             'cart.*.quantity' => 'required|integer|min:1',
             'cart.*.price' => 'required|numeric|min:0',
-            'total_vat' => 'required|numeric|min:0',
             'total_discount' => 'nullable|numeric|min:0',
             'status' => 'required|in:paid,unpaid',
             'payment_method' => 'required|in:cash,credit_card',
@@ -36,6 +37,13 @@ class POSController extends Controller
             'rental_start_date' => 'required|date',
             'rental_end_date' => 'required|date|after_or_equal:rental_start_date',
         ]);
+
+        // Get current category from session
+        $currentCategoryName = session('category', 'daily'); // Default to 'daily'
+
+        // Fetch the category ID based on the current category name
+        $category = Category::where('name', $currentCategoryName)->firstOrFail();
+
 
         // Calculate the subtotal for one day
         $subtotal = array_sum(array_map(function ($item) {
@@ -45,21 +53,20 @@ class POSController extends Controller
         // Calculate the rental total based on rental_days
         $rentalTotal = $subtotal * $request->rental_days;
 
-        // Calculate VAT and discount amounts
-        $vatAmount = ($rentalTotal * $request->total_vat) / 100;
+        // Calculate discount amounts
         $discountAmount = ($rentalTotal * ($request->total_discount ?? 0)) / 100;
 
-        // Calculate the final total amount including VAT and discount
-        $totalAmount = $rentalTotal + $vatAmount - $discountAmount;
+        // Calculate the final total amount including discount
+        $totalAmount = $rentalTotal - $discountAmount;
 
         // Create the invoice with rental_days
         $invoice = Invoice::create([
             'customer_id' => $request->customer_id,
             'user_id' => Auth::id(),
-            'total_vat' => $request->total_vat,
+            'category_id' => $category->id, // Associate the invoice with the selected category
             'total_discount' => $request->total_discount ?? 0,
             'amount_per_day' => $subtotal,
-            'total_amount' => $totalAmount, // Final total with VAT and discount applied
+            'total_amount' => $totalAmount, // Final total with discount applied
             'paid' => $request->status === 'paid',
             'payment_method' => $request->payment_method,
             'days' => $request->rental_days, // Store rental_days as days in the database
@@ -88,7 +95,6 @@ class POSController extends Controller
         // Validate incoming request data
         $request->validate([
             'name' => 'required|string|min:3',
-            'email' => 'nullable|email|unique:customers,email',
             'phone' => 'required|numeric|unique:customers,phone',
             'address' => 'nullable|string',
             'deposit_card' => 'nullable|file|mimes:jpeg,png,jpg,gif|max:2048', // Optional file validation
@@ -103,7 +109,6 @@ class POSController extends Controller
         // Create new customer
         $customer = new Customer();
         $customer->name = $request->name;
-        $customer->email = $request->email;
         $customer->phone = $request->phone;
         $customer->address = $request->address;
         $customer->deposit_card = $filePath;

@@ -87,7 +87,7 @@
                 <p>+1 (123) 456 7891, +44 (876) 543 2198</p>
             </div>
             <div>
-                <h5>Invoice #{{ $invoice->id }}</h5>
+                <h5>Rental Agreement #{{ $invoice->id }}</h5>
                 <p><strong>Date Issued:</strong> {{ $invoice->created_at->format('M d, Y') }}</p>
                 <p><strong>Date Due:</strong> {{ $invoice->rental_end_date ? $invoice->rental_end_date->format('M d, Y') : 'N/A' }}</p>
             </div>
@@ -207,10 +207,6 @@
             <tr>
                 <td><strong>Discount:</strong></td>
                 <td class="text-end">- ${{ number_format($totals['discountAmount'], 2) }}</td>
-            </tr>
-            <tr>
-                <td><strong>VAT:</strong></td>
-                <td class="text-end">+ ${{ number_format($totals['vatAmount'], 2) }}</td>
             </tr>
             <tr>
                 <td><strong>Total:</strong></td>

@@ -14,6 +14,7 @@ return new class extends Migration
         Schema::create('invoices', function (Blueprint $table) {
             $table->id();
             $table->foreignId('customer_id')->constrained('customers')->onDelete('cascade');
+            $table->foreignId('category_id')->nullable()->constrained('categories')->after('id');
             $table->decimal('total_vat', 5, 2)->default(0); // VAT percentage
             $table->decimal('total_discount', 5, 2)->default(0); // Discount percentage
             $table->decimal('amount_per_day', 10, 2); // Total amount of the invoice per day

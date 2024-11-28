@@ -15,6 +15,12 @@ class Product extends Model
         return $this->hasMany(InvoiceItem::class, 'product_id');
     }
 
+        // Relationship to get returned items for the product
+        public function returnedItems()
+        {
+            return $this->hasMany(ReturnDetail::class, 'product_id');
+        }
+
     // Calculate the total rented quantity (active invoices only)
     public function rentedQuantity()
     {
@@ -24,6 +30,13 @@ class Product extends Model
             })
             ->sum('quantity');
     }
+
+    // Calculate the total returned quantity
+    public function returnedQuantity()
+    {
+        return $this->returnedItems()->sum('returned_quantity');
+    }
+
 
     // Get the detailed rentals including customer and dates
     public function rentals()

@@ -12,6 +12,7 @@ class ReturnDetail extends Model
     protected $fillable = [
         'invoice_id',          // ID of the invoice this return belongs to
         'invoice_item_id',     // ID of the specific invoice item
+        'product_id', // Add product_id here
         'returned_quantity',   // Quantity returned
         'days_used',           // Days the returned items were used
         'cost',                // Cost for the returned items
@@ -27,6 +28,12 @@ class ReturnDetail extends Model
     /**
      * Get the invoice item associated with this return detail.
      */
+
+     public function product()
+     {
+         return $this->belongsTo(Product::class);
+     }
+
     public function invoiceItem()
     {
         return $this->belongsTo(InvoiceItem::class, 'invoice_item_id');

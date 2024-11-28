@@ -14,6 +14,41 @@
     <div class="menu-inner-shadow"></div>
 
     <ul class="menu-inner py-1">
+
+        <!-- Category Selector -->
+        <li class="menu-header small text-uppercase">
+            <span class="menu-header-text">Category</span>
+        </li>
+        <li class="menu-item">
+            <form id="category-form" method="POST" action="{{ route('set.category') }}" class="px-3 py-2">
+                @csrf
+                <div class="menu-link d-flex align-items-center">
+                    <input type="radio" name="category" value="daily" id="daily-category"
+                        class="form-check-input me-2" {{ session('category', 'daily') === 'daily' ? 'checked' : '' }}
+                        onchange="document.getElementById('category-form').submit()">
+                    <label for="daily-category" class="form-check-label text-truncate mb-0">
+                        Daily
+                    </label>
+                </div>
+                <div class="menu-link d-flex align-items-center">
+                    <input type="radio" name="category" value="season" id="season-category"
+                        class="form-check-input me-2" {{ session('category') === 'season' ? 'checked' : '' }}
+                        onchange="document.getElementById('category-form').submit()">
+                    <label for="season-category" class="form-check-label text-truncate mb-0">
+                        Season
+                    </label>
+                </div>
+            </form>
+        </li>
+        <!-- End of Category Selector -->
+
+
+        <!-- Dashboard Header -->
+        <li class="menu-header small text-uppercase">
+            <span class="menu-header-text">Dashboard</span>
+        </li>
+
+
         <!-- Dashboard -->
         <li class="menu-item {{ Route::is('dashboard') ? 'active' : '' }}">
             <a href="{{ route('dashboard') }}" class="menu-link">
@@ -27,7 +62,6 @@
             <span class="menu-header-text">POS</span>
         </li>
 
-        <!-- POS -->
         <li class="menu-item {{ Route::is('pos.index') ? 'active' : '' }}">
             <a href="{{ route('pos.index') }}" class="menu-link">
                 <i class="menu-icon tf-icons bx bx-cart"></i>
@@ -44,7 +78,7 @@
         <!-- Customers -->
         <li class="menu-item {{ Route::is('customers.index') ? 'active' : '' }}">
             <a href="{{ route('customers.index') }}" class="menu-link">
-                <i class="menu-icon tf-icons bx bx-user-circle"></i> <!-- Always shows 'bx bx-user-circle' -->
+                <i class="menu-icon tf-icons bx bx-user-circle"></i>
                 <div class="text-truncate" data-i18n="Customers">Customers</div>
             </a>
         </li>
@@ -52,7 +86,7 @@
         <!-- Products -->
         <li class="menu-item {{ Route::is('products.index') ? 'active' : '' }}">
             <a href="{{ route('products.index') }}" class="menu-link">
-                <i class="menu-icon tf-icons bx bx-chat"></i> <!-- You can apply similar logic here if needed -->
+                <i class="menu-icon tf-icons bx bx-chat"></i>
                 <div class="text-truncate" data-i18n="Products">Products</div>
                 <div class="badge rounded-pill bg-label-primary text-uppercase fs-tiny ms-auto"></div>
             </a>
@@ -67,6 +101,10 @@
             </a>
         </li>
 
+        <!-- Balance -->
+        <li class="menu-header small text-uppercase">
+            <span class="menu-header-text">Balance</span>
+        </li>
 
 
         <!-- Trial Balance -->
@@ -81,14 +119,43 @@
         <!-- Trial Balance by Products -->
         <li class="menu-item {{ Route::is('trialbalance.products') ? 'active' : '' }}">
             <a href="{{ route('trialbalance.products') }}" class="menu-link">
-                <i class="menu-icon tf-icons bx bx-cart"></i> <!-- Use a different icon as appropriate -->
+                <i class="menu-icon tf-icons bx bx-cart"></i>
                 <div class="text-truncate" data-i18n="Trial Balance by Products">Trial Balance by Products</div>
                 <div class="badge rounded-pill bg-label-primary text-uppercase fs-tiny ms-auto"></div>
             </a>
         </li>
 
+        <!-- Profile -->
+        <li class="menu-header small text-uppercase">
+            <span class="menu-header-text">Profile</span>
+        </li>
+
+
+        <!-- Admin Profile Dropdown -->
+        <li class="menu-item">
+            <a href="javascript:void(0);" class="menu-link menu-toggle">
+                <i class="menu-icon tf-icons bx bx-user-circle"></i>
+                <div class="text-truncate" data-i18n="Admin">Profile</div>
+            </a>
+            <ul class="menu-sub">
+                <li class="menu-item {{ Route::is('profile.edit') ? 'active' : '' }}">
+                    <a href="{{ route('profile.edit') }}" class="menu-link">
+                        <div class="text-truncate" data-i18n="Edit Profile">Edit Profile</div>
+                    </a>
+                </li>
+                        <li class="menu-item">
+                    <a href="javascript:void(0);" onclick="document.getElementById('logout-form').submit();"
+                        class="menu-link">
+                        <div class="text-truncate" data-i18n="Logout">Logout</div>
+                    </a>
+                    <form id="logout-form" method="POST" action="{{ route('logout') }}" class="d-none">
+                        @csrf
+                    </form>
+                </li>
+            </ul>
+        </li>
+
+        <!-- End Admin Profile Dropdown -->
 
     </ul>
-
-
 </aside>

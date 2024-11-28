@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Category;
 use App\Models\Customer;
 use App\Models\Invoice;
 use App\Models\Product;
@@ -12,18 +13,33 @@ class DashbboardController extends Controller
 {
     public function index()
     {
-        // Fetch total clients, invoices, paid and unpaid totals
-        $customersCount = Customer::count();
-        $invoicesCount = Invoice::count();
-        $totalPaid = Invoice::where('paid', true)->count();
-        $totalUnpaid = Invoice::where('paid', false)->count();
+        // Fetch the category from the session (default to 'daily' if not set)
+        $categoryName = session('category', 'daily');
 
-        // Fetch latest invoices (for the table)
-        $invoices = Invoice::with('customer')->orderBy('created_at', 'desc')->paginate(10);
+        // Find the category ID based on the name
+        $category = Category::where('name', $categoryName)->first();
+
+        if (!$category) {
+            // Handle the case where the category doesn't exist (optional)
+            abort(404, 'Category not found.');
+        }
+
+        // Fetch total clients, invoices, paid and unpaid totals for the category
+        $customersCount = Customer::count();
+        $invoicesCount = Invoice::where('category_id', $category->id)->count();
+        $totalPaid = Invoice::where('category_id', $category->id)->where('paid', true)->count();
+        $totalUnpaid = Invoice::where('category_id', $category->id)->where('paid', false)->count();
+
+        // Fetch latest invoices for the selected category
+        $invoices = Invoice::with('customer')
+            ->where('category_id', $category->id)
+            ->orderBy('created_at', 'desc')
+            ->paginate(10);
 
         // Pass the data to the view
         return view('dashboard', compact('customersCount', 'invoicesCount', 'totalPaid', 'totalUnpaid', 'invoices'));
     }
+
 
     public function trialBalance(Request $request)
     {
@@ -35,38 +51,36 @@ class DashbboardController extends Controller
         $from = Carbon::parse($fromDate)->startOfDay();
         $to = Carbon::parse($toDate)->endOfDay();
 
-        // Fetch total income (paid invoices) within the date range
-        $totalIncome = Invoice::where('paid', true)
+        // Fetch the selected category from the session
+        $categoryName = session('category', 'daily');
+        $category = Category::where('name', $categoryName)->first();
+
+        if (!$category) {
+            return redirect()->back()->withErrors('Invalid category selected.');
+        }
+
+        // Fetch total income (paid invoices) within the date range and category
+        $totalIncome = Invoice::where('category_id', $category->id)
+            ->where('paid', true)
             ->whereBetween('created_at', [$from, $to])
             ->sum('total_amount');
 
-        // Fetch total unpaid amount (unpaid invoices) within the date range
-        $totalUnpaid = Invoice::where('paid', false)
+        // Fetch total unpaid amount (unpaid invoices) within the date range and category
+        $totalUnpaid = Invoice::where('category_id', $category->id)
+            ->where('paid', false)
             ->whereBetween('created_at', [$from, $to])
             ->sum('total_amount');
 
-        // Fetch additional costs from additionalItems within the date range
-        $additionalCosts = Invoice::whereBetween('created_at', [$from, $to])
-            ->with('additionalItems')
-            ->get()
-            ->sum(fn($invoice) => $invoice->additionalItems->sum('total_price'));
+        // Fetch total amount of invoices paid by credit card within the category
+        $totalCreditCard = Invoice::where('category_id', $category->id)
+            ->where('payment_method', 'credit_card')
+            ->whereBetween('created_at', [$from, $to])
+            ->sum('total_amount');
 
-        // Fetch returned costs from returnDetails within the date range
-        $returnedCosts = Invoice::whereBetween('created_at', [$from, $to])
-            ->with('returnDetails')
-            ->get()
-            ->sum(fn($invoice) => $invoice->returnDetails->sum('cost'));
-
-        // Calculate net income
-        $netIncome = $totalIncome - $returnedCosts + $additionalCosts;
-
-        // Pass the data and date range to the view
         return view('trial-balance.index', compact(
             'totalIncome',
             'totalUnpaid',
-            'additionalCosts',
-            'returnedCosts',
-            'netIncome',
+            'totalCreditCard',
             'fromDate',
             'toDate'
         ));
@@ -83,9 +97,20 @@ class DashbboardController extends Controller
         $from = Carbon::parse($fromDate)->startOfDay();
         $to = Carbon::parse($toDate)->endOfDay();
 
-        // Fetch product sales data within the date range
-        $productSales = Product::with(['invoiceItems' => function ($query) use ($from, $to) {
-            $query->whereBetween('created_at', [$from, $to]);
+        // Fetch the selected category from the session
+        $categoryName = session('category', 'daily');
+        $category = Category::where('name', $categoryName)->first();
+
+        if (!$category) {
+            return redirect()->back()->withErrors('Invalid category selected.');
+        }
+
+        // Fetch product sales data within the date range and category
+        $productSales = Product::with(['invoiceItems' => function ($query) use ($from, $to, $category) {
+            $query->whereBetween('created_at', [$from, $to])
+                  ->whereHas('invoice', function ($invoiceQuery) use ($category) {
+                      $invoiceQuery->where('category_id', $category->id);
+                  });
         }])->get();
 
         // Calculate total income and other data from product sales
@@ -108,6 +133,5 @@ class DashbboardController extends Controller
 
         return view('trial-balance.products', compact('productBalances', 'totalIncome', 'fromDate', 'toDate'));
     }
-
 
 }

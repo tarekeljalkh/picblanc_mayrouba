@@ -41,6 +41,7 @@
                         <tr>
                             <th>Invoice ID</th>
                             <th>Total Price</th>
+                            <th>Returned Cost</th>
                             <th>Status</th>
                             <th>Rental Start Date</th>
                             <th>Rental End Date</th>
@@ -51,9 +52,14 @@
                     </thead>
                     <tbody>
                         @foreach ($invoices as $invoice)
+                            @php
+                                $returnedCost = $invoice->returnDetails->sum('cost');
+                                $netTotal = $invoice->total_amount - $returnedCost; // Adjusted total considering returns
+                            @endphp
                             <tr>
                                 <td>{{ $invoice->id }}</td>
-                                <td>${{ $invoice->total }}</td>
+                                <td>${{ number_format($netTotal, 2) }}</td>
+                                <td>${{ number_format($returnedCost, 2) }}</td>
                                 <td>{{ ucfirst($invoice->status) }}</td>
                                 <td>{{ \Carbon\Carbon::parse($invoice->rental_start_date)->format('d/m/Y') }}</td>
                                 <td>{{ \Carbon\Carbon::parse($invoice->rental_end_date)->format('d/m/Y') }}</td>

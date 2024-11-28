@@ -22,19 +22,20 @@
                                 <img src="{{ asset('logo_croped.png') }}" alt="Logo" width="150">
                             </span>
                         </div>
-                        <p class="mb-2">Office 149, 450 South Brand Brooklyn</p>
-                        <p class="mb-2">San Diego County, CA 91905, USA</p>
-                        <p class="mb-0">+1 (123) 456 7891, +44 (876) 543 2198</p>
+                        <p class="mb-2">Mayrouba Rental Shop</p>
+                        <p class="mb-2">Tel: 03 71 57 57</p>
                     </div>
                     <div>
-                        <h5 class="mb-6">Invoice #{{ $invoice->id }}</h5>
+                        <h5 class="mb-6">Rental Agreement #{{ $invoice->id }}</h5>
                         <div class="mb-1 text-heading">
                             <span>Date Issued:</span>
                             <span class="fw-medium">{{ $invoice->created_at->format('M d, Y') }}</span>
                         </div>
+                        <br>
                         <div class="text-heading">
-                            <span>Date Due:</span>
-                            <span class="fw-medium">{{ $invoice->rental_end_date ? $invoice->rental_end_date->format('M d, Y') : 'N/A' }}</span>
+                            <p>Rental Start: {{ $invoice->rental_start_date->format('d/m/Y H:i') }}</p>
+                            <p>Rental End: {{ $invoice->rental_end_date->format('d/m/Y H:i') }}</p>
+                            <p>Rental Days: {{ $invoice->days }} day(s)</p>
                         </div>
                     </div>
                 </div>
@@ -51,10 +52,6 @@
                         <p class="mb-0">{{ $invoice->customer->email }}</p>
                     </div>
                     <div class="col-xl-6 col-md-12 col-sm-7 col-12">
-                        <h6>Rental Details:</h6>
-                        <p>Rental Start: {{ $invoice->rental_start_date->format('d/m/Y H:i') }}</p>
-                        <p>Rental End: {{ $invoice->rental_end_date->format('d/m/Y H:i') }}</p>
-                        <p>Rental Days: {{ $invoice->days }} day(s)</p>
                     </div>
                 </div>
             </div>
@@ -158,7 +155,6 @@
                                 <p class="mb-2">Additional Costs:</p>
                                 <p class="mb-2 text-danger">Returned Costs:</p>
                                 <p class="mb-2">Discount ({{ $invoice->total_discount }}%):</p>
-                                <p class="mb-2 border-bottom pb-2">VAT ({{ $invoice->total_vat }}%):</p>
                                 <p class="mb-0">Total:</p>
                             </td>
                             <td class="text-end px-0 py-6 w-px-100 fw-medium text-heading">
@@ -167,14 +163,12 @@
                                     $addedCost = $totals['additionalCost'];
                                     $returnedCost = $totals['returnedCost'];
                                     $discountAmount = $totals['discountAmount'];
-                                    $vatAmount = $totals['vatAmount'];
                                     $total = $totals['total'];
                                 @endphp
                                 <p class="fw-medium mb-2">${{ number_format($subtotal, 2) }}</p>
                                 <p class="fw-medium mb-2">${{ number_format($addedCost, 2) }}</p>
                                 <p class="fw-medium mb-2 text-danger">- ${{ number_format($returnedCost, 2) }}</p>
                                 <p class="fw-medium mb-2">- ${{ number_format($discountAmount, 2) }}</p>
-                                <p class="fw-medium mb-2 border-bottom pb-2">+ ${{ number_format($vatAmount, 2) }}</p>
                                 <p class="fw-medium mb-0">${{ number_format($total, 2) }}</p>
                             </td>
                         </tr>

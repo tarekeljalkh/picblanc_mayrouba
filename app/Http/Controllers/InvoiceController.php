@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Category;
 use App\Models\Customer;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
@@ -23,9 +24,20 @@ class InvoiceController extends Controller
      */
     public function index()
     {
-        $invoices = Invoice::with('customer')->get();
-        return view('invoices.index', compact('invoices'));
+        // Retrieve the selected category from the session, default to 'daily' if none is set
+        $selectedCategory = session('category', 'daily');
+
+        // Fetch invoices based on the selected category
+        $invoices = Invoice::with('customer')
+            ->whereHas('category', function ($query) use ($selectedCategory) {
+                $query->where('name', $selectedCategory);
+            })
+            ->get();
+
+        // Pass the selected category to the view
+        return view('invoices.index', compact('invoices', 'selectedCategory'));
     }
+
 
     /**
      * Show the form for creating a new resource.
@@ -42,6 +54,7 @@ class InvoiceController extends Controller
      */
     public function store(Request $request)
     {
+
         // Validate input
         $request->validate([
             'customer_id' => 'nullable|exists:customers,id',
@@ -56,7 +69,6 @@ class InvoiceController extends Controller
             'quantities.*' => 'integer|min:1',
             'prices' => 'required|array|min:1',
             'prices.*' => 'numeric|min:0',
-            'total_vat' => 'nullable|numeric|min:0',
             'total_discount' => 'nullable|numeric|min:0',
             'paid' => 'required|in:0,1',
             'amount_per_day' => 'required|numeric', // Validating amount per day from the form
@@ -75,13 +87,17 @@ class InvoiceController extends Controller
             ]);
         }
 
+        // Retrieve the selected category from the session
+        $categoryName = session('category', 'daily');
+        $category = Category::where('name', $categoryName)->firstOrFail();
+
         // Create the Invoice
         $invoice = new Invoice([
             'customer_id' => $customer->id,
             'user_id' => auth()->user()->id,
+            'category_id' => $category->id, // Associate the invoice with the selected category
             'rental_start_date' => $request->rental_start_date,
             'rental_end_date' => $request->rental_end_date,
-            'total_vat' => $request->total_vat ?? 0,
             'total_discount' => $request->total_discount ?? 0,
             'amount_per_day' => $request->amount_per_day,
             'total_amount' => $request->total_amount,
@@ -161,7 +177,6 @@ class InvoiceController extends Controller
             'quantities.*' => 'integer|min:1',
             'prices' => 'required|array|min:1',
             'prices.*' => 'numeric|min:0',
-            'total_vat' => 'nullable|numeric|min:0',
             'total_discount' => 'nullable|numeric|min:0',
             'paid' => 'required|in:0,1',
         ]);
@@ -179,12 +194,11 @@ class InvoiceController extends Controller
         $rentalDays = $rentalStartDate->diffInDays($rentalEndDate) + 1;
 
         // Update invoice details
-        $invoice->total_vat = $request->total_vat ?? 0;
         $invoice->total_discount = $request->total_discount ?? 0;
         $invoice->paid = (bool) $request->paid;
         $invoice->status = 'active';
 
-        // Recalculate subtotal, VAT, discount, and total for updated items
+        // Recalculate subtotal, discount, and total for updated items
         $subtotal = 0;
         $invoice->items()->delete();
         $invoiceItems = [];
@@ -203,10 +217,9 @@ class InvoiceController extends Controller
             ]);
         }
 
-        // Calculate total with VAT and discount
-        $vatAmount = ($subtotal * $invoice->total_vat) / 100;
+        // Calculate total and discount
         $discountAmount = ($subtotal * $invoice->total_discount) / 100;
-        $invoice->total = $subtotal + $vatAmount - $discountAmount;
+        $invoice->total = $subtotal - $discountAmount;
         $invoice->save();
 
         // Attach updated items to the invoice
@@ -259,6 +272,7 @@ class InvoiceController extends Controller
 
     public function processReturns(Request $request, $invoiceId)
     {
+
         $invoice = Invoice::with('items.product')->findOrFail($invoiceId);
 
         $validated = $request->validate([
@@ -287,26 +301,27 @@ class InvoiceController extends Controller
                     'return_date' => 'required|date|after_or_equal:' . $invoice->rental_start_date . '|before_or_equal:' . $invoice->rental_end_date,
                 ])->validate();
 
+                // Calculate the cost of the return
                 $returnDate = Carbon::parse($validatedReturn['return_date']);
                 $usedDays = $returnDate->diffInDays(Carbon::parse($invoice->rental_start_date)) + 1;
                 $usedCost = $item->price * $usedDays * $validatedReturn['quantity'];
 
-                // Save return details with invoice_id
+                // Create the return record
                 ReturnDetail::create([
-                    'invoice_id' => $invoice->id, // Provide the invoice ID
+                    'invoice_id' => $invoice->id,
                     'invoice_item_id' => $item->id,
+                    'product_id' => $item->product_id, // Include the product_id here
                     'returned_quantity' => $validatedReturn['quantity'],
                     'days_used' => $usedDays,
                     'cost' => $usedCost,
                     'return_date' => $validatedReturn['return_date'],
                 ]);
 
-                // Update returned quantity
-                $item->returned_quantity += $validatedReturn['quantity'];
-                $item->save();
+                // Update the item's returned quantity
+                $item->increment('returned_quantity', $validatedReturn['quantity']);
 
-                // Update invoice total
-                $invoice->total_amount -= $usedCost;
+                // Update the invoice total amount
+                $invoice->decrement('total_amount', $usedCost);
             }
 
             $invoice->save();
@@ -318,7 +333,6 @@ class InvoiceController extends Controller
             return redirect()->back()->with('error', 'Failed to process returns: ' . $e->getMessage());
         }
     }
-
 
     public function addItems(Request $request, $invoiceId)
     {
@@ -372,6 +386,15 @@ class InvoiceController extends Controller
         }
     }
 
+    public function updatePaymentStatus(Request $request, $id)
+    {
+        $invoice = Invoice::findOrFail($id);
+        $validated = $request->validate([
+            'paid' => 'required|boolean',
+        ]);
 
+        $invoice->update(['paid' => $validated['paid']]);
 
+        return redirect()->route('invoices.edit', $id)->with('success', 'Payment status updated successfully.');
+    }
 }
