@@ -24,11 +24,10 @@ Update Process:
 * changed cart background to white
 
 New Updates:
-
-daily and seasons
 broken items in trial balance
 
 done:
+- categories : daily and seasons
 - create new customer from pos
 - remove vat from invoice
 - in products show returned quantities
