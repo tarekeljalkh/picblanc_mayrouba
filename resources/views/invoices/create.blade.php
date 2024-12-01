@@ -38,7 +38,8 @@
                                         </option>
                                     @endforeach
                                 </select>
-                                <button type="button" class="btn btn-warning mt-2" id="clear_customer_form">Clear Form</button>
+                                <button type="button" class="btn btn-warning mt-2" id="clear_customer_form">Clear
+                                    Form</button>
                             </div>
                         </div>
 
@@ -101,14 +102,20 @@
                                                 <select class="form-select product-select" name="products[]">
                                                     <option value="">Select Product</option>
                                                     @foreach ($products as $product)
-                                                        <option value="{{ $product->id }}" data-price="{{ $product->price }}">{{ $product->name }}</option>
+                                                        <option value="{{ $product->id }}"
+                                                            data-price="{{ $product->price }}">{{ $product->name }}
+                                                        </option>
                                                     @endforeach
                                                 </select>
                                             </td>
-                                            <td><input type="number" class="form-control quantity" name="quantities[]" value="1" /></td>
-                                            <td><input type="text" class="form-control price" name="prices[]" value="0.00" readonly /></td>
-                                            <td><input type="text" class="form-control total-price" name="total_price[]" value="0.00" readonly /></td>
-                                            <td><button type="button" class="btn btn-danger remove-item">Remove</button></td>
+                                            <td><input type="number" class="form-control quantity" name="quantities[]"
+                                                    value="1" /></td>
+                                            <td><input type="text" class="form-control price" name="prices[]"
+                                                    value="0.00" readonly /></td>
+                                            <td><input type="text" class="form-control total-price"
+                                                    name="total_price[]" value="0.00" readonly /></td>
+                                            <td><button type="button" class="btn btn-danger remove-item">Remove</button>
+                                            </td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -116,19 +123,21 @@
                             </div>
                         </div>
 
-                        {{--Discount, Amount Per Day --}}
+                        {{-- Discount, Amount Per Day --}}
 
                         <div class="mb-4 row">
                             <label for="total_discount" class="col-md-2 col-form-label">Total Discount (%)</label>
                             <div class="col-md-10">
-                                <input type="number" class="form-control" id="total_discount" name="total_discount" value="0" min="0" max="100"/>
+                                <input type="number" class="form-control" id="total_discount" name="total_discount"
+                                    value="0" min="0" max="100" />
                             </div>
                         </div>
 
                         <div class="mb-4 row">
                             <label for="amount_per_day" class="col-md-2 col-form-label">Amount Per Day</label>
                             <div class="col-md-10">
-                                <input type="text" class="form-control" id="amount_per_day" name="amount_per_day" value="0.00" readonly />
+                                <input type="text" class="form-control" id="amount_per_day" name="amount_per_day"
+                                    value="0.00" readonly />
                             </div>
                         </div>
 
@@ -136,14 +145,16 @@
                         <div class="mb-4 row">
                             <label for="days" class="col-md-2 col-form-label">Days</label>
                             <div class="col-md-10">
-                                <input type="text" class="form-control" id="days" name="days" value="0" readonly />
+                                <input type="text" class="form-control" id="days" name="days" value="0"
+                                    readonly />
                             </div>
                         </div>
 
                         <div class="mb-4 row">
                             <label for="total_amount" class="col-md-2 col-form-label">Total Amount</label>
                             <div class="col-md-10">
-                                <input type="text" class="form-control" id="total_amount" name="total_amount" value="0.00" readonly />
+                                <input type="text" class="form-control" id="total_amount" name="total_amount"
+                                    value="0.00" readonly />
                             </div>
                         </div>
 
@@ -152,15 +163,35 @@
                             <label class="col-md-2 col-form-label">Payment Status</label>
                             <div class="col-md-10">
                                 <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="radio" name="paid" id="paid" value="1" {{ old('paid', 0) == 1 ? 'checked' : '' }}>
+                                    <input class="form-check-input" type="radio" name="paid" id="paid"
+                                        value="1" checked>
                                     <label class="form-check-label" for="paid">Paid</label>
                                 </div>
                                 <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="radio" name="paid" id="unpaid" value="0" {{ old('paid', 0) == 0 ? 'checked' : '' }}>
+                                    <input class="form-check-input" type="radio" name="paid" id="unpaid"
+                                        value="0">
                                     <label class="form-check-label" for="unpaid">Unpaid</label>
                                 </div>
                             </div>
                         </div>
+
+                        {{-- Payment Method --}}
+                        <div class="mb-4 row">
+                            <label class="col-md-2 col-form-label">Payment Method</label>
+                            <div class="col-md-10">
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="payment_method"
+                                        id="payment_cash" value="cash" checked>
+                                    <label class="form-check-label" for="payment_cash">Cash</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="payment_method"
+                                        id="payment_credit_card" value="credit_card">
+                                    <label class="form-check-label" for="payment_credit_card">Credit Card</label>
+                                </div>
+                            </div>
+                        </div>
+
 
                         <div class="mb-4 row">
                             <label for="note" class="col-md-2 col-form-label">Note</label>
@@ -173,7 +204,8 @@
                         {{-- Create Button --}}
                         <div class="mt-4 row">
                             <div class="col-md-12 text-end">
-                                <button type="submit" class="btn btn-primary" id="create-invoice-button" disabled>Create Invoice</button>
+                                <button type="submit" class="btn btn-primary" id="create-invoice-button" disabled>Create
+                                    Invoice</button>
                             </div>
                         </div>
 
@@ -226,38 +258,39 @@
         }
 
         function calculateInvoiceTotal() {
-    let subtotal = 0;
+            let subtotal = 0;
 
-    // Calculate the subtotal of invoice items
-    $('#invoice-items-table tbody tr').each(function() {
-        subtotal += parseFloat($(this).find('.total-price').val()) || 0;
-    });
+            // Calculate the subtotal of invoice items
+            $('#invoice-items-table tbody tr').each(function() {
+                subtotal += parseFloat($(this).find('.total-price').val()) || 0;
+            });
 
-    // Calculate the amount per day based on the subtotal
-    let amountPerDay = subtotal;
-    $('#amount_per_day').val(amountPerDay.toFixed(2));
+            // Calculate the amount per day based on the subtotal
+            let amountPerDay = subtotal;
+            $('#amount_per_day').val(amountPerDay.toFixed(2));
 
-    // Calculate the rental duration in days
-    let startDate = new Date($('#rental_start_date').val());
-    let endDate = new Date($('#rental_end_date').val());
-    let days = (startDate && endDate) ? Math.floor((endDate - startDate) / (1000 * 60 * 60 * 24) + 1) : 0;
-    $('#days').val(days);
+            // Calculate the rental duration in days
+            let startDate = new Date($('#rental_start_date').val());
+            let endDate = new Date($('#rental_end_date').val());
+            let days = (startDate && endDate) ? Math.floor((endDate - startDate) / (1000 * 60 * 60 * 24) + 1) : 0;
+            $('#days').val(days);
 
-    // Calculate discount for the total amount
-    let discount = parseFloat($('#total_discount').val()) || 0;
+            // Calculate discount for the total amount
+            let discount = parseFloat($('#total_discount').val()) || 0;
 
-    let discountAmount = (subtotal * discount) / 100;
+            let discountAmount = (subtotal * discount) / 100;
 
-    // Calculate the final total amount
-    let totalAmount = (subtotal - discountAmount) * days;
-    $('#total_amount').val(totalAmount.toFixed(2));
+            // Calculate the final total amount
+            let totalAmount = (subtotal - discountAmount) * days;
+            $('#total_amount').val(totalAmount.toFixed(2));
 
-    checkFormValidity();
-}
+            checkFormValidity();
+        }
 
 
         function checkFormValidity() {
-            let hasCustomer = $('#select_customer').val() || ($('#customer_name').val() && $('#customer_phone').val() && $('#customer_address').val());
+            let hasCustomer = $('#select_customer').val() || ($('#customer_name').val() && $('#customer_phone').val() && $(
+                '#customer_address').val());
             let hasProducts = false;
 
             $('#invoice-items-table .product-select').each(function() {

@@ -14,6 +14,7 @@ class Invoice extends Model
         'total_amount',
         'amount_per_day',
         'paid',
+        'payment_method',
         'rental_start_date',
         'rental_end_date',
         'days',

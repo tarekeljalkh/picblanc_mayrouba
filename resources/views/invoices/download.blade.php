@@ -89,8 +89,10 @@
             <div>
                 <h5>Rental Agreement #{{ $invoice->id }}</h5>
                 <p><strong>Date Issued:</strong> {{ $invoice->created_at->format('M d, Y') }}</p>
-                <p><strong>Date Due:</strong> {{ $invoice->rental_end_date ? $invoice->rental_end_date->format('M d, Y') : 'N/A' }}</p>
-            </div>
+                <p><strong>Rental Start:</strong> {{ $invoice->rental_start_date->format('d/m/Y') }}</p>
+                <p><strong>Rental End:</strong> {{ $invoice->rental_end_date->format('d/m/Y') }}</p>
+                <p><strong>Rental Days:</strong> {{ $invoice->days }} day(s)</p>
+</div>
         </div>
 
         <hr />

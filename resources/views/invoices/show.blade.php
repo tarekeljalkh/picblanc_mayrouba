@@ -33,8 +33,8 @@
                         </div>
                         <br>
                         <div class="text-heading">
-                            <p>Rental Start: {{ $invoice->rental_start_date->format('d/m/Y H:i') }}</p>
-                            <p>Rental End: {{ $invoice->rental_end_date->format('d/m/Y H:i') }}</p>
+                            <p>Rental Start: {{ $invoice->rental_start_date->format('d/m/Y') }}</p>
+                            <p>Rental End: {{ $invoice->rental_end_date->format('d/m/Y') }}</p>
                             <p>Rental Days: {{ $invoice->days }} day(s)</p>
                         </div>
                     </div>

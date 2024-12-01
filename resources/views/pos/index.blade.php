@@ -2,6 +2,10 @@
 
 @section('title', 'POS')
 
+@push('styles')
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+@endpush
+
 @section('content')
     <div class="container">
         <div class="row">
@@ -77,17 +81,19 @@
                 <!-- Payment Status and Method -->
                 <div class="mb-4">
                     <label class="form-label">Payment Status</label><br>
-                    <input class="form-check-input" type="radio" name="payment_status" id="paid-radio" value="paid">
+                    <input class="form-check-input" type="radio" name="payment_status" id="paid-radio" value="paid"
+                        checked>
                     <label class="form-check-label" for="paid-radio">Paid</label>
 
                     <input class="form-check-input ms-2" type="radio" name="payment_status" id="unpaid-radio"
-                        value="unpaid" checked>
+                        value="unpaid">
                     <label class="form-check-label" for="unpaid-radio">Unpaid</label>
                 </div>
 
                 <div class="mb-4">
                     <label class="form-label">Payment Method</label><br>
-                    <input class="form-check-input" type="radio" name="payment_method" id="cash-radio" value="cash">
+                    <input class="form-check-input" type="radio" name="payment_method" id="cash-radio" value="cash"
+                        checked>
                     <label class="form-check-label" for="cash-radio">Cash</label>
 
                     <input class="form-check-input ms-2" type="radio" name="payment_method" id="credit-radio"
@@ -115,45 +121,56 @@
     </div>
 
 
-        <!-- Modal for creating a new customer -->
-        <div class="modal fade" id="newCustomerModal" tabindex="-1" aria-labelledby="newCustomerModalLabel" aria-hidden="true">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="newCustomerModalLabel">Create New Customer</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <form action="{{ route('pos.store') }}" method="POST" enctype="multipart/form-data">
-                            @csrf
-                            <div class="mb-3">
-                                <label for="customer_name" class="form-label">Name</label>
-                                <input type="text" class="form-control" id="customer_name" name="name" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="customer_phone" class="form-label">Phone</label>
-                                <input type="text" class="form-control" id="customer_phone" name="phone" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="customer_address" class="form-label">Address</label>
-                                <input type="text" class="form-control" id="customer_address" name="address">
-                            </div>
-                            <div class="mb-3">
-                                <label for="deposit_card" class="form-label">Deposit Card</label>
-                                <input type="file" class="form-control" id="deposit_card" name="deposit_card">
-                            </div>
-                            <button type="submit" class="btn btn-primary">Save Customer</button>
-                        </form>
-                    </div>
+    <!-- Modal for creating a new customer -->
+    <div class="modal fade" id="newCustomerModal" tabindex="-1" aria-labelledby="newCustomerModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="newCustomerModalLabel">Create New Customer</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form action="{{ route('pos.store') }}" method="POST" enctype="multipart/form-data">
+                        @csrf
+                        <div class="mb-3">
+                            <label for="customer_name" class="form-label">Name</label>
+                            <input type="text" class="form-control" id="customer_name" name="name" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="customer_phone" class="form-label">Phone</label>
+                            <input type="text" class="form-control" id="customer_phone" name="phone" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="customer_address" class="form-label">Address</label>
+                            <input type="text" class="form-control" id="customer_address" name="address">
+                        </div>
+                        <div class="mb-3">
+                            <label for="deposit_card" class="form-label">Deposit Card</label>
+                            <input type="file" class="form-control" id="deposit_card" name="deposit_card">
+                        </div>
+                        <button type="submit" class="btn btn-primary">Save Customer</button>
+                    </form>
                 </div>
             </div>
         </div>
+    </div>
 
     @push('scripts')
+        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+        <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
         <script>
             let cart = [];
 
             $(document).ready(function() {
+
+                $('#customer-select').select2({
+                    placeholder: 'Select A Customer',
+                    allowClear: true
+                });
+
                 $('#rental-start-date, #rental-end-date').on('change', calculateDays);
                 $('#total-discount').on('input', calculateTotalAmount);
                 $('input[name="payment_method"]').on('change', enableCheckoutButton);

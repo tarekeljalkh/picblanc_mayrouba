@@ -71,6 +71,7 @@ class InvoiceController extends Controller
             'prices.*' => 'numeric|min:0',
             'total_discount' => 'nullable|numeric|min:0',
             'paid' => 'required|in:0,1',
+            'payment_method' => 'required|in:cash,credit_card', // Validate payment method
             'amount_per_day' => 'required|numeric', // Validating amount per day from the form
             'days' => 'required|integer', // Validating days from the form
             'total_amount' => 'required|numeric' // Validating total from the form
@@ -102,6 +103,7 @@ class InvoiceController extends Controller
             'amount_per_day' => $request->amount_per_day,
             'total_amount' => $request->total_amount,
             'paid' => $request->paid,
+            'payment_method' => $request->payment_method, // Store payment method
             'status' => 'active',
             'days' => $request->days,
         ]);
