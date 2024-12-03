@@ -42,36 +42,38 @@
                             <hr class="d-none d-sm-block d-lg-none">
                         </div>
 
-                        <!-- Paid Amount Card -->
+                        <!-- Paid Invoices Card -->
                         <div class="col-sm-6 col-lg-3">
-                            <div
-                                class="d-flex justify-content-between align-items-center border-end pb-4 pb-sm-0 card-widget-3">
+                            <a href="{{ route('invoices.index', ['status' => 'paid']) }}"
+                                class="d-flex justify-content-between align-items-center card-widget-3 border-end pb-4 pb-sm-0">
                                 <div>
-                                    <h4 class="mb-0">{{ $totalPaid }}</h4> <!-- Dynamic Paid Total -->
-                                    <p class="mb-0">Paid</p>
+                                    <h4 class="mb-0">{{ $totalPaid }}</h4>
+                                    <p class="mb-0">Paid Invoices</p>
                                 </div>
                                 <div class="avatar me-sm-6">
                                     <span class="avatar-initial rounded bg-label-secondary text-heading">
                                         <i class="bx bx-check-double bx-26px"></i>
                                     </span>
                                 </div>
-                            </div>
+                            </a>
                         </div>
 
-                        <!-- Unpaid Amount Card -->
+                        <!-- Unpaid Invoices Card -->
                         <div class="col-sm-6 col-lg-3">
-                            <div class="d-flex justify-content-between align-items-center">
+                            <a href="{{ route('invoices.index', ['status' => 'unpaid']) }}"
+                                class="d-flex justify-content-between align-items-center card-widget-3 border-end pb-4 pb-sm-0">
                                 <div>
-                                    <h4 class="mb-0">{{ $totalUnpaid }}</h4> <!-- Dynamic Unpaid Total -->
-                                    <p class="mb-0">Unpaid</p>
+                                    <h4 class="mb-0">{{ $totalUnpaid }}</h4>
+                                    <p class="mb-0">Unpaid Invoices</p>
                                 </div>
-                                <div class="avatar">
+                                <div class="avatar me-sm-6">
                                     <span class="avatar-initial rounded bg-label-secondary text-heading">
-                                        <i class="bx bx-error-circle bx-26px"></i>
+                                        <i class="bx bx-time bx-26px"></i>
                                     </span>
                                 </div>
-                            </div>
+                            </a>
                         </div>
+
                     </div>
                 </div>
             </div>

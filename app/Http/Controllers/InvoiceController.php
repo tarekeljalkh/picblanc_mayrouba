@@ -22,21 +22,47 @@ class InvoiceController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    // public function index()
+    // {
+    //     // Retrieve the selected category from the session, default to 'daily' if none is set
+    //     $selectedCategory = session('category', 'daily');
+
+    //     // Fetch invoices based on the selected category
+    //     $invoices = Invoice::with('customer')
+    //         ->whereHas('category', function ($query) use ($selectedCategory) {
+    //             $query->where('name', $selectedCategory);
+    //         })
+    //         ->get();
+
+    //     // Pass the selected category to the view
+    //     return view('invoices.index', compact('invoices', 'selectedCategory'));
+    // }
+
+    public function index(Request $request)
     {
         // Retrieve the selected category from the session, default to 'daily' if none is set
         $selectedCategory = session('category', 'daily');
 
-        // Fetch invoices based on the selected category
+        // Get the status filter from the request
+        $status = $request->query('status');
+
+        // Fetch invoices based on the selected category and optional status filter
         $invoices = Invoice::with('customer')
             ->whereHas('category', function ($query) use ($selectedCategory) {
                 $query->where('name', $selectedCategory);
             })
-            ->get();
+            ->when($status === 'paid', function ($query) {
+                $query->where('paid', true);
+            })
+            ->when($status === 'unpaid', function ($query) {
+                $query->where('paid', false);
+            })
+            ->paginate(10); // Paginate results for better performance
 
-        // Pass the selected category to the view
-        return view('invoices.index', compact('invoices', 'selectedCategory'));
+        // Pass the selected category and status to the view
+        return view('invoices.index', compact('invoices', 'selectedCategory', 'status'));
     }
+
 
 
     /**

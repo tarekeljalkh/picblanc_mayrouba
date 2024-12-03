@@ -40,7 +40,6 @@ class DashbboardController extends Controller
         return view('dashboard', compact('customersCount', 'invoicesCount', 'totalPaid', 'totalUnpaid', 'invoices'));
     }
 
-
     public function trialBalance(Request $request)
     {
         // Set default "from" and "to" dates to today if not provided
@@ -108,9 +107,9 @@ class DashbboardController extends Controller
         // Fetch product sales data within the date range and category
         $productSales = Product::with(['invoiceItems' => function ($query) use ($from, $to, $category) {
             $query->whereBetween('created_at', [$from, $to])
-                  ->whereHas('invoice', function ($invoiceQuery) use ($category) {
-                      $invoiceQuery->where('category_id', $category->id);
-                  });
+                ->whereHas('invoice', function ($invoiceQuery) use ($category) {
+                    $invoiceQuery->where('category_id', $category->id);
+                });
         }])->get();
 
         // Calculate total income and other data from product sales
@@ -133,5 +132,4 @@ class DashbboardController extends Controller
 
         return view('trial-balance.products', compact('productBalances', 'totalIncome', 'fromDate', 'toDate'));
     }
-
 }

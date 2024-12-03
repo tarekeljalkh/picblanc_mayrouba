@@ -13,15 +13,12 @@ Route::get('/', function () {
     return view('auth.login');
 });
 
-Route::get('/invoice', function () {
-    return view('create-invoice');
-});
 
 Route::get('/dashboard', [DashbboardController::class, 'index'])->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
 
-        // Category
+    // Category
     Route::post('/set-category', [CategoryController::class, 'setCategory'])->name('set.category');
     Route::get('/get-category', [CategoryController::class, 'getCategory'])->name('category.get');
 
@@ -40,10 +37,12 @@ Route::middleware('auth')->group(function () {
     Route::resource('products', ProductController::class);
 
     // Invoices
+    Route::resource('invoices', InvoiceController::class);
     Route::get('/invoices/{id}/print', [InvoiceController::class, 'print'])->name('invoices.print');
     Route::get('/invoices/{id}/download', [InvoiceController::class, 'download'])->name('invoices.download');
     Route::post('/invoices/customer/store', [InvoiceController::class, 'customer_store'])->name('invoices.customer.store');
     Route::patch('/invoices/{id}/update-payment-status', [InvoiceController::class, 'updatePaymentStatus'])->name('invoices.updatePaymentStatus');
+    // filter paid and unpaid
 
     // Manage returns
     Route::post('/invoices/{invoice}/process-returns', [InvoiceController::class, 'processReturns'])->name('invoices.process-returns');
@@ -51,7 +50,6 @@ Route::middleware('auth')->group(function () {
     // Add new items
     Route::post('/invoices/{invoice}/add-items', [InvoiceController::class, 'addItems'])->name('invoices.add-items');
 
-    Route::resource('invoices', InvoiceController::class);
 
     // POS
     Route::get('/pos', [POSController::class, 'index'])->name('pos.index');
