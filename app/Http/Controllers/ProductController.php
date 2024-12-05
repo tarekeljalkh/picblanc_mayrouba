@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Category;
 use App\Models\Product;
 use Illuminate\Http\Request;
 
@@ -10,11 +11,22 @@ class ProductController extends Controller
     /**
      * Display a listing of the resource.
      */
+
     public function index()
     {
-        $products = Product::all();
+        // Retrieve the selected category from the session, default to 'daily'
+        $selectedCategory = session('category', 'daily');
+
+        // Fetch the category from the database
+        $category = Category::where('name', $selectedCategory)->firstOrFail();
+
+        // Fetch products that belong to the selected category
+        $products = Product::where('category_id', $category->id)->get();
+
+        // Pass the products and selected category to the view
         return view('products.index', compact('products'));
     }
+
 
     /**
      * Show the form for creating a new resource.
@@ -36,11 +48,16 @@ class ProductController extends Controller
             'price' => 'required|numeric',
         ]);
 
+        // Retrieve the selected category from the session
+        $categoryName = session('category', 'daily');
+        $category = Category::where('name', $categoryName)->firstOrFail();
+
         // Create a new Product
         $product = new Product();
         $product->name = $request->name;
         $product->description = $request->description;
         $product->price = $request->price;
+        $product->category_id = $category->id; // Assign the category from the session
         $product->save();
 
         return redirect()->route('products.index')

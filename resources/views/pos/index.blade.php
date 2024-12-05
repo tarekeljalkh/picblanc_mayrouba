@@ -3,7 +3,7 @@
 @section('title', 'POS')
 
 @push('styles')
-    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="{{ asset('assets/vendor/libs/select2/select2.css') }}" />
 @endpush
 
 @section('content')
@@ -35,18 +35,24 @@
             <!-- Right Column: Customer Selection and Cart -->
             <div class="col-md-4" style="background-color: #ffffff;">
                 <h4 class="my-4">Select Customer</h4>
-                <div class="mb-4 d-flex justify-content-between">
-                    <select id="customer-select" class="form-select">
+                <div class="mb-6 d-flex justify-content-between">
+                    <!-- Customer Dropdown with Search -->
+                    <select id="customer-select" class="select2 form-select form-select-lg" data-allow-clear="true">
                         <option value="" disabled selected>Select a customer</option>
                         @foreach ($customers as $customer)
-                            <option value="{{ $customer->id }}"
+                            <option
+                                value="{{ $customer->id }}"
+                                data-phone="{{ $customer->phone }}"
                                 {{ session('new_customer_id') == $customer->id ? 'selected' : '' }}>
-                                {{ $customer->name }}
+                                {{ $customer->name }} ({{ $customer->phone }})
                             </option>
                         @endforeach
                     </select>
-                    <button class="btn btn-primary ms-2" data-bs-toggle="modal" data-bs-target="#newCustomerModal">Create
-                        New Customer</button>
+
+                    <!-- Button to Create New Customer -->
+                    <button class="btn btn-primary ms-2" data-bs-toggle="modal" data-bs-target="#newCustomerModal">
+                        Create New Customer
+                    </button>
                 </div>
 
                 <!-- Cart Section -->
@@ -77,19 +83,19 @@
                     <input type="number" class="form-control" id="total-discount" value="0">
                 </div>
 
-
-                <!-- Payment Status and Method -->
+                <!-- Payment Status -->
                 <div class="mb-4">
                     <label class="form-label">Payment Status</label><br>
-                    <input class="form-check-input" type="radio" name="payment_status" id="paid-radio" value="paid"
+                    <input class="form-check-input" type="radio" name="payment_status" id="paid-radio" value="1"
                         checked>
                     <label class="form-check-label" for="paid-radio">Paid</label>
 
                     <input class="form-check-input ms-2" type="radio" name="payment_status" id="unpaid-radio"
-                        value="unpaid">
+                        value="0">
                     <label class="form-check-label" for="unpaid-radio">Unpaid</label>
                 </div>
 
+                <!-- Payment Method -->
                 <div class="mb-4">
                     <label class="form-label">Payment Method</label><br>
                     <input class="form-check-input" type="radio" name="payment_method" id="cash-radio" value="cash"
@@ -112,14 +118,12 @@
                     <label for="note" class="form-label">Note</label>
                     <input type="text" class="form-control" id="note">
                 </div>
-                <!-- End Note -->
 
                 <!-- Checkout Button -->
-                <button class="btn btn-success w-100" id="checkout-btn" disabled>Checkout</button>
+                <button class="btn w-100" id="checkout-btn" disabled>Checkout</button>
             </div>
         </div>
     </div>
-
 
     <!-- Modal for creating a new customer -->
     <div class="modal fade" id="newCustomerModal" tabindex="-1" aria-labelledby="newCustomerModalLabel"
@@ -157,26 +161,47 @@
     </div>
 
     @push('scripts')
-        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-
-        <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+        <script src="{{ asset('assets/vendor/libs/select2/select2.js') }}"></script>
+        <script src="{{ asset('assets/js/forms-selects.js') }}"></script>
 
         <script>
             let cart = [];
 
             $(document).ready(function() {
-
                 $('#customer-select').select2({
                     placeholder: 'Select A Customer',
                     allowClear: true
                 });
 
-                $('#rental-start-date, #rental-end-date').on('change', calculateDays);
-                $('#total-discount').on('input', calculateTotalAmount);
-                $('input[name="payment_method"]').on('change', enableCheckoutButton);
-                $('#customer-select').on('change', enableCheckoutButton);
+                // Disable checkout if no rental dates are selected
+                function validateCheckoutButton() {
+                    const startDate = $('#rental-start-date').val();
+                    const endDate = $('#rental-end-date').val();
+                    const isCartEmpty = cart.length === 0;
 
-                // Search filter for products
+                    $('#checkout-btn').prop('disabled', !(startDate && endDate && !isCartEmpty));
+                }
+
+                // Change button appearance based on payment status
+                $('input[name="payment_status"]').on('change', function() {
+                    const paymentStatus = $('input[name="payment_status"]:checked').val();
+                    const checkoutBtn = $('#checkout-btn');
+
+                    if (paymentStatus === '1') {
+                        checkoutBtn.removeClass('btn-danger').addClass('btn-success').text('Checkout');
+                    } else if (paymentStatus === '0') {
+                        checkoutBtn.removeClass('btn-success').addClass('btn-danger').text('Save as Draft');
+                    }
+                });
+
+                // Trigger button change on page load
+                $('input[name="payment_status"]:checked').trigger('change');
+
+                $('#rental-start-date, #rental-end-date').on('change', function() {
+                    calculateDays();
+                    validateCheckoutButton();
+                });
+
                 $('#search-product').on('input', function() {
                     const searchTerm = $(this).val().toLowerCase();
                     $('#product-list .product-card-container').each(function() {
@@ -202,6 +227,7 @@
                         });
                     }
                     renderCart();
+                    validateCheckoutButton();
                 });
 
                 function calculateDays() {
@@ -227,7 +253,6 @@
                     const grandTotal = total - discountAmount;
 
                     $('#total-amount').val(grandTotal.toFixed(2));
-                    enableCheckoutButton();
                 }
 
                 function renderCart() {
@@ -275,15 +300,8 @@
                         const index = $(this).data('index');
                         cart.splice(index, 1);
                         renderCart();
+                        validateCheckoutButton();
                     });
-                }
-
-                function enableCheckoutButton() {
-                    const selectedCustomer = $('#customer-select').val();
-                    const paymentMethod = $('input[name="payment_method"]:checked').val();
-                    const isCheckoutEnabled = cart.length > 0 && selectedCustomer && paymentMethod;
-
-                    $('#checkout-btn').prop('disabled', !isCheckoutEnabled);
                 }
 
                 $('#checkout-btn').on('click', function() {
@@ -291,11 +309,8 @@
                     const paymentStatus = $('input[name="payment_status"]:checked').val();
                     const paymentMethod = $('input[name="payment_method"]:checked').val();
 
-                    // Add current time to date inputs
-                    const now = new Date();
-                    const currentTime = now.toTimeString().split(' ')[0]; // Get time in HH:MM:SS format
-                    const startDateWithTime = $('#rental-start-date').val() + 'T' + currentTime;
-                    const endDateWithTime = $('#rental-end-date').val() + 'T' + currentTime;
+                    const startDateWithTime = $('#rental-start-date').val() + 'T00:00:00';
+                    const endDateWithTime = $('#rental-end-date').val() + 'T23:59:59';
 
                     $.ajax({
                         url: '{{ route('pos.checkout') }}',
@@ -311,7 +326,7 @@
                             rental_start_date: startDateWithTime,
                             rental_end_date: endDateWithTime,
                             total_amount: $('#total-amount').val(),
-                            note: $('#note').val() // Include the note
+                            note: $('#note').val()
                         },
                         success: function(response) {
                             window.location.href = '{{ route('invoices.show', ':id') }}'.replace(
@@ -322,6 +337,8 @@
                         }
                     });
                 });
+
+                validateCheckoutButton();
             });
         </script>
     @endpush

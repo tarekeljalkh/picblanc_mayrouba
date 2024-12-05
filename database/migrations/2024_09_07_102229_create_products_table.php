@@ -16,6 +16,7 @@ return new class extends Migration
             $table->string('name');         // Product name
             $table->string('description')->nullable();        // Description name
             $table->decimal('price', 8, 2); // Price per unit
+            $table->foreignId('category_id')->nullable()->constrained('categories')->onDelete('cascade');
             $table->timestamps();
         });
     }

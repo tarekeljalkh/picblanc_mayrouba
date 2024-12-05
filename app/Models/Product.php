@@ -45,4 +45,11 @@ class Product extends Model
             $query->where('status', 'active');
         });
     }
+
+        // Define the relationship with Category
+        public function category()
+        {
+            return $this->belongsTo(Category::class);
+        }
+
 }

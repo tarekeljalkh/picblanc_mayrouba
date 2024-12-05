@@ -150,7 +150,7 @@
                                 </p>
                                 <span>Thanks for your business</span>
                             </td>
-                            <td class="px-0 py-6 w-px-100">
+                            <td class="px-0 py-3 w-px-150">
                                 <p class="mb-2">Subtotal:</p>
                                 <p class="mb-2">Additional Costs:</p>
                                 <p class="mb-2 text-danger">Returned Costs:</p>

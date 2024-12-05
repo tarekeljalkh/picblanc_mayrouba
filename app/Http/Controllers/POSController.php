@@ -9,6 +9,8 @@ use App\Models\Product;
 use App\Traits\FileUploadTrait;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class POSController extends Controller
 {
@@ -17,8 +19,12 @@ class POSController extends Controller
     // Display POS Interface
     public function index()
     {
-        $products = Product::all();
+        $products = Product::whereHas('category', function ($query) {
+            $query->where('name', session('category', 'daily'));
+        })->get();
+
         $customers = Customer::all();
+
         return view('pos.index', compact('products', 'customers'));
     }
 
@@ -27,67 +33,151 @@ class POSController extends Controller
         $request->validate([
             'customer_id' => 'required|exists:customers,id',
             'cart' => 'required|array',
-            'cart.*.id' => 'required|exists:products,id',
+            'cart.*.id' => [
+                'required',
+                'exists:products,id',
+                function ($attribute, $value, $fail) {
+                    $currentCategoryName = session('category', 'daily');
+                    $category = Category::where('name', $currentCategoryName)->firstOrFail();
+                    $product = Product::find($value);
+                    if ($product && $product->category_id !== $category->id) {
+                        $fail("The product '{$product->name}' does not belong to the selected category.");
+                    }
+                }
+            ],
             'cart.*.quantity' => 'required|integer|min:1',
             'cart.*.price' => 'required|numeric|min:0',
             'total_discount' => 'nullable|numeric|min:0',
-            'status' => 'required|in:paid,unpaid',
+            'status' => 'required|boolean',
             'payment_method' => 'required|in:cash,credit_card',
-            'rental_days' => 'required|integer|min:1', // Use rental_days from the request
+            'rental_days' => 'required|integer|min:1',
             'rental_start_date' => 'required|date',
             'rental_end_date' => 'required|date|after_or_equal:rental_start_date',
         ]);
 
-        // Get current category from session
-        $currentCategoryName = session('category', 'daily'); // Default to 'daily'
+        try {
+            DB::beginTransaction();
 
-        // Fetch the category ID based on the current category name
-        $category = Category::where('name', $currentCategoryName)->firstOrFail();
+            $currentCategoryName = session('category', 'daily');
+            $category = Category::where('name', $currentCategoryName)->firstOrFail();
 
+            $subtotal = array_sum(array_map(function ($item) {
+                return $item['price'] * $item['quantity'];
+            }, $request->cart));
 
-        // Calculate the subtotal for one day
-        $subtotal = array_sum(array_map(function ($item) {
-            return $item['price'] * $item['quantity'];
-        }, $request->cart));
+            $rentalTotal = $subtotal * $request->rental_days;
+            $discountAmount = ($rentalTotal * ($request->total_discount ?? 0)) / 100;
+            $totalAmount = $rentalTotal - $discountAmount;
 
-        // Calculate the rental total based on rental_days
-        $rentalTotal = $subtotal * $request->rental_days;
+            $isPaid = (bool)$request->status; // Ensure this is correctly interpreted as boolean
+            $invoiceStatus = $isPaid ? 'active' : 'draft';
 
-        // Calculate discount amounts
-        $discountAmount = ($rentalTotal * ($request->total_discount ?? 0)) / 100;
+            //Log::info('Final Invoice Status:', ['isPaid' => $isPaid, 'status' => $invoiceStatus]);
 
-        // Calculate the final total amount including discount
-        $totalAmount = $rentalTotal - $discountAmount;
-
-        // Create the invoice with rental_days
-        $invoice = Invoice::create([
-            'customer_id' => $request->customer_id,
-            'user_id' => Auth::id(),
-            'category_id' => $category->id, // Associate the invoice with the selected category
-            'total_discount' => $request->total_discount ?? 0,
-            'amount_per_day' => $subtotal,
-            'total_amount' => $totalAmount, // Final total with discount applied
-            'paid' => $request->status === 'paid',
-            'payment_method' => $request->payment_method,
-            'days' => $request->rental_days, // Store rental_days as days in the database
-            'rental_start_date' => $request->rental_start_date,
-            'rental_end_date' => $request->rental_end_date,
-            'status' => 'active',
-            'note' => $request->note, // Save the note
-        ]);
-
-        // Save invoice items
-        foreach ($request->cart as $item) {
-            $invoice->items()->create([
-                'product_id' => $item['id'],
-                'quantity' => $item['quantity'],
-                'price' => $item['price'],
-                'total_price' => $item['price'] * $item['quantity'],
+            $invoice = Invoice::create([
+                'customer_id' => $request->customer_id,
+                'user_id' => Auth::id(),
+                'category_id' => $category->id,
+                'total_discount' => $request->total_discount ?? 0,
+                'amount_per_day' => $subtotal,
+                'total_amount' => $totalAmount,
+                'paid' => $isPaid, // Directly use boolean for 'paid'
+                'payment_method' => $request->payment_method,
+                'days' => $request->rental_days,
+                'rental_start_date' => $request->rental_start_date,
+                'rental_end_date' => $request->rental_end_date,
+                'status' => $invoiceStatus, // Use dynamically determined status
+                'note' => $request->note ?? null,
             ]);
-        }
 
-        return response()->json(['invoice_id' => $invoice->id]);
+            foreach ($request->cart as $item) {
+                $product = Product::findOrFail($item['id']);
+                $price = $product->price;
+                $invoice->items()->create([
+                    'product_id' => $product->id,
+                    'quantity' => $item['quantity'],
+                    'price' => $price,
+                    'total_price' => $price * $item['quantity'],
+                ]);
+            }
+
+            DB::commit();
+
+            return response()->json(['invoice_id' => $invoice->id]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Checkout Error:', ['message' => $e->getMessage()]);
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
     }
+
+
+    // public function checkout(Request $request)
+    // {
+    //     $request->validate([
+    //         'customer_id' => 'required|exists:customers,id',
+    //         'cart' => 'required|array',
+    //         'cart.*.id' => 'required|exists:products,id',
+    //         'cart.*.quantity' => 'required|integer|min:1',
+    //         'cart.*.price' => 'required|numeric|min:0',
+    //         'total_discount' => 'nullable|numeric|min:0',
+    //         'status' => 'required|in:paid,unpaid',
+    //         'payment_method' => 'required|in:cash,credit_card',
+    //         'rental_days' => 'required|integer|min:1', // Use rental_days from the request
+    //         'rental_start_date' => 'required|date',
+    //         'rental_end_date' => 'required|date|after_or_equal:rental_start_date',
+    //     ]);
+
+    //     // Get current category from session
+    //     $currentCategoryName = session('category', 'daily'); // Default to 'daily'
+
+    //     // Fetch the category ID based on the current category name
+    //     $category = Category::where('name', $currentCategoryName)->firstOrFail();
+
+
+    //     // Calculate the subtotal for one day
+    //     $subtotal = array_sum(array_map(function ($item) {
+    //         return $item['price'] * $item['quantity'];
+    //     }, $request->cart));
+
+    //     // Calculate the rental total based on rental_days
+    //     $rentalTotal = $subtotal * $request->rental_days;
+
+    //     // Calculate discount amounts
+    //     $discountAmount = ($rentalTotal * ($request->total_discount ?? 0)) / 100;
+
+    //     // Calculate the final total amount including discount
+    //     $totalAmount = $rentalTotal - $discountAmount;
+
+    //     // Create the invoice with rental_days
+    //     $invoice = Invoice::create([
+    //         'customer_id' => $request->customer_id,
+    //         'user_id' => Auth::id(),
+    //         'category_id' => $category->id, // Associate the invoice with the selected category
+    //         'total_discount' => $request->total_discount ?? 0,
+    //         'amount_per_day' => $subtotal,
+    //         'total_amount' => $totalAmount, // Final total with discount applied
+    //         'paid' => $request->status === 'paid',
+    //         'payment_method' => $request->payment_method,
+    //         'days' => $request->rental_days, // Store rental_days as days in the database
+    //         'rental_start_date' => $request->rental_start_date,
+    //         'rental_end_date' => $request->rental_end_date,
+    //         'status' => 'active',
+    //         'note' => $request->note, // Save the note
+    //     ]);
+
+    //     // Save invoice items
+    //     foreach ($request->cart as $item) {
+    //         $invoice->items()->create([
+    //             'product_id' => $item['id'],
+    //             'quantity' => $item['quantity'],
+    //             'price' => $item['price'],
+    //             'total_price' => $item['price'] * $item['quantity'],
+    //         ]);
+    //     }
+
+    //     return response()->json(['invoice_id' => $invoice->id]);
+    // }
 
 
     public function store(Request $request)

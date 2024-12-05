@@ -16,7 +16,7 @@
 
         .invoice-print {
             padding: 10px;
-            max-width: 1000px;
+            max-width: 800px;
             margin: auto;
         }
 
@@ -40,6 +40,10 @@
             font-size: 12px;
         }
 
+        .table th {
+            background-color: #f9f9f9;
+        }
+
         .text-end {
             text-align: right;
         }
@@ -52,6 +56,10 @@
         h6 {
             font-size: 14px;
             font-weight: bold;
+        }
+
+        p {
+            margin: 0;
         }
 
         @media print {
@@ -79,7 +87,7 @@
 <body>
     <div class="invoice-print">
         <!-- Invoice Header -->
-        <div class="d-flex justify-content-between">
+        <div class="d-flex">
             <div>
                 <img src="{{ public_path('logo_croped.png') }}" alt="Logo" width="150">
                 <p>Office 149, 450 South Brand Brooklyn</p>
@@ -92,25 +100,23 @@
                 <p><strong>Rental Start:</strong> {{ $invoice->rental_start_date->format('d/m/Y') }}</p>
                 <p><strong>Rental End:</strong> {{ $invoice->rental_end_date->format('d/m/Y') }}</p>
                 <p><strong>Rental Days:</strong> {{ $invoice->days }} day(s)</p>
-</div>
+            </div>
         </div>
 
         <hr />
 
         <!-- Customer Details -->
-        <div class="d-flex justify-content-between mb-4">
-            <div>
-                <h6>Invoice To:</h6>
-                <p>{{ $invoice->customer->name }}</p>
-                <p>{{ $invoice->customer->address }}</p>
-                <p>{{ $invoice->customer->phone }}</p>
-                <p>{{ $invoice->customer->email }}</p>
-            </div>
+        <div>
+            <h6>Invoice To:</h6>
+            <p>{{ $invoice->customer->name }}</p>
+            <p>{{ $invoice->customer->address }}</p>
+            <p>{{ $invoice->customer->phone }}</p>
+            <p>{{ $invoice->customer->email }}</p>
         </div>
 
         <!-- Invoice Items -->
         <h6>Invoice Items</h6>
-        <div class="table-responsive">
+        <div>
             <table class="table">
                 <thead>
                     <tr>
@@ -136,7 +142,7 @@
         <!-- Additional Items -->
         @if ($invoice->additionalItems->isNotEmpty())
             <h6>Additional Items</h6>
-            <div class="table-responsive">
+            <div>
                 <table class="table">
                     <thead>
                         <tr>
@@ -165,7 +171,7 @@
         <!-- Returned Items -->
         @if ($invoice->returnDetails->isNotEmpty())
             <h6>Returned Items</h6>
-            <div class="table-responsive">
+            <div>
                 <table class="table">
                     <thead>
                         <tr>
@@ -198,14 +204,18 @@
                 <td><strong>Subtotal:</strong></td>
                 <td class="text-end">${{ number_format($totals['subtotal'], 2) }}</td>
             </tr>
-            <tr>
-                <td><strong>Additional Costs:</strong></td>
-                <td class="text-end">${{ number_format($totals['additionalCost'], 2) }}</td>
-            </tr>
-            <tr>
-                <td><strong>Returned Costs:</strong></td>
-                <td class="text-end text-danger">- ${{ number_format($totals['returnedCost'], 2) }}</td>
-            </tr>
+            @if ($totals['additionalCost'] > 0)
+                <tr>
+                    <td><strong>Additional Costs:</strong></td>
+                    <td class="text-end">${{ number_format($totals['additionalCost'], 2) }}</td>
+                </tr>
+            @endif
+            @if ($totals['returnedCost'] > 0)
+                <tr>
+                    <td><strong>Returned Costs:</strong></td>
+                    <td class="text-end text-danger">- ${{ number_format($totals['returnedCost'], 2) }}</td>
+                </tr>
+            @endif
             <tr>
                 <td><strong>Discount:</strong></td>
                 <td class="text-end">- ${{ number_format($totals['discountAmount'], 2) }}</td>

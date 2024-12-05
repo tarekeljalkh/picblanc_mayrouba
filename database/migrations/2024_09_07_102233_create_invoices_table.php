@@ -21,7 +21,7 @@ return new class extends Migration
             $table->decimal('total_amount', 10, 2); // Total amount of the invoice
             $table->boolean('paid')->default(false); // Paid status
             $table->enum('payment_method', ['cash', 'credit_card']);
-            $table->enum('status', ['active', 'returned', 'overdue'])->default('active'); // Rental status
+            $table->enum('status', ['draft', 'active', 'returned', 'overdue'])->default('active'); // Rental status
             $table->datetime('rental_start_date')->nullable(); // Start of the rental period
             $table->datetime('rental_end_date')->nullable(); // End of the rental period
             $table->integer('days')->nullable();

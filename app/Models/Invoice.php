@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 
 class Invoice extends Model
@@ -15,6 +16,7 @@ class Invoice extends Model
         'amount_per_day',
         'paid',
         'payment_method',
+        'status',
         'rental_start_date',
         'rental_end_date',
         'days',
@@ -136,21 +138,28 @@ class Invoice extends Model
 
     public function calculateTotals()
     {
+        // Calculate subtotal
         $subtotal = $this->items->sum(function ($item) {
-            return $item->price * $item->quantity;
+            return $item->price * $item->quantity * $this->days;
         });
 
+        // Calculate additional costs based on days remaining
         $additionalCost = $this->additionalItems->sum(function ($item) {
-            return $item->total_price;
+            $daysUsed = max(1, Carbon::parse($item->added_date)->diffInDays(Carbon::parse($this->rental_end_date)) + 1);
+            return $item->price * $item->quantity * $daysUsed;
         });
 
+        // Calculate returned costs based on days used
         $returnedCost = $this->returnDetails->sum(function ($return) {
-            return $return->cost;
+            return $return->returned_quantity * $return->invoiceItem->price * $return->days_used;
         });
 
-        $discountAmount = ($subtotal + $additionalCost - $returnedCost) * ($this->total_discount / 100);
+        // Calculate discount amount based on total before discount and days
+        $totalBeforeDiscount = $subtotal + $additionalCost - $returnedCost;
+        $discountAmount = ($totalBeforeDiscount * $this->total_discount / 100);
 
-        $total = $subtotal + $additionalCost - $returnedCost - $discountAmount;
+        // Calculate total
+        $total = $totalBeforeDiscount - $discountAmount;
 
         return [
             'subtotal' => $subtotal,
