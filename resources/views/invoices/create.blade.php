@@ -5,7 +5,7 @@
 @push('styles')
     <link rel="stylesheet" href="{{ asset('assets/vendor/css/pages/app-invoice.css') }}" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="{{ asset('assets/vendor/libs/select2/select2.css') }}" />
 @endpush
 
 @section('content')
@@ -34,7 +34,7 @@
                                     @foreach ($customers as $customer)
                                         <option value="{{ $customer->id }}" data-name="{{ $customer->name }}"
                                             data-phone="{{ $customer->phone }}" data-address="{{ $customer->address }}">
-                                            {{ $customer->name }}
+                                            {{ $customer->name }} ({{ $customer->phone }})
                                         </option>
                                     @endforeach
                                 </select>
@@ -218,13 +218,15 @@
     {{-- Include jQuery, Flatpickr, and Select2 CDN --}}
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script src="{{ asset('assets/vendor/libs/select2/select2.js') }}"></script>
+    <script src="{{ asset('assets/js/forms-selects.js') }}"></script>
 
     <script>
         flatpickr("#rental_start_date, #rental_end_date", {
-            dateFormat: "Y-m-d",
+            enableTime: true, // Enable time picker
+            dateFormat: "Y-m-d H:i", // Format for date and time
             altInput: true,
-            altFormat: "d-m-Y",
+            altFormat: "F j, Y h:i K", // User-friendly format
             allowInput: true,
             onChange: function(selectedDates, dateStr, instance) {
                 calculateInvoiceTotal();
@@ -287,7 +289,6 @@
             checkFormValidity();
         }
 
-
         function checkFormValidity() {
             let hasCustomer = $('#select_customer').val() || ($('#customer_name').val() && $('#customer_phone').val() && $(
                 '#customer_address').val());
@@ -340,5 +341,24 @@
         });
 
         $('#total_discount').on('input', calculateInvoiceTotal);
+
+        // Listen for payment status changes
+        $('input[name="paid"]').on('change', function() {
+            const paymentStatus = $('input[name="paid"]:checked').val(); // Get selected payment status
+            const createButton = $('#create-invoice-button'); // Select the button
+
+            // Update button based on payment status
+            if (paymentStatus === "1") {
+                createButton.text('Save Invoice').removeClass('btn-danger').addClass('btn-primary');
+            } else {
+                createButton.text('Save as Draft').removeClass('btn-primary').addClass('btn-danger');
+            }
+        });
+
+        // Trigger the button update on page load
+        $(document).ready(function() {
+            $('input[name="paid"]:checked').trigger('change');
+        });
     </script>
+
 @endsection

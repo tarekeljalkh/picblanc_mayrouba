@@ -112,7 +112,7 @@ class ProductController extends Controller
     {
         try {
             $product = Product::findOrFail($id);
-            // Delete the customer
+            // Delete the product
             $product->delete();
 
 

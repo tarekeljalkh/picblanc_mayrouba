@@ -49,7 +49,7 @@ class InvoiceSeeder extends Seeder
             'total_discount' => 5,
             'total_amount' => (100 * $days1) * 1.1 * 0.95,
             'paid' => false,
-            'status' => 'active'
+            'status' => 'draft'
         ]);
 
         Invoice::create([

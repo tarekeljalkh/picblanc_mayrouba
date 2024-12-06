@@ -65,6 +65,7 @@
                             <th>Unit Price</th>
                             <th>Qty</th>
                             <th>Total Price</th>
+                            <th>Rental Time</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -74,6 +75,7 @@
                                 <td>${{ number_format($item->price, 2) }}</td>
                                 <td>{{ $item->quantity }}</td>
                                 <td>${{ number_format($item->price * $item->quantity, 2) }}</td>
+                                <td>{{ $item->rental_start_date ? \Carbon\Carbon::parse($item->rental_start_date)->format('H:i') : 'N/A' }}</td>
                             </tr>
                         @endforeach
                     </tbody>
@@ -101,7 +103,7 @@
                                     <td>${{ number_format($addedItem->price, 2) }}</td>
                                     <td>{{ $addedItem->quantity }}</td>
                                     <td>${{ number_format($addedItem->total_price, 2) }}</td>
-                                    <td>{{ optional($addedItem->added_date)->format('d/m/Y') }}</td>
+                                    <td>{{ optional($addedItem->added_date)->format('d/m/Y H:i') }}</td>
                                 </tr>
                             @endforeach
                         </tbody>
@@ -130,7 +132,7 @@
                                     <td>{{ $return->returned_quantity }}</td>
                                     <td>{{ $return->days_used }}</td>
                                     <td>${{ number_format($return->cost, 2) }}</td>
-                                    <td>{{ optional($return->return_date)->format('d/m/Y') }}</td>
+                                    <td>{{ optional($return->return_date)->format('d/m/Y H:i') }}</td>
                                 </tr>
                             @endforeach
                         </tbody>

@@ -3,10 +3,13 @@
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DashbboardController;
+use App\Http\Controllers\DraftController;
 use App\Http\Controllers\InvoiceController;
+use App\Http\Controllers\InvoiceDraftController;
 use App\Http\Controllers\POSController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -42,13 +45,14 @@ Route::middleware('auth')->group(function () {
     Route::get('/invoices/{id}/download', [InvoiceController::class, 'download'])->name('invoices.download');
     Route::post('/invoices/customer/store', [InvoiceController::class, 'customer_store'])->name('invoices.customer.store');
     Route::patch('/invoices/{id}/update-payment-status', [InvoiceController::class, 'updatePaymentStatus'])->name('invoices.updatePaymentStatus');
-    // filter paid and unpaid
-
     // Manage returns
     Route::post('/invoices/{invoice}/process-returns', [InvoiceController::class, 'processReturns'])->name('invoices.process-returns');
-
     // Add new items
     Route::post('/invoices/{invoice}/add-items', [InvoiceController::class, 'addItems'])->name('invoices.add-items');
+
+
+    // Drafts
+    Route::resource('drafts', DraftController::class);
 
 
     // POS
@@ -59,6 +63,9 @@ Route::middleware('auth')->group(function () {
     // Trial balance
     Route::get('/trial-balance', [DashbboardController::class, 'trialBalance'])->name('trialbalance.index');
     Route::get('/trial-balance/products', [DashbboardController::class, 'trialBalanceByProducts'])->name('trialbalance.products');
+
+    // Users
+    Route::resource('users', UserController::class);
 });
 
 require __DIR__ . '/auth.php';

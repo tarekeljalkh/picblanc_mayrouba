@@ -101,6 +101,17 @@
             </a>
         </li>
 
+        <!-- Drafts -->
+        <!-- Drafts -->
+        <li class="menu-item {{ Route::is('drafts.index') ? 'active' : '' }}">
+            <a href="{{ route('drafts.index') }}" class="menu-link">
+                <i class="menu-icon tf-icons bx bx-trash text-danger"></i> <!-- Changed icon and color to red -->
+                <div class="text-truncate" data-i18n="Invoices">Drafts</div>
+                <div class="badge rounded-pill bg-label-danger text-uppercase fs-tiny ms-auto">Drafts</div>
+                <!-- Changed badge color to red -->
+            </a>
+        </li>
+
         <!-- Balance -->
         <li class="menu-header small text-uppercase">
             <span class="menu-header-text">Balance</span>
@@ -125,6 +136,21 @@
             </a>
         </li>
 
+        @if (auth()->user()->role === 'admin')
+            <!-- Users -->
+            <li class="menu-header small text-uppercase">
+                <span class="menu-header-text">System Users</span>
+            </li>
+            <!-- Users -->
+            <li class="menu-item {{ Route::is('users.index') ? 'active' : '' }}">
+                <a href="{{ route('users.index') }}" class="menu-link">
+                    <i class="menu-icon tf-icons bx bx-user"></i> <!-- Updated icon for users -->
+                    <div class="text-truncate" data-i18n="Users">Users</div>
+                    <div class="badge rounded-pill bg-label-primary text-uppercase fs-tiny ms-auto"></div>
+                </a>
+            </li>
+        @endif
+
         <!-- Profile -->
         <li class="menu-header small text-uppercase">
             <span class="menu-header-text">Profile</span>
@@ -143,7 +169,7 @@
                         <div class="text-truncate" data-i18n="Edit Profile">Edit Profile</div>
                     </a>
                 </li>
-                        <li class="menu-item">
+                <li class="menu-item">
                     <a href="javascript:void(0);" onclick="document.getElementById('logout-form').submit();"
                         class="menu-link">
                         <div class="text-truncate" data-i18n="Logout">Logout</div>

@@ -8,14 +8,14 @@ use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\Product;
 use App\Models\ReturnDetail;
-use Illuminate\Http\Request;
-use Carbon\Carbon;
-use Barryvdh\DomPDF\Facade\Pdf;
 use App\Traits\FileUploadTrait;
-use Illuminate\Support\Facades\Validator;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Carbon\Carbon;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 
-class InvoiceController extends Controller
+class DraftController extends Controller
 {
     use FileUploadTrait;
 
@@ -51,7 +51,7 @@ class InvoiceController extends Controller
             ->whereHas('category', function ($query) use ($selectedCategory) {
                 $query->where('name', $selectedCategory);
             })
-            ->where('status', '!=', 'draft') // Exclude invoices with 'draft' status
+            ->where('status', '=', 'draft') // Exclude invoices with 'draft' status
             ->when($status === 'paid', function ($query) {
                 $query->where('paid', true);
             })
@@ -61,7 +61,7 @@ class InvoiceController extends Controller
             ->paginate(10); // Paginate results for better performance
 
         // Pass the selected category and status to the view
-        return view('invoices.index', compact('invoices', 'selectedCategory', 'status'));
+        return view('draft.index', compact('invoices', 'selectedCategory', 'status'));
     }
 
 
@@ -72,7 +72,7 @@ class InvoiceController extends Controller
     {
         $customers = Customer::all();
         $products = Product::all();
-        return view('invoices.create', compact('customers', 'products'));
+        return view('draft.create', compact('customers', 'products'));
     }
 
     /**
@@ -80,6 +80,7 @@ class InvoiceController extends Controller
      */
     public function store(Request $request)
     {
+
         // Validate input
         $request->validate([
             'customer_id' => 'nullable|exists:customers,id',
@@ -117,9 +118,6 @@ class InvoiceController extends Controller
         $categoryName = session('category', 'daily');
         $category = Category::where('name', $categoryName)->firstOrFail();
 
-        // Determine the invoice status based on the payment status
-        $status = $request->paid ? 'active' : 'draft';
-
         // Create the Invoice
         $invoice = new Invoice([
             'customer_id' => $customer->id,
@@ -132,7 +130,7 @@ class InvoiceController extends Controller
             'total_amount' => $request->total_amount,
             'paid' => $request->paid,
             'payment_method' => $request->payment_method, // Store payment method
-            'status' => $status, // Set the status dynamically
+            'status' => 'active',
             'days' => $request->days,
         ]);
         $invoice->save();
@@ -166,7 +164,6 @@ class InvoiceController extends Controller
 
         return redirect()->route('invoices.show', $invoice->id)->with('success', 'Invoice created successfully');
     }
-
 
 
     /**
@@ -420,17 +417,12 @@ class InvoiceController extends Controller
     public function updatePaymentStatus(Request $request, $id)
     {
         $invoice = Invoice::findOrFail($id);
-
         $validated = $request->validate([
             'paid' => 'required|boolean',
         ]);
 
-        // Update the paid status and dynamically set the status field
-        $invoice->update([
-            'paid' => $validated['paid'],
-            'status' => $validated['paid'] ? 'active' : 'draft',
-        ]);
+        $invoice->update(['paid' => $validated['paid']]);
 
         return redirect()->route('invoices.edit', $id)->with('success', 'Payment status updated successfully.');
     }
-    }
+}
