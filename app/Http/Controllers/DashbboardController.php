@@ -13,22 +13,27 @@ class DashbboardController extends Controller
 {
     public function index()
     {
-        // Fetch the category from the session (default to 'daily' if not set)
+        // Retrieve the selected category from the session, default to 'daily'
         $categoryName = session('category', 'daily');
 
-        // Find the category ID based on the name
+        // Fetch the category based on the name
         $category = Category::where('name', $categoryName)->first();
 
         if (!$category) {
-            // Handle the case where the category doesn't exist (optional)
+            // Handle the case where the category doesn't exist
             abort(404, 'Category not found.');
         }
 
-        // Fetch total clients, invoices, paid and unpaid totals for the category
+        // Fetch total counts for customers, invoices, and invoice statuses for the selected category
         $customersCount = Customer::count();
         $invoicesCount = Invoice::where('category_id', $category->id)->count();
         $totalPaid = Invoice::where('category_id', $category->id)->where('paid', true)->count();
         $totalUnpaid = Invoice::where('category_id', $category->id)->where('paid', false)->count();
+        $returnedCount = Invoice::where('category_id', $category->id)->where('status', 'returned')->count();
+        $overdueCount = Invoice::where('category_id', $category->id)
+            ->where('rental_end_date', '<', now())
+            ->where('paid', false)
+            ->count();
 
         // Fetch latest invoices for the selected category
         $invoices = Invoice::with('customer')
@@ -37,8 +42,18 @@ class DashbboardController extends Controller
             ->paginate(10);
 
         // Pass the data to the view
-        return view('dashboard', compact('customersCount', 'invoicesCount', 'totalPaid', 'totalUnpaid', 'invoices'));
+        return view('dashboard', compact(
+            'customersCount',
+            'invoicesCount',
+            'totalPaid',
+            'totalUnpaid',
+            'returnedCount',
+            'overdueCount',
+            'invoices',
+            'categoryName'
+        ));
     }
+
 
     public function trialBalance(Request $request)
     {

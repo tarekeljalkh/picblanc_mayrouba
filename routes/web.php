@@ -40,11 +40,16 @@ Route::middleware('auth')->group(function () {
     Route::resource('products', ProductController::class);
 
     // Invoices
+    Route::get('/invoices/overdue', [InvoiceController::class, 'overdue'])->name('invoices.overdue');
+    Route::get('/invoices/returned', [InvoiceController::class, 'returned'])->name('invoices.returned');
+
     Route::resource('invoices', InvoiceController::class);
     Route::get('/invoices/{id}/print', [InvoiceController::class, 'print'])->name('invoices.print');
     Route::get('/invoices/{id}/download', [InvoiceController::class, 'download'])->name('invoices.download');
     Route::post('/invoices/customer/store', [InvoiceController::class, 'customer_store'])->name('invoices.customer.store');
     Route::patch('/invoices/{id}/update-payment-status', [InvoiceController::class, 'updatePaymentStatus'])->name('invoices.updatePaymentStatus');
+    Route::patch('/invoices/{id}/update-invoice-status', [InvoiceController::class, 'updateInvoiceStatus'])->name('invoices.updateInvoiceStatus');
+
     // Manage returns
     Route::post('/invoices/{invoice}/process-returns', [InvoiceController::class, 'processReturns'])->name('invoices.process-returns');
     // Add new items

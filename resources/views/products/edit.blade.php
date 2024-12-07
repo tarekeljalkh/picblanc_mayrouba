@@ -1,21 +1,21 @@
 @extends('layouts.master')
 
 @section('content')
-
-<nav aria-label="breadcrumb">
-    <ol class="breadcrumb">
-        <li class="breadcrumb-item"><a href="{{ route('dashboard') }}"><i class="bx bx-home"></i> Dashboard</a></li>
-        <li class="breadcrumb-item"><a href="{{ route('products.index') }}">Products</a></li>
-        <li class="breadcrumb-item active" aria-current="page">Edit: {{ $product->name }}</li>
-    </ol>
-</nav>
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ route('dashboard') }}"><i class="bx bx-home"></i> Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="{{ route('products.index') }}">Products</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Edit: {{ $product->name }}</li>
+        </ol>
+    </nav>
 
     <div class="row g-6">
         <div class="col-md">
             <div class="card">
                 <h5 class="card-header">Edit Product</h5>
                 <div class="card-body">
-                    <form action="{{ route('products.update', $product->id) }}" method="POST" enctype="multipart/form-data">
+                    <form action="{{ route('products.update', $product->id) }}" method="POST"
+                        enctype="multipart/form-data">
                         @csrf
                         @method('PUT') {{-- Laravel method directive to spoof PUT request --}}
 
@@ -23,7 +23,8 @@
                         <div class="mb-4 row">
                             <label for="name" class="col-md-2 col-form-label">Name</label>
                             <div class="col-md-10">
-                                <input class="form-control" type="text" id="name" name="name" value="{{ old('name', $product->name) }}" />
+                                <input class="form-control" type="text" id="name" name="name"
+                                    value="{{ old('name', $product->name) }}" />
                             </div>
                         </div>
                         {{-- End Name --}}
@@ -32,7 +33,8 @@
                         <div class="mb-4 row">
                             <label for="description" class="col-md-2 col-form-label">Description</label>
                             <div class="col-md-10">
-                                <input class="form-control" type="text" id="description" name="description" value="{{ old('description', $product->description) }}" />
+                                <input class="form-control" type="text" id="description" name="description"
+                                    value="{{ old('description', $product->description) }}" />
                             </div>
                         </div>
                         {{-- End Description --}}
@@ -41,11 +43,25 @@
                         <div class="mb-4 row">
                             <label for="price" class="col-md-2 col-form-label">Price</label>
                             <div class="col-md-10">
-                                <input class="form-control" type="number" id="price" name="price" value="{{ old('price', $product->price) }}" />
+                                <input class="form-control" type="number" step="0.01" id="price" name="price"
+                                    value="{{ old('price', $product->price) }}" />
                             </div>
                         </div>
                         {{-- End Price --}}
 
+                        {{-- Type --}}
+                        <div class="mb-4 row">
+                            <label for="type" class="col-md-2 col-form-label">Price Type</label>
+                            <div class="col-md-10">
+                                <select id="type" name="type" class="form-select" required>
+                                    <option value="fixed" {{ $product->type->value === 'fixed' ? 'selected' : '' }}>Fixed
+                                    </option>
+                                    <option value="standard" {{ $product->type->value === 'standard' ? 'selected' : '' }}>
+                                        Standard</option>
+                                </select>
+                            </div>
+                        </div>
+                        {{-- End Type --}}
 
                         {{-- Update Button --}}
                         <div class="mt-4 row">

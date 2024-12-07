@@ -2,11 +2,25 @@
 
 namespace App\Models;
 
+use App\Enums\ProductType;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Product extends Model
 {
+
+    protected $fillable = [
+        'name',
+        'description',
+        'price',
+        'category_id',
+        'type',
+    ];
+
+    protected $casts = [
+        'type' => ProductType::class,
+    ];
+
     use HasFactory;
 
     // Relationship to get invoice items for the product

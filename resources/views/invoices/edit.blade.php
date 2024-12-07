@@ -39,9 +39,16 @@
                                 Items</button>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="payment-status-tab" data-bs-toggle="tab" data-bs-target="#payment-status"
-                                type="button" role="tab" aria-controls="payment-status" aria-selected="false">Payment Status</button>
+                            <button class="nav-link" id="payment-status-tab" data-bs-toggle="tab"
+                                data-bs-target="#payment-status" type="button" role="tab"
+                                aria-controls="payment-status" aria-selected="false">Payment Status</button>
                         </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="invoice-status-tab" data-bs-toggle="tab"
+                                data-bs-target="#invoice-status" type="button" role="tab"
+                                aria-controls="invoice-status" aria-selected="false">Invoice Status</button>
+                        </li>
+
                     </ul>
                     <div class="tab-content" id="editInvoiceTabsContent">
                         {{-- Manage Returns Tab --}}
@@ -56,19 +63,14 @@
 
                         {{-- Payment Status Tab --}}
                         <div class="tab-pane fade" id="payment-status" role="tabpanel" aria-labelledby="payment-status-tab">
-                            <form action="{{ route('invoices.updatePaymentStatus', $invoice->id) }}" method="POST">
-                                @csrf
-                                @method('PATCH')
-                                <div class="mb-3">
-                                    <label for="paymentStatus" class="form-label">Payment Status</label>
-                                    <select id="paymentStatus" name="paid" class="form-select">
-                                        <option value="1" {{ $invoice->paid ? 'selected' : '' }}>Paid</option>
-                                        <option value="0" {{ !$invoice->paid ? 'selected' : '' }}>Not Paid</option>
-                                    </select>
-                                </div>
-                                <button type="submit" class="btn btn-success">Update Payment Status</button>
-                            </form>
+                            @include('invoices.partials.payment-status')
                         </div>
+
+                        {{-- Invoice Status Tab --}}
+                        <div class="tab-pane fade" id="invoice-status" role="tabpanel" aria-labelledby="invoice-status-tab">
+                            @include('invoices.partials.invoice-status')
+                        </div>
+
                     </div>
                 </div>
             </div>

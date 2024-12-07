@@ -4,11 +4,12 @@
 
 @section('content')
     <div class="container-xxl flex-grow-1 container-p-y">
+        <!-- Card Widgets -->
         <div class="card mb-6">
             <div class="card-widget-separator-wrapper">
                 <div class="card-body card-widget-separator">
                     <div class="row gy-4 gy-sm-1">
-                        <!-- customers Card -->
+                        <!-- Customers Card -->
                         <div class="col-sm-6 col-lg-3">
                             <div
                                 class="d-flex justify-content-between align-items-center card-widget-1 border-end pb-4 pb-sm-0">
@@ -44,7 +45,7 @@
 
                         <!-- Paid Invoices Card -->
                         <div class="col-sm-6 col-lg-3">
-                            <a href="{{ route('invoices.index')}}"
+                            <a href="{{ route('invoices.index') }}"
                                 class="d-flex justify-content-between align-items-center card-widget-3 border-end pb-4 pb-sm-0">
                                 <div>
                                     <h4 class="mb-0">{{ $totalPaid }}</h4>
@@ -60,7 +61,7 @@
 
                         <!-- Unpaid Invoices Card -->
                         <div class="col-sm-6 col-lg-3">
-                            <a href="{{ route('drafts.index')}}"
+                            <a href="{{ route('drafts.index') }}"
                                 class="d-flex justify-content-between align-items-center card-widget-3 border-end pb-4 pb-sm-0">
                                 <div>
                                     <h4 class="mb-0">{{ $totalUnpaid }}</h4>
@@ -74,6 +75,37 @@
                             </a>
                         </div>
 
+                        <!-- Returned Invoices Card -->
+                        <div class="col-sm-6 col-lg-3">
+                            <a href="{{ route('invoices.returned') }}"
+                                class="d-flex justify-content-between align-items-center card-widget-4 border-end pb-4 pb-sm-0">
+                                <div>
+                                    <h4 class="mb-0">{{ $returnedCount }}</h4>
+                                    <p class="mb-0">Returned Invoices</p>
+                                </div>
+                                <div class="avatar me-sm-6">
+                                    <span class="avatar-initial rounded bg-label-secondary text-heading">
+                                        <i class="bx bx-undo bx-26px"></i>
+                                    </span>
+                                </div>
+                            </a>
+                        </div>
+
+                        <!-- Overdue Invoices Card -->
+                        <div class="col-sm-6 col-lg-3">
+                            <a href="{{ route('invoices.overdue') }}"
+                                class="d-flex justify-content-between align-items-center card-widget-5 border-end pb-4 pb-sm-0">
+                                <div>
+                                    <h4 class="mb-0">{{ $overdueCount }}</h4>
+                                    <p class="mb-0">Overdue Invoices</p>
+                                </div>
+                                <div class="avatar me-sm-6">
+                                    <span class="avatar-initial rounded bg-label-secondary text-heading">
+                                        <i class="bx bx-error bx-26px"></i>
+                                    </span>
+                                </div>
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -99,9 +131,7 @@
                                 <td>{{ $invoice->id }}</td>
                                 <td>{{ $invoice->customer->name ?? 'N/A' }}</td>
                                 <td>${{ number_format($invoice->total_amount ?? 0, 2) }}</td>
-                                <!-- Ensure correct total field -->
-                                <td>{{ $invoice->created_at->format('d/m/Y') }}</td> <!-- Date format adjusted to d/m/y -->
-                                </td> <!-- Correct balance calculation -->
+                                <td>{{ $invoice->created_at->format('d/m/Y') }}</td>
                                 <td>
                                     <span class="badge {{ $invoice->paid ? 'bg-success' : 'bg-danger' }}">
                                         {{ $invoice->paid ? 'Paid' : 'Unpaid' }}
@@ -119,14 +149,11 @@
                     <nav>
                         <ul class="pagination justify-content-center">
                             {{ $invoices->onEachSide(1)->links('pagination::bootstrap-4') }}
-                            <!-- Bootstrap styled pagination -->
                         </ul>
                     </nav>
                 </div>
             </div>
         </div>
         <!-- End Invoice List Table -->
-
-
     </div>
 @endsection

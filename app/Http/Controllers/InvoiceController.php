@@ -367,13 +367,17 @@ class InvoiceController extends Controller
 
     public function addItems(Request $request, $invoiceId)
     {
+        // Validate the incoming request
         $validated = $request->validate([
             'products' => 'required|array|min:1',
             'products.*.product_id' => 'required|exists:products,id',
             'products.*.quantity' => 'required|integer|min:1',
             'products.*.price' => 'required|numeric|min:0',
+            'products.*.rental_start_date' => 'required|date',
+            'products.*.rental_end_date' => 'required|date|after_or_equal:products.*.rental_start_date',
         ]);
 
+        // Find the invoice
         $invoice = Invoice::findOrFail($invoiceId);
 
         DB::beginTransaction();
@@ -383,30 +387,30 @@ class InvoiceController extends Controller
                 $productId = $product['product_id'];
                 $quantity = $product['quantity'];
                 $price = $product['price'];
+                $rentalStartDate = Carbon::parse($product['rental_start_date']);
+                $rentalEndDate = Carbon::parse($product['rental_end_date']);
 
-                // Ensure the `added_date` is set to the current date
-                $addedDate = now();
+                // Calculate the number of days for the rental period
+                $days = max($rentalStartDate->diffInDays($rentalEndDate), 1);
 
-                // Calculate the number of days from the `added_date` to the `rental_end_date`
-                $rentalEndDate = Carbon::parse($invoice->rental_end_date);
-                $days = max($addedDate->diffInDays($rentalEndDate), 1);
-
-                // Calculate total price for the new items
+                // Calculate total price for the item
                 $totalPrice = $price * $quantity * $days;
 
-                // Add the new additional item
+                // Add the new item to the invoice
                 $invoice->additionalItems()->create([
                     'product_id' => $productId,
                     'quantity' => $quantity,
                     'price' => $price,
                     'total_price' => $totalPrice,
-                    'added_date' => $addedDate,
+                    'rental_start_date' => $rentalStartDate,
+                    'rental_end_date' => $rentalEndDate,
                 ]);
 
                 // Update the invoice total
                 $invoice->total_amount += $totalPrice;
             }
 
+            // Save the updated invoice
             $invoice->save();
             DB::commit();
 
@@ -416,6 +420,7 @@ class InvoiceController extends Controller
             return redirect()->back()->with('error', 'Failed to add items: ' . $e->getMessage());
         }
     }
+
 
     public function updatePaymentStatus(Request $request, $id)
     {
@@ -433,4 +438,68 @@ class InvoiceController extends Controller
 
         return redirect()->route('invoices.edit', $id)->with('success', 'Payment status updated successfully.');
     }
+
+    public function updateInvoiceStatus(Request $request, $id)
+    {
+        // Fetch the invoice
+        $invoice = Invoice::findOrFail($id);
+
+        // Validate the request (if any additional fields are sent, e.g., reason for status change)
+        $validated = $request->validate([
+            'status' => 'required|in:returned,overdue', // Ensure status is valid enum
+        ]);
+
+        // Update the invoice status
+        $invoice->status = $validated['status'];
+
+        // Save the updated invoice
+        $invoice->save();
+
+        // Redirect back with success message
+        return redirect()->route('invoices.edit', $id)->with('success', 'Invoice status updated successfully.');
     }
+
+
+    public function returned(Request $request)
+    {
+        // Retrieve the selected category from the session, default to 'daily'
+        $selectedCategory = $request->query('category', session('category', 'daily'));
+
+        // Store the selected category in the session for persistence
+        session(['category' => $selectedCategory]);
+
+        // Fetch invoices with 'returned' status and category filter
+        $invoices = Invoice::with('customer')
+            ->whereHas('category', function ($query) use ($selectedCategory) {
+                $query->where('name', $selectedCategory);
+            })
+            ->where('status', 'returned') // Only returned invoices
+            ->paginate(10);
+
+        // Pass the selected category to the view
+        return view('invoices.returned', compact('invoices', 'selectedCategory'));
+    }
+
+
+    public function overdue(Request $request)
+    {
+        // Retrieve the selected category from the session, default to 'daily'
+        $selectedCategory = $request->query('category', session('category', 'daily'));
+
+        // Store the selected category in the session for persistence
+        session(['category' => $selectedCategory]);
+
+        // Fetch overdue invoices with category filter
+        $invoices = Invoice::with('customer')
+            ->whereHas('category', function ($query) use ($selectedCategory) {
+                $query->where('name', $selectedCategory);
+            })
+            ->where('rental_end_date', '<', now()) // Rental period has ended
+            ->where('paid', false) // Unpaid invoices only
+            ->paginate(10);
+
+        // Pass the selected category to the view
+        return view('invoices.overdue', compact('invoices', 'selectedCategory'));
+    }
+
+}

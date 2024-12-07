@@ -7,6 +7,8 @@
                 <th>Quantity</th>
                 <th>Price</th>
                 <th>Total Price</th>
+                <th>Rental Start Date</th>
+                <th>Rental End Date</th>
                 <th>Action</th>
             </tr>
         </thead>
@@ -30,6 +32,12 @@
                     <input type="text" class="form-control total-price" value="0.00" readonly>
                 </td>
                 <td>
+                    <input type="date" name="products[0][rental_start_date]" class="form-control" value="{{ now()->toDateString() }}" required>
+                </td>
+                <td>
+                    <input type="date" name="products[0][rental_end_date]" class="form-control" value="{{ now()->addDays(1)->toDateString() }}" required>
+                </td>
+                <td>
                     <button type="button" class="btn btn-danger remove-row">Remove</button>
                 </td>
             </tr>
@@ -40,7 +48,7 @@
                 <td>
                     <input type="text" id="grandTotal" class="form-control" value="0.00" readonly>
                 </td>
-                <td></td>
+                <td colspan="3"></td>
             </tr>
         </tfoot>
     </table>
@@ -76,6 +84,12 @@
                     </td>
                     <td>
                         <input type="text" class="form-control total-price" value="0.00" readonly>
+                    </td>
+                    <td>
+                        <input type="date" name="products[${rowIndex}][rental_start_date]" class="form-control" value="{{ now()->toDateString() }}" required>
+                    </td>
+                    <td>
+                        <input type="date" name="products[${rowIndex}][rental_end_date]" class="form-control" value="{{ now()->addDays(1)->toDateString() }}" required>
                     </td>
                     <td>
                         <button type="button" class="btn btn-danger remove-row">Remove</button>

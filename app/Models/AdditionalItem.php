@@ -15,11 +15,13 @@ class AdditionalItem extends Model
         'quantity',        // Quantity of the added item
         'price',           // Price per unit
         'total_price',     // Total price for the added items
-        'added_date',      // Date when the item was added
+        'rental_start_date', // Rental start date
+        'rental_end_date',   // Rental end date
     ];
 
     protected $casts = [
-        'added_date' => 'datetime',
+        'rental_start_date' => 'datetime',
+        'rental_end_date' => 'datetime',
     ];
 
     // Relationships

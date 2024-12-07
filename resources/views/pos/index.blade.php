@@ -64,12 +64,12 @@
                 <!-- Rental Dates and Days Calculation -->
                 <div class="mb-3">
                     <label for="rental-start-date" class="form-label">Rental Start Date</label>
-                    <input type="date" class="form-control" id="rental-start-date">
+                    <input type="datetime-local" class="form-control" id="rental-start-date">
                 </div>
 
                 <div class="mb-3">
                     <label for="rental-end-date" class="form-label">Rental End Date</label>
-                    <input type="date" class="form-control" id="rental-end-date">
+                    <input type="datetime-local" class="form-control" id="rental-end-date">
                 </div>
 
                 <div class="mb-3">

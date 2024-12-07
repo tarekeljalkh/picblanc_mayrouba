@@ -51,8 +51,8 @@ class POSController extends Controller
             'status' => 'required|boolean',
             'payment_method' => 'required|in:cash,credit_card',
             'rental_days' => 'required|integer|min:1',
-            'rental_start_date' => 'required|date',
-            'rental_end_date' => 'required|date|after_or_equal:rental_start_date',
+            'rental_start_date' => 'required|date_format:Y-m-d\TH:i',
+            'rental_end_date' => 'required|date_format:Y-m-d\TH:i|after_or_equal:rental_start_date',
         ]);
 
         try {
@@ -69,10 +69,8 @@ class POSController extends Controller
             $discountAmount = ($rentalTotal * ($request->total_discount ?? 0)) / 100;
             $totalAmount = $rentalTotal - $discountAmount;
 
-            $isPaid = (bool)$request->status; // Ensure this is correctly interpreted as boolean
+            $isPaid = (bool) $request->status;
             $invoiceStatus = $isPaid ? 'active' : 'draft';
-
-            //Log::info('Final Invoice Status:', ['isPaid' => $isPaid, 'status' => $invoiceStatus]);
 
             $invoice = Invoice::create([
                 'customer_id' => $request->customer_id,
@@ -81,12 +79,12 @@ class POSController extends Controller
                 'total_discount' => $request->total_discount ?? 0,
                 'amount_per_day' => $subtotal,
                 'total_amount' => $totalAmount,
-                'paid' => $isPaid, // Directly use boolean for 'paid'
+                'paid' => $isPaid,
                 'payment_method' => $request->payment_method,
                 'days' => $request->rental_days,
                 'rental_start_date' => $request->rental_start_date,
                 'rental_end_date' => $request->rental_end_date,
-                'status' => $invoiceStatus, // Use dynamically determined status
+                'status' => $invoiceStatus,
                 'note' => $request->note ?? null,
             ]);
 

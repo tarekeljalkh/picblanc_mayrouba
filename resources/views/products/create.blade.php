@@ -10,51 +10,62 @@
     </ol>
 </nav>
 
-    <div class="row g-6">
-        <div class="col-md">
-            <div class="card">
-                <h5 class="card-header">Add New Product</h5>
-                <div class="card-body">
-                    <form action="{{ route('products.store') }}" method="POST" enctype="multipart/form-data">
-                        @csrf
-                        {{-- Name --}}
-                        <div class="mb-4 row">
-                            <label for="name" class="col-md-2 col-form-label">Name</label>
-                            <div class="col-md-10">
-                                <input class="form-control" type="text" id="name" name="name" />
-                            </div>
+<div class="row g-6">
+    <div class="col-md">
+        <div class="card">
+            <h5 class="card-header">Add New Product</h5>
+            <div class="card-body">
+                <form action="{{ route('products.store') }}" method="POST" enctype="multipart/form-data">
+                    @csrf
+                    {{-- Name --}}
+                    <div class="mb-4 row">
+                        <label for="name" class="col-md-2 col-form-label">Name</label>
+                        <div class="col-md-10">
+                            <input class="form-control" type="text" id="name" name="name" required />
                         </div>
-                        {{-- End Name --}}
+                    </div>
+                    {{-- End Name --}}
 
-                        {{-- Description --}}
-                        <div class="mb-4 row">
-                            <label for="description" class="col-md-2 col-form-label">Description</label>
-                            <div class="col-md-10">
-                                <input class="form-control" type="description" id="description" name="description" />
-                            </div>
+                    {{-- Description --}}
+                    <div class="mb-4 row">
+                        <label for="description" class="col-md-2 col-form-label">Description</label>
+                        <div class="col-md-10">
+                            <input class="form-control" type="text" id="description" name="description" />
                         </div>
-                        {{-- End Description --}}
+                    </div>
+                    {{-- End Description --}}
 
-                        {{-- Price --}}
-                        <div class="mb-4 row">
-                            <label for="price" class="col-md-2 col-form-label">Price</label>
-                            <div class="col-md-10">
-                                <input class="form-control" type="number" id="price" name="price" />
-                            </div>
+                    {{-- Price --}}
+                    <div class="mb-4 row">
+                        <label for="price" class="col-md-2 col-form-label">Price</label>
+                        <div class="col-md-10">
+                            <input class="form-control" type="number" step="0.01" id="price" name="price" required />
                         </div>
-                        {{-- End Price --}}
+                    </div>
+                    {{-- End Price --}}
 
-
-                        {{-- Create Button --}}
-                        <div class="mt-4 row">
-                            <div class="col-md-12 text-end">
-                                <button type="submit" class="btn btn-primary">Create</button>
-                            </div>
+                    {{-- Product Type --}}
+                    <div class="mb-4 row">
+                        <label for="type" class="col-md-2 col-form-label">Price Type</label>
+                        <div class="col-md-10">
+                            <select class="form-select" id="type" name="type" required>
+                                <option value="standard">Standard</option>
+                                <option value="fixed">Fixed</option>
+                            </select>
                         </div>
-                        {{-- End Create Button --}}
-                    </form>
-                </div>
+                    </div>
+                    {{-- End Product Type --}}
+
+                    {{-- Create Button --}}
+                    <div class="mt-4 row">
+                        <div class="col-md-12 text-end">
+                            <button type="submit" class="btn btn-primary">Create</button>
+                        </div>
+                    </div>
+                    {{-- End Create Button --}}
+                </form>
             </div>
         </div>
     </div>
+</div>
 @endsection

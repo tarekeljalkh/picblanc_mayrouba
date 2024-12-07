@@ -18,7 +18,8 @@ return new class extends Migration
             $table->integer('quantity');
             $table->decimal('price', 10, 2);
             $table->decimal('total_price', 10, 2);
-            $table->datetime('added_date');;
+            $table->datetime('rental_start_date');
+            $table->datetime('rental_end_date');
             $table->timestamps();
         });
     }

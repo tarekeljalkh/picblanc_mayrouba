@@ -22,18 +22,21 @@ class ProductSeeder extends Seeder
             'name' => 'Ski',
             'description' => 'Salomon',
             'price' => 150.00,
+            'type' => 'standard',
             'category_id' => $dailyCategory->id,
         ]);
         Product::create([
             'name' => 'Ski Boots',
             'description' => 'Burton',
             'price' => 200.00,
+            'type' => 'standard',
             'category_id' => $dailyCategory->id,
         ]);
         Product::create([
             'name' => 'Poles',
             'description' => 'Atomic',
             'price' => 100.00,
+            'type' => 'standard',
             'category_id' => $dailyCategory->id,
         ]);
 
@@ -42,18 +45,21 @@ class ProductSeeder extends Seeder
             'name' => 'Snowboard',
             'description' => 'Giro',
             'price' => 50.00,
+            'type' => 'standard',
             'category_id' => $seasonCategory->id,
         ]);
         Product::create([
             'name' => 'Snowboard Boots',
             'description' => 'North Face',
             'price' => 20.00,
+            'type' => 'standard',
             'category_id' => $seasonCategory->id,
         ]);
         Product::create([
             'name' => 'Sled',
             'description' => 'North Face',
             'price' => 200.00,
+            'type' => 'standard',
             'category_id' => $seasonCategory->id,
         ]);
 
@@ -62,42 +68,77 @@ class ProductSeeder extends Seeder
             'name' => 'Hiking Racket',
             'description' => 'North Face',
             'price' => 10.00,
+            'type' => 'standard',
             'category_id' => $dailyCategory->id,
         ]);
         Product::create([
             'name' => 'Gloves',
             'description' => 'North Face',
             'price' => 150.00,
+            'type' => 'standard',
             'category_id' => $seasonCategory->id,
         ]);
         Product::create([
             'name' => 'Helmet',
             'description' => 'Marmot',
             'price' => 30.00,
+            'type' => 'standard',
             'category_id' => $dailyCategory->id,
         ]);
         Product::create([
             'name' => 'Goggles',
             'description' => 'Marmot',
             'price' => 60.00,
+            'type' => 'standard',
             'category_id' => $seasonCategory->id,
         ]);
         Product::create([
             'name' => 'Jacket',
             'description' => 'Columbia',
             'price' => 20.00,
+            'type' => 'standard',
             'category_id' => $dailyCategory->id,
         ]);
         Product::create([
             'name' => 'Pants',
             'description' => 'Columbia',
             'price' => 70.00,
+            'type' => 'standard',
             'category_id' => $seasonCategory->id,
         ]);
         Product::create([
             'name' => 'Apres Ski',
             'description' => 'Columbia',
             'price' => 180.00,
+            'type' => 'standard',
+            'category_id' => $seasonCategory->id,
+        ]);
+        Product::create([
+            'name' => 'Bus',
+            'description' => 'Bus',
+            'price' => 180.00,
+            'type' => 'fixed',
+            'category_id' => $seasonCategory->id,
+        ]);
+        Product::create([
+            'name' => 'Maintenance',
+            'description' => 'Maintenance',
+            'price' => 40.00,
+            'type' => 'fixed',
+            'category_id' => $seasonCategory->id,
+        ]);
+        Product::create([
+            'name' => 'Broken',
+            'description' => 'Brokent',
+            'price' => 30.00,
+            'type' => 'fixed',
+            'category_id' => $seasonCategory->id,
+        ]);
+        Product::create([
+            'name' => 'Lost',
+            'description' => 'Lost',
+            'price' => 20.00,
+            'type' => 'fixed',
             'category_id' => $seasonCategory->id,
         ]);
     }

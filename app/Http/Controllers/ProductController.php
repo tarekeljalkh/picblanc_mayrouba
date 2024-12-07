@@ -46,6 +46,7 @@ class ProductController extends Controller
             'name' => 'required|string|min:3',
             'description' => 'nullable|string',
             'price' => 'required|numeric',
+            'type' => 'required|in:standard,fixed', // Validate the type field
         ]);
 
         // Retrieve the selected category from the session
@@ -57,13 +58,13 @@ class ProductController extends Controller
         $product->name = $request->name;
         $product->description = $request->description;
         $product->price = $request->price;
+        $product->type = $request->type; // Assign the product type
         $product->category_id = $category->id; // Assign the category from the session
         $product->save();
 
         return redirect()->route('products.index')
             ->with('success', 'Product created successfully.');
     }
-
     /**
      * Display the specified resource.
      */
@@ -92,17 +93,20 @@ class ProductController extends Controller
             'name' => 'required|min:3',
             'description' => 'nullable|string',
             'price' => 'required|numeric',
+            'type' => 'required|in:standard,fixed', // Validate the type field
         ]);
 
+        // Find the product
         $product = Product::findOrFail($id);
 
-        // Update customer details
+        // Update product details
         $product->name = $request->name;
         $product->description = $request->description;
         $product->price = $request->price;
+        $product->type = $request->type; // Update the product type
         $product->save();
 
-        return redirect()->route('products.index')->with('success', 'Customer updated successfully.');
+        return redirect()->route('products.index')->with('success', 'Product updated successfully.');
     }
 
     /**

@@ -69,16 +69,16 @@
                         <div class="mb-4 row">
                             <label for="rental_start_date" class="col-md-2 col-form-label">Rental Start Date</label>
                             <div class="col-md-10">
-                                <input class="form-control" type="text" id="rental_start_date" name="rental_start_date"
-                                    placeholder="Enter Rental Start Date" autocomplete="off" required />
+                                <input class="form-control" type="datetime-local" id="rental_start_date"
+                                    name="rental_start_date" required />
                             </div>
                         </div>
 
                         <div class="mb-4 row">
                             <label for="rental_end_date" class="col-md-2 col-form-label">Rental End Date</label>
                             <div class="col-md-10">
-                                <input class="form-control" type="text" id="rental_end_date" name="rental_end_date"
-                                    placeholder="Enter Rental End Date" autocomplete="off" required />
+                                <input class="form-control" type="datetime-local" id="rental_end_date"
+                                    name="rental_end_date" required />
                             </div>
                         </div>
 
@@ -112,8 +112,8 @@
                                                     value="1" /></td>
                                             <td><input type="text" class="form-control price" name="prices[]"
                                                     value="0.00" readonly /></td>
-                                            <td><input type="text" class="form-control total-price"
-                                                    name="total_price[]" value="0.00" readonly /></td>
+                                            <td><input type="text" class="form-control total-price" name="total_price[]"
+                                                    value="0.00" readonly /></td>
                                             <td><button type="button" class="btn btn-danger remove-item">Remove</button>
                                             </td>
                                         </tr>
