@@ -99,13 +99,23 @@ class InvoiceItem extends Model
 
         // Update returned quantity
         $this->returned_quantity += $returnedQuantity;
+
+        // If all quantities for this item are returned, update its status
+        if ($this->returned_quantity == $this->quantity) {
+            $this->status = 'returned';
+        }
+
         $this->save();
+
+        // Trigger invoice status update
+        $this->invoice->checkAndUpdateStatus();
 
         return [
             'used_cost' => $usedCost,
             'remaining_quantity' => $this->quantity - $this->returned_quantity,
         ];
     }
+
 
     /**
      * Add quantity to the invoice item

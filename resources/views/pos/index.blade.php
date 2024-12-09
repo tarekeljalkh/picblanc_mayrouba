@@ -21,7 +21,8 @@
                     @foreach ($products as $product)
                         <div class="col-md-3 col-sm-6 col-12 mb-4 product-card-container">
                             <div class="card product-card clickable-card" data-id="{{ $product->id }}"
-                                data-name="{{ $product->name }}" data-price="{{ $product->price }}">
+                                data-name="{{ $product->name }}" data-price="{{ $product->price }}"
+                                data-type="{{ $product->type }}">
                                 <div class="card-body text-center">
                                     <h5 class="card-title">{{ $product->name }}</h5>
                                     <p class="card-text">${{ number_format($product->price, 2) }}</p>
@@ -40,9 +41,7 @@
                     <select id="customer-select" class="select2 form-select form-select-lg" data-allow-clear="true">
                         <option value="" disabled selected>Select a customer</option>
                         @foreach ($customers as $customer)
-                            <option
-                                value="{{ $customer->id }}"
-                                data-phone="{{ $customer->phone }}"
+                            <option value="{{ $customer->id }}" data-phone="{{ $customer->phone }}"
                                 {{ session('new_customer_id') == $customer->id ? 'selected' : '' }}>
                                 {{ $customer->name }} ({{ $customer->phone }})
                             </option>
@@ -214,6 +213,7 @@
                     const productId = $(this).data('id');
                     const productName = $(this).data('name');
                     const productPrice = parseFloat($(this).data('price'));
+                    const productType = $(this).data('type'); // Get the product type
 
                     let productInCart = cart.find(item => item.id === productId);
                     if (productInCart) {
@@ -223,6 +223,7 @@
                             id: productId,
                             name: productName,
                             price: productPrice,
+                            type: productType, // Store product type in the cart
                             quantity: 1
                         });
                     }
@@ -244,11 +245,19 @@
                 }
 
                 function calculateTotalAmount() {
-                    let total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-                    const days = parseInt($('#rental-days').val()) || 1;
+                    const days = parseInt($('#rental-days').val()) || 1; // Default to 1 if no days entered
                     const totalDiscount = parseFloat($('#total-discount').val()) || 0;
 
-                    total *= days;
+                    let total = cart.reduce((sum, item) => {
+                        if (item.type === 'fixed') {
+                            // Fixed products are not multiplied by days
+                            return sum + (item.price * item.quantity);
+                        } else {
+                            // Standard products are multiplied by days
+                            return sum + (item.price * item.quantity * days);
+                        }
+                    }, 0);
+
                     const discountAmount = (total * totalDiscount) / 100;
                     const grandTotal = total - discountAmount;
 
@@ -260,25 +269,27 @@
                     if (cart.length > 0) {
                         cart.forEach((item, index) => {
                             cartHtml += `
-                            <div class="cart-item mb-3">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <span><strong>${item.name}</strong></span>
-                                    <button class="btn btn-danger btn-sm remove-from-cart" data-index="${index}">Remove</button>
-                                </div>
-                                <div class="form-row mt-2">
-                                    <div class="d-flex justify-content-between">
-                                        <div class="col">
-                                            <label>Qty</label>
-                                            <input type="number" class="form-control form-control-sm quantity" data-index="${index}" value="${item.quantity}" />
-                                        </div>
-                                        <div class="col">
-                                            <label>Price</label>
-                                            <input type="text" class="form-control form-control-sm price" value="${(item.price * item.quantity).toFixed(2)}" readonly />
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        `;
+            <div class="cart-item mb-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <span><strong>${item.name}</strong></span>
+                    <button class="btn btn-danger btn-sm remove-from-cart" data-index="${index}">Remove</button>
+                </div>
+                <div class="form-row mt-2">
+                    <div class="d-flex justify-content-between">
+                        <div class="col">
+                            <label>Qty</label>
+                            <input type="number" class="form-control form-control-sm quantity" data-index="${index}" value="${item.quantity}" />
+                        </div>
+                        <div class="col">
+                            <label>Price</label>
+                            <input type="text" class="form-control form-control-sm price" value="${item.type === 'fixed'
+                                ? (item.price * item.quantity).toFixed(2)
+                                : (item.price * item.quantity * ($('#rental-days').val() || 1)).toFixed(2)}" readonly />
+                        </div>
+                    </div>
+                </div>
+            </div>
+            `;
                         });
                     } else {
                         cartHtml = '<p>No items in the cart.</p>';
@@ -309,8 +320,8 @@
                     const paymentStatus = $('input[name="payment_status"]:checked').val();
                     const paymentMethod = $('input[name="payment_method"]:checked').val();
 
-                    const startDateWithTime = $('#rental-start-date').val() + 'T00:00:00';
-                    const endDateWithTime = $('#rental-end-date').val() + 'T23:59:59';
+                    const startDateWithTime = $('#rental-start-date').val();
+                    const endDateWithTime = $('#rental-end-date').val();
 
                     $.ajax({
                         url: '{{ route('pos.checkout') }}',
@@ -342,4 +353,5 @@
             });
         </script>
     @endpush
+
 @endsection

@@ -18,30 +18,54 @@
                 <a href="{{ route('invoices.create') }}" class="btn btn-primary">Create New Invoice</a>
             </div>
             <div class="card-body">
-                <!-- Date Filter Form -->
+                <!-- Filter Form -->
                 <form method="GET" action="{{ route('invoices.index') }}" class="mb-3">
                     <div class="row">
+                        <!-- Date Filters -->
                         <div class="col-md-3">
                             <label for="start_date" class="form-label">Start Date</label>
                             <input type="date" id="start_date" name="start_date" class="form-control"
-                                   value="{{ request('start_date', \Carbon\Carbon::today()->toDateString()) }}">
+                                value="{{ request('start_date', \Carbon\Carbon::today()->toDateString()) }}">
                         </div>
                         <div class="col-md-3">
                             <label for="end_date" class="form-label">End Date</label>
                             <input type="date" id="end_date" name="end_date" class="form-control"
-                                   value="{{ request('end_date', \Carbon\Carbon::today()->toDateString()) }}">
+                                value="{{ request('end_date', \Carbon\Carbon::today()->toDateString()) }}">
                         </div>
-                        <div class="col-md-3 align-self-end">
+
+                        <!-- Status Filter -->
+                        <div class="col-md-2">
+                            <label for="status" class="form-label">Status</label>
+                            <select id="status" name="status" class="form-select">
+                                <option value="">All</option>
+                                <option value="active" {{ request('status') === 'active' ? 'selected' : '' }}>Active</option>
+                                <option value="returned" {{ request('status') === 'returned' ? 'selected' : '' }}>Returned</option>
+                                <option value="draft" {{ request('status') === 'draft' ? 'selected' : '' }}>Draft</option>
+                            </select>
+                        </div>
+
+                        <!-- Payment Status Filter -->
+                        <div class="col-md-2">
+                            <label for="payment_status" class="form-label">Payment Status</label>
+                            <select id="payment_status" name="payment_status" class="form-select">
+                                <option value="">All</option>
+                                <option value="paid" {{ request('payment_status') === 'paid' ? 'selected' : '' }}>Paid</option>
+                                <option value="unpaid" {{ request('payment_status') === 'unpaid' ? 'selected' : '' }}>Unpaid</option>
+                            </select>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <div class="col-md-2 align-self-end">
                             <button type="submit" class="btn btn-primary">Filter</button>
                         </div>
                     </div>
                 </form>
 
+                <!-- Invoice Table -->
                 <table id="invoicesTable" class="table table-striped table-bordered dt-responsive nowrap"
                     style="width:100%">
                     <thead>
                         <tr>
-                            <th>#</th>
                             <th>Customer</th>
                             <th>Total</th>
                             <th>Status</th>
@@ -52,33 +76,36 @@
                     <tbody>
                         @foreach ($invoices as $invoice)
                             <tr>
-                                <td>{{ $invoice->id }}</td>
                                 <td>{{ $invoice->customer->name }}</td>
-                                <td>${{ $invoice->total_amount }}</td>
-                                <td>{{ ucfirst($invoice->status) }}</td>
+                                <td>${{ number_format($invoice->total_amount, 2) }}</td>
                                 <td>
-                                    @if($invoice->paid)
-                                        <span class="badge bg-success">Paid</span>
-                                    @else
-                                        <span class="badge bg-danger">Unpaid</span>
-                                    @endif
+                                    <span class="badge bg-{{ $invoice->status === 'returned' ? 'info' : ($invoice->status === 'active' ? 'success' : 'secondary') }}">
+                                        {{ ucfirst($invoice->status) }}
+                                    </span>
                                 </td>
                                 <td>
-                                    <a href="{{ route('invoices.edit', $invoice->id) }}" class="btn btn-warning">Edit</a>
-                                    <a href="{{ route('invoices.show', $invoice->id) }}" class="btn btn-warning">Show</a>
-                                    <a href="{{ route('invoices.print', $invoice->id) }}" class="btn btn-warning">Print</a>
+                                    <span class="badge bg-{{ $invoice->paid ? 'success' : 'danger' }}">
+                                        {{ $invoice->paid ? 'Paid' : 'Unpaid' }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <a href="{{ route('invoices.edit', $invoice->id) }}" class="btn btn-warning btn-sm">Edit</a>
+                                    <a href="{{ route('invoices.show', $invoice->id) }}" class="btn btn-info btn-sm">Show</a>
+                                    <a href="{{ route('invoices.print', $invoice->id) }}" class="btn btn-primary btn-sm">Print</a>
                                     @if (auth()->user()->role === 'admin')
-                                        <form action="{{ route('invoices.destroy', $invoice->id) }}" method="POST" class="d-inline">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="btn btn-danger">Delete</button>
-                                        </form>
-                                    @endif
+                                    <a href="{{ route('invoices.destroy', $invoice->id) }}"
+                                        class="btn btn-danger btn-sm delete-item">Delete</a>
+                                 @endif
                                 </td>
                             </tr>
                         @endforeach
                     </tbody>
                 </table>
+
+                <!-- Pagination Links -->
+                <div class="mt-3">
+                    {{ $invoices->withQueryString()->links() }}
+                </div>
             </div>
         </div>
     </div>

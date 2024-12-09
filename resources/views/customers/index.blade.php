@@ -52,13 +52,13 @@
                                     <!-- Only show the 'View Rentals' button if the customer has rentals -->
                                     @if ($customer->hasRentals())
                                         <a href="{{ route('customers.rentalDetails', $customer->id) }}"
-                                            class="btn btn-info">View Rentals</a>
+                                            class="btn btn-sm btn-info">View Rentals</a>
                                     @endif
                                     @if (auth()->user()->role === 'admin')
                                         <a href="{{ route('customers.edit', $customer->id) }}"
-                                            class="btn btn-warning">Edit</a>
+                                            class="btn btn-sm btn-warning">Edit</a>
                                         <a href="{{ route('customers.destroy', $customer->id) }}"
-                                            class="btn btn-danger delete-item">Delete</a>
+                                            class="btn btn-sm btn-danger delete-item">Delete</a>
                                     @endif
                                 </td>
                             </tr>

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\ProductType;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 
@@ -138,27 +139,33 @@ class Invoice extends Model
 
     public function calculateTotals()
     {
-        // Calculate subtotal
+        // Separate logic for standard and fixed products
         $subtotal = $this->items->sum(function ($item) {
-            return $item->price * $item->quantity * $this->days;
+            $type = $item->product->type instanceof \App\Enums\ProductType ? $item->product->type->value : $item->product->type;
+
+            return $type === 'fixed'
+                ? $item->price * $item->quantity // Fixed product: price * quantity
+                : $item->price * $item->quantity * $this->days; // Standard product: price * quantity * days
         });
 
-        // Calculate additional costs based on days remaining
+        // Additional costs based on days remaining
         $additionalCost = $this->additionalItems->sum(function ($item) {
             $daysUsed = max(1, Carbon::parse($item->added_date)->diffInDays(Carbon::parse($this->rental_end_date)) + 1);
             return $item->price * $item->quantity * $daysUsed;
         });
 
-        // Calculate returned costs based on days used
+        // Returned costs based on days used
         $returnedCost = $this->returnDetails->sum(function ($return) {
             return $return->returned_quantity * $return->invoiceItem->price * $return->days_used;
         });
 
-        // Calculate discount amount based on total before discount and days
+        // Calculate total before discount
         $totalBeforeDiscount = $subtotal + $additionalCost - $returnedCost;
+
+        // Discount calculation
         $discountAmount = ($totalBeforeDiscount * $this->total_discount / 100);
 
-        // Calculate total
+        // Final total
         $total = $totalBeforeDiscount - $discountAmount;
 
         return [
@@ -168,5 +175,17 @@ class Invoice extends Model
             'discountAmount' => $discountAmount,
             'total' => $total,
         ];
+    }
+
+    public function checkAndUpdateStatus()
+    {
+        // Check if all items are returned
+        $allReturned = $this->items()->where('status', '!=', 'returned')->doesntExist();
+
+        // Update the invoice status if all items are returned
+        if ($allReturned) {
+            $this->status = 'returned';
+            $this->save();
+        }
     }
 }

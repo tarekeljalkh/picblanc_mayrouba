@@ -75,13 +75,13 @@
                             </a>
                         </div>
 
-                        <!-- Returned Invoices Card -->
+                        <!-- Active Invoices Card -->
                         <div class="col-sm-6 col-lg-3">
-                            <a href="{{ route('invoices.returned') }}"
+                            <a href="{{ route('invoices.index', ['status' => 'active']) }}"
                                 class="d-flex justify-content-between align-items-center card-widget-4 border-end pb-4 pb-sm-0">
                                 <div>
-                                    <h4 class="mb-0">{{ $returnedCount }}</h4>
-                                    <p class="mb-0">Returned Invoices</p>
+                                    <h4 class="mb-0">{{ $notReturnedCount }}</h4>
+                                    <p class="mb-0">Not Returned Invoices</p>
                                 </div>
                                 <div class="avatar me-sm-6">
                                     <span class="avatar-initial rounded bg-label-secondary text-heading">
@@ -90,6 +90,7 @@
                                 </div>
                             </a>
                         </div>
+
 
                         <!-- Overdue Invoices Card -->
                         <div class="col-sm-6 col-lg-3">
@@ -117,10 +118,10 @@
                 <table class="invoice-list-table table border-top">
                     <thead>
                         <tr>
-                            <th>#</th>
                             <th>Client</th>
                             <th>Total</th>
-                            <th>Issued Date</th>
+                            <th>Return Date</th>
+                            <th>Payment Status</th>
                             <th>Invoice Status</th>
                             <th class="cell-fit">Action</th>
                         </tr>
@@ -128,13 +129,26 @@
                     <tbody>
                         @foreach ($invoices as $invoice)
                             <tr>
-                                <td>{{ $invoice->id }}</td>
                                 <td>{{ $invoice->customer->name ?? 'N/A' }}</td>
                                 <td>${{ number_format($invoice->total_amount ?? 0, 2) }}</td>
                                 <td>{{ $invoice->created_at->format('d/m/Y') }}</td>
                                 <td>
                                     <span class="badge {{ $invoice->paid ? 'bg-success' : 'bg-danger' }}">
                                         {{ $invoice->paid ? 'Paid' : 'Unpaid' }}
+                                    </span>
+                                </td>
+                                <td>
+                                    @php
+                                        $statusClasses = [
+                                            'draft' => 'bg-warning',
+                                            'active' => 'bg-success',
+                                            'returned' => 'bg-info',
+                                            'overdue' => 'bg-danger',
+                                        ];
+                                    @endphp
+
+                                    <span class="badge {{ $statusClasses[$invoice->status] ?? 'bg-secondary' }}">
+                                        {{ ucfirst($invoice->status) }}
                                     </span>
                                 </td>
                                 <td>

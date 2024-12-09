@@ -44,14 +44,14 @@
                                     <!-- Conditional Button for Rental Details -->
                                     @if ($product->rentedQuantity() > 0)
                                         <a href="{{ route('products.rentalDetails', $product->id) }}"
-                                            class="btn btn-info">View Rental Details</a>
+                                            class="btn btn-sm btn-info">View Rental Details</a>
                                     @endif
 
                                     @if (auth()->user()->role === 'admin')
                                         <a href="{{ route('products.edit', $product->id) }}"
-                                            class="btn btn-warning">Edit</a>
+                                            class="btn btn-sm btn-warning">Edit</a>
                                         <a href="{{ route('products.destroy', $product->id) }}"
-                                            class="btn btn-danger delete-item">Delete</a>
+                                            class="btn btn-danger btn-sm delete-item">Delete</a>
                                     @endif
                                 </td>
                             </tr>

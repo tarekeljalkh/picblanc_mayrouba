@@ -40,7 +40,7 @@
                     </td>
                     <td>
                         <input
-                            type="date"
+                            type="datetime-local"
                             class="form-control return-date {{ $errors->has("returns.{$item->id}.return_date") ? 'is-invalid' : '' }}"
                             name="returns[{{ $item->id }}][return_date]"
                             min="{{ $invoice->rental_start_date }}"

@@ -43,26 +43,33 @@ class InvoiceController extends Controller
         // Retrieve the selected category from the session, default to 'daily' if none is set
         $selectedCategory = session('category', 'daily');
 
-        // Get the status filter from the request
+        // Get the status and payment filters from the request
         $status = $request->query('status');
+        $paymentStatus = $request->query('payment_status');
 
-        // Fetch invoices based on the selected category and optional status filter, excluding 'draft'
+        // Fetch invoices based on the selected category and optional status/payment filters
         $invoices = Invoice::with('customer')
             ->whereHas('category', function ($query) use ($selectedCategory) {
                 $query->where('name', $selectedCategory);
             })
-            ->where('status', '!=', 'draft') // Exclude invoices with 'draft' status
-            ->when($status === 'paid', function ($query) {
+            ->when($status, function ($query, $status) {
+                // Filter by invoice status
+                $query->where('status', $status);
+            })
+            ->when($paymentStatus === 'paid', function ($query) {
+                // Filter for paid invoices
                 $query->where('paid', true);
             })
-            ->when($status === 'unpaid', function ($query) {
+            ->when($paymentStatus === 'unpaid', function ($query) {
+                // Filter for unpaid invoices
                 $query->where('paid', false);
             })
             ->paginate(10); // Paginate results for better performance
 
-        // Pass the selected category and status to the view
-        return view('invoices.index', compact('invoices', 'selectedCategory', 'status'));
+        // Pass the selected category, status, and payment status to the view
+        return view('invoices.index', compact('invoices', 'selectedCategory', 'status', 'paymentStatus'));
     }
+
 
 
     /**
@@ -262,7 +269,7 @@ class InvoiceController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy($id)
+    public function destroy(string $id)
     {
         try {
             $invoice = Invoice::findOrFail($id);
@@ -299,11 +306,8 @@ class InvoiceController extends Controller
     }
 
 
-
-
     public function processReturns(Request $request, $invoiceId)
     {
-
         $invoice = Invoice::with('items.product')->findOrFail($invoiceId);
 
         $validated = $request->validate([
@@ -341,7 +345,7 @@ class InvoiceController extends Controller
                 ReturnDetail::create([
                     'invoice_id' => $invoice->id,
                     'invoice_item_id' => $item->id,
-                    'product_id' => $item->product_id, // Include the product_id here
+                    'product_id' => $item->product_id,
                     'returned_quantity' => $validatedReturn['quantity'],
                     'days_used' => $usedDays,
                     'cost' => $usedCost,
@@ -355,6 +359,15 @@ class InvoiceController extends Controller
                 $invoice->decrement('total_amount', $usedCost);
             }
 
+            // Check if all items in the invoice are returned
+            $allReturned = $invoice->items->every(function ($item) {
+                return $item->quantity === $item->returned_quantity;
+            });
+
+            if ($allReturned) {
+                $invoice->status = 'returned'; // Update the status to 'returned'
+            }
+
             $invoice->save();
             DB::commit();
 
@@ -364,6 +377,7 @@ class InvoiceController extends Controller
             return redirect()->back()->with('error', 'Failed to process returns: ' . $e->getMessage());
         }
     }
+
 
     public function addItems(Request $request, $invoiceId)
     {

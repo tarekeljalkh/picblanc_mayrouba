@@ -103,7 +103,8 @@
                                                     <option value="">Select Product</option>
                                                     @foreach ($products as $product)
                                                         <option value="{{ $product->id }}"
-                                                            data-price="{{ $product->price }}">{{ $product->name }}
+                                                            data-price="{{ $product->price }}"
+                                                            data-type="{{ $product->type }}">{{ $product->name }}
                                                         </option>
                                                     @endforeach
                                                 </select>
@@ -260,16 +261,22 @@
         }
 
         function calculateInvoiceTotal() {
-            let subtotal = 0;
+            let subtotal = 0; // For per-day products
+            let fixedTotal = 0; // For fixed products
 
-            // Calculate the subtotal of invoice items
+            // Iterate through each product row to calculate totals
             $('#invoice-items-table tbody tr').each(function() {
-                subtotal += parseFloat($(this).find('.total-price').val()) || 0;
-            });
+                let row = $(this);
+                let productType = row.find('.product-select option:selected').data('type'); // Get product type
+                let quantity = parseFloat(row.find('.quantity').val()) || 0;
+                let price = parseFloat(row.find('.price').val()) || 0;
 
-            // Calculate the amount per day based on the subtotal
-            let amountPerDay = subtotal;
-            $('#amount_per_day').val(amountPerDay.toFixed(2));
+                if (productType === 'fixed') {
+                    fixedTotal += quantity * price; // Add directly to fixed total
+                } else {
+                    subtotal += quantity * price; // Add to subtotal for per-day products
+                }
+            });
 
             // Calculate the rental duration in days
             let startDate = new Date($('#rental_start_date').val());
@@ -277,17 +284,18 @@
             let days = (startDate && endDate) ? Math.floor((endDate - startDate) / (1000 * 60 * 60 * 24) + 1) : 0;
             $('#days').val(days);
 
-            // Calculate discount for the total amount
+            // Calculate discount
             let discount = parseFloat($('#total_discount').val()) || 0;
-
             let discountAmount = (subtotal * discount) / 100;
 
-            // Calculate the final total amount
-            let totalAmount = (subtotal - discountAmount) * days;
+            // Final total amount
+            let totalAmount = (subtotal - discountAmount) * days + fixedTotal; // Fixed products are added directly
             $('#total_amount').val(totalAmount.toFixed(2));
 
+            // Update form validity
             checkFormValidity();
         }
+
 
         function checkFormValidity() {
             let hasCustomer = $('#select_customer').val() || ($('#customer_name').val() && $('#customer_phone').val() && $(
@@ -322,7 +330,7 @@
                         <select class="form-select product-select" name="products[]">
                             <option value="">Select Product</option>
                             @foreach ($products as $product)
-                                <option value="{{ $product->id }}" data-price="{{ $product->price }}">{{ $product->name }}</option>
+                                <option value="{{ $product->id }}" data-price="{{ $product->price }}" data-type="{{ $product->type }}">{{ $product->name }}</option>
                             @endforeach
                         </select>
                     </td>

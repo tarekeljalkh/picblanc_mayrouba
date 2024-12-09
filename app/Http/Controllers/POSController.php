@@ -30,47 +30,57 @@ class POSController extends Controller
 
     public function checkout(Request $request)
     {
-        $request->validate([
-            'customer_id' => 'required|exists:customers,id',
-            'cart' => 'required|array',
-            'cart.*.id' => [
-                'required',
-                'exists:products,id',
-                function ($attribute, $value, $fail) {
-                    $currentCategoryName = session('category', 'daily');
-                    $category = Category::where('name', $currentCategoryName)->firstOrFail();
-                    $product = Product::find($value);
-                    if ($product && $product->category_id !== $category->id) {
-                        $fail("The product '{$product->name}' does not belong to the selected category.");
-                    }
-                }
-            ],
-            'cart.*.quantity' => 'required|integer|min:1',
-            'cart.*.price' => 'required|numeric|min:0',
-            'total_discount' => 'nullable|numeric|min:0',
-            'status' => 'required|boolean',
-            'payment_method' => 'required|in:cash,credit_card',
-            'rental_days' => 'required|integer|min:1',
-            'rental_start_date' => 'required|date_format:Y-m-d\TH:i',
-            'rental_end_date' => 'required|date_format:Y-m-d\TH:i|after_or_equal:rental_start_date',
-        ]);
+        Log::info('Checkout Request Payload:', $request->all());
 
         try {
+            $request->validate([
+                'customer_id' => 'required|exists:customers,id',
+                'cart' => 'required|array',
+                'cart.*.id' => 'required|exists:products,id',
+                'cart.*.quantity' => 'required|integer|min:1',
+                'cart.*.price' => 'required|numeric|min:0',
+                'total_discount' => 'nullable|numeric|min:0',
+                'status' => 'required|boolean',
+                'payment_method' => 'required|in:cash,credit_card',
+                'rental_days' => 'required|integer|min:1',
+                'rental_start_date' => 'required|date_format:Y-m-d\TH:i',
+                'rental_end_date' => 'required|date_format:Y-m-d\TH:i|after_or_equal:rental_start_date',
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::error('Validation Error:', $e->errors());
+            return response()->json(['error' => 'Validation Failed', 'details' => $e->errors()], 422);
+        }
+
+        try {
+            Log::info('Starting Database Transaction...');
             DB::beginTransaction();
 
             $currentCategoryName = session('category', 'daily');
             $category = Category::where('name', $currentCategoryName)->firstOrFail();
 
+            Log::info('Category Found:', ['name' => $category->name]);
+
             $subtotal = array_sum(array_map(function ($item) {
-                return $item['price'] * $item['quantity'];
+                $product = Product::findOrFail($item['id']);
+                Log::info('Calculating for Product:', ['product' => $product->name, 'type' => $product->type]);
+                if ($product->type === \App\Enums\ProductType::FIXED->value) {
+                    return $product->price * $item['quantity'];
+                } else {
+                    return $product->price * $item['quantity'] * request()->rental_days;
+                }
             }, $request->cart));
 
-            $rentalTotal = $subtotal * $request->rental_days;
+            Log::info('Subtotal Calculated:', ['subtotal' => $subtotal]);
+
+            $rentalTotal = $subtotal;
             $discountAmount = ($rentalTotal * ($request->total_discount ?? 0)) / 100;
             $totalAmount = $rentalTotal - $discountAmount;
 
-            $isPaid = (bool) $request->status;
-            $invoiceStatus = $isPaid ? 'active' : 'draft';
+            Log::info('Final Amounts:', [
+                'rental_total' => $rentalTotal,
+                'discount' => $discountAmount,
+                'total' => $totalAmount,
+            ]);
 
             $invoice = Invoice::create([
                 'customer_id' => $request->customer_id,
@@ -79,35 +89,55 @@ class POSController extends Controller
                 'total_discount' => $request->total_discount ?? 0,
                 'amount_per_day' => $subtotal,
                 'total_amount' => $totalAmount,
-                'paid' => $isPaid,
+                'paid' => (bool) $request->status,
                 'payment_method' => $request->payment_method,
                 'days' => $request->rental_days,
                 'rental_start_date' => $request->rental_start_date,
                 'rental_end_date' => $request->rental_end_date,
-                'status' => $invoiceStatus,
+                'status' => $request->status ? 'active' : 'draft',
                 'note' => $request->note ?? null,
             ]);
 
+            Log::info('Invoice Created:', ['invoice_id' => $invoice->id]);
+
             foreach ($request->cart as $item) {
                 $product = Product::findOrFail($item['id']);
-                $price = $product->price;
+                $totalPrice = ($product->type === \App\Enums\ProductType::FIXED->value)
+                    ? $product->price * $item['quantity']
+                    : $product->price * $item['quantity'] * $request->rental_days;
+
+                Log::info('Adding Product to Invoice:', [
+                    'product_id' => $product->id,
+                    'quantity' => $item['quantity'],
+                    'total_price' => $totalPrice,
+                ]);
+
                 $invoice->items()->create([
                     'product_id' => $product->id,
                     'quantity' => $item['quantity'],
-                    'price' => $price,
-                    'total_price' => $price * $item['quantity'],
+                    'price' => $product->price,
+                    'total_price' => $totalPrice,
+                    'rental_start_date' => $request->rental_start_date,
+                    'rental_end_date' => $request->rental_end_date,
                 ]);
             }
 
             DB::commit();
-
+            Log::info('Transaction Committed Successfully');
             return response()->json(['invoice_id' => $invoice->id]);
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Checkout Error:', ['message' => $e->getMessage()]);
+            Log::error('Checkout Exception:', [
+                'message' => $e->getMessage(),
+                'line' => $e->getLine(),
+                'file' => $e->getFile(),
+                'trace' => $e->getTraceAsString(),
+            ]);
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
+
+
 
 
     // public function checkout(Request $request)

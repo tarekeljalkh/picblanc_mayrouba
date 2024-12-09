@@ -32,10 +32,10 @@
                     <input type="text" class="form-control total-price" value="0.00" readonly>
                 </td>
                 <td>
-                    <input type="date" name="products[0][rental_start_date]" class="form-control" value="{{ now()->toDateString() }}" required>
+                    <input type="datetime-local" name="products[0][rental_start_date]" class="form-control" value="{{ now()->toDateString() }}" required>
                 </td>
                 <td>
-                    <input type="date" name="products[0][rental_end_date]" class="form-control" value="{{ now()->addDays(1)->toDateString() }}" required>
+                    <input type="datetime-local" name="products[0][rental_end_date]" class="form-control" value="{{ now()->addDays(1)->toDateString() }}" required>
                 </td>
                 <td>
                     <button type="button" class="btn btn-danger remove-row">Remove</button>

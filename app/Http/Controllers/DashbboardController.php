@@ -29,6 +29,7 @@ class DashbboardController extends Controller
         $invoicesCount = Invoice::where('category_id', $category->id)->count();
         $totalPaid = Invoice::where('category_id', $category->id)->where('paid', true)->count();
         $totalUnpaid = Invoice::where('category_id', $category->id)->where('paid', false)->count();
+        $notReturnedCount = Invoice::where('category_id', $category->id)->where('status', 'active')->count();
         $returnedCount = Invoice::where('category_id', $category->id)->where('status', 'returned')->count();
         $overdueCount = Invoice::where('category_id', $category->id)
             ->where('rental_end_date', '<', now())
@@ -47,6 +48,7 @@ class DashbboardController extends Controller
             'invoicesCount',
             'totalPaid',
             'totalUnpaid',
+            'notReturnedCount',
             'returnedCount',
             'overdueCount',
             'invoices',
@@ -133,7 +135,14 @@ class DashbboardController extends Controller
 
         foreach ($productSales as $product) {
             $totalQuantity = $product->invoiceItems->sum('quantity');
-            $totalIncomeForProduct = $product->invoiceItems->sum(fn($item) => $item->quantity * $item->price);
+
+            // Distinguish between fixed and standard product types
+            $totalIncomeForProduct = $product->invoiceItems->sum(function ($item) use ($product) {
+                return $product->type === \App\Enums\ProductType::FIXED->value
+                    ? $item->price  // Fixed: Price is taken as-is
+                    : $item->price * $item->quantity; // Standard: Multiply by quantity
+            });
+
             $averagePrice = $totalQuantity > 0 ? $totalIncomeForProduct / $totalQuantity : 0;
 
             $productBalances[] = [
@@ -147,4 +156,5 @@ class DashbboardController extends Controller
 
         return view('trial-balance.products', compact('productBalances', 'totalIncome', 'fromDate', 'toDate'));
     }
+
 }
