@@ -92,13 +92,13 @@
                         </div>
 
 
-                        <!-- Overdue Invoices Card -->
+                        <!-- Returned Invoices Card -->
                         <div class="col-sm-6 col-lg-3">
-                            <a href="{{ route('invoices.overdue') }}"
+                            <a href="{{ route('invoices.returned') }}"
                                 class="d-flex justify-content-between align-items-center card-widget-5 border-end pb-4 pb-sm-0">
                                 <div>
-                                    <h4 class="mb-0">{{ $overdueCount }}</h4>
-                                    <p class="mb-0">Overdue Invoices</p>
+                                    <h4 class="mb-0">{{ $returnedCount }}</h4>
+                                    <p class="mb-0">Returned Invoices</p>
                                 </div>
                                 <div class="avatar me-sm-6">
                                     <span class="avatar-initial rounded bg-label-secondary text-heading">

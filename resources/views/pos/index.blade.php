@@ -236,12 +236,14 @@
                     const endDate = new Date($('#rental-end-date').val());
 
                     if (!isNaN(startDate) && !isNaN(endDate) && startDate <= endDate) {
-                        const days = (endDate - startDate) / (1000 * 60 * 60 * 24) + 1;
+                        // Calculate the rental duration in whole days
+                        const days = Math.max(Math.floor((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1, 0);
                         $('#rental-days').val(days);
                     } else {
                         $('#rental-days').val(0);
                     }
-                    calculateTotalAmount();
+
+                    calculateTotalAmount(); // Ensure total amount is recalculated based on updated days
                 }
 
                 function calculateTotalAmount() {

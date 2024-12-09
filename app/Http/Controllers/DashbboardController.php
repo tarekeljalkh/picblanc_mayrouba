@@ -56,7 +56,6 @@ class DashbboardController extends Controller
         ));
     }
 
-
     public function trialBalance(Request $request)
     {
         // Set default "from" and "to" dates to today if not provided
@@ -93,10 +92,35 @@ class DashbboardController extends Controller
             ->whereBetween('created_at', [$from, $to])
             ->sum('total_amount');
 
+        // Fetch fixed products and their totals
+        $fixedProducts = Product::where('type', 'fixed')
+            ->with(['invoiceItems' => function ($query) use ($from, $to) {
+                $query->whereBetween('created_at', [$from, $to]);
+            }])
+            ->get();
+
+        $fixedProductBalances = $fixedProducts->map(function ($product) {
+            $totalQuantity = $product->invoiceItems->sum('quantity');
+            $totalRevenue = $product->invoiceItems->sum(fn($item) => $item->quantity * $item->price);
+
+            return [
+                'description' => $product->name, // Only the product name, no extra text
+                'amount' => $totalRevenue,
+                'quantity' => $totalQuantity,
+            ];
+        });
+
+        // Combine all data for the table
+        $trialBalanceData = [
+            ['description' => 'Total Paid Invoices', 'amount' => $totalIncome],
+            ['description' => 'Total Unpaid Invoices', 'amount' => $totalUnpaid],
+            ['description' => 'Total Paid by Credit Card', 'amount' => $totalCreditCard],
+        ];
+
+        $trialBalanceData = array_merge($trialBalanceData, $fixedProductBalances->toArray());
+
         return view('trial-balance.index', compact(
-            'totalIncome',
-            'totalUnpaid',
-            'totalCreditCard',
+            'trialBalanceData',
             'fromDate',
             'toDate'
         ));

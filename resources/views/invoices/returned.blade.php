@@ -53,17 +53,14 @@
                                 <td>{{ $invoice->id }}</td>
                                 <td>{{ $invoice->customer->name }}</td>
                                 <td>${{ $invoice->total_amount }}</td>
-                                <td>{{ $invoice->returned_at->format('Y-m-d') }}</td>
+                                <td>{{ $invoice->rental_end_date->format('d/m/Y H:i') }}</td>
                                 <td>
-                                    <a href="{{ route('invoices.edit', $invoice->id) }}" class="btn btn-warning">Edit</a>
-                                    <a href="{{ route('invoices.show', $invoice->id) }}" class="btn btn-warning">Show</a>
-                                    <a href="{{ route('invoices.print', $invoice->id) }}" class="btn btn-warning">Print</a>
+                                    <a href="{{ route('invoices.edit', $invoice->id) }}" class="btn btn-sm btn-warning">Edit</a>
+                                    <a href="{{ route('invoices.show', $invoice->id) }}" class="btn btn-sm btn-warning">Show</a>
+                                    <a href="{{ route('invoices.print', $invoice->id) }}" class="btn btn-sm btn-warning">Print</a>
                                     @if (auth()->user()->role === 'admin')
-                                        <form action="{{ route('invoices.destroy', $invoice->id) }}" method="POST" class="d-inline">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="btn btn-danger">Delete</button>
-                                        </form>
+                                            <a href="{{ route('invoices.destroy', $invoice->id) }}"
+                                                class="btn btn-danger btn-sm delete-item">Delete</a>
                                     @endif
                                 </td>
                             </tr>

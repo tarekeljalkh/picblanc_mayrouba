@@ -46,18 +46,12 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <tr>
-                            <td>Total Paid Invoices</td>
-                            <td>${{ number_format($totalIncome, 2) }}</td>
-                        </tr>
-                        <tr>
-                            <td>Total Unpaid Invoices</td>
-                            <td>${{ number_format($totalUnpaid, 2) }}</td>
-                        </tr>
-                        <tr>
-                            <td>Total Paid by Credit Card</td>
-                            <td>${{ number_format($totalCreditCard, 2) }}</td> <!-- Add this row -->
-                                        </tr>
+                        @foreach ($trialBalanceData as $data)
+                            <tr>
+                                <td>{{ $data['description'] }}</td>
+                                <td>${{ number_format($data['amount'], 2) }}</td>
+                            </tr>
+                        @endforeach
                     </tbody>
                 </table>
             </div>
@@ -65,14 +59,3 @@
     </div>
 
 @endsection
-
-@push('scripts')
-    <script>
-        flatpickr('#from_date', {
-            dateFormat: "Y-m-d"
-        });
-        flatpickr('#to_date', {
-            dateFormat: "Y-m-d"
-        });
-    </script>
-@endpush
