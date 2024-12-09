@@ -9,13 +9,13 @@
     <style>
         body {
             font-family: 'DejaVu Sans', sans-serif;
+            color: #333;
             margin: 0;
             padding: 0;
-            color: #333;
         }
 
-        .invoice-print {
-            padding: 10px;
+        .container {
+            padding: 20px;
             max-width: 800px;
             margin: auto;
         }
@@ -26,21 +26,21 @@
             align-items: center;
         }
 
-        .table {
+        table {
             width: 100%;
             border-collapse: collapse;
             margin-bottom: 1rem;
         }
 
-        .table th,
-        .table td {
+        table th,
+        table td {
             padding: 8px;
             border: 1px solid #ddd;
             text-align: left;
             font-size: 12px;
         }
 
-        .table th {
+        table th {
             background-color: #f9f9f9;
         }
 
@@ -48,51 +48,24 @@
             text-align: right;
         }
 
-        h5 {
-            font-size: 16px;
+        .fw-bold {
             font-weight: bold;
         }
 
-        h6 {
-            font-size: 14px;
-            font-weight: bold;
-        }
-
-        p {
-            margin: 0;
-        }
-
-        @media print {
-            body {
-                margin: 0;
-                padding: 0;
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
-            }
-
-            .invoice-print {
-                padding: 0;
-                margin: 0 auto;
-            }
-
-            .table th,
-            .table td {
-                font-size: 10px;
-                padding: 6px;
-            }
+        .text-danger {
+            color: red;
         }
     </style>
 </head>
 
 <body>
-    <div class="invoice-print">
+    <div class="container">
         <!-- Invoice Header -->
         <div class="d-flex">
             <div>
                 <img src="{{ public_path('logo_croped.png') }}" alt="Logo" width="150">
-                <p>Office 149, 450 South Brand Brooklyn</p>
-                <p>San Diego County, CA 91905, USA</p>
-                <p>+1 (123) 456 7891, +44 (876) 543 2198</p>
+                <p>Mayrouba Rental Shop</p>
+                <p>Tel: 03 71 57 57</p>
             </div>
             <div>
                 <h5>Rental Agreement #{{ $invoice->id }}</h5>
@@ -114,92 +87,61 @@
             <p>{{ $invoice->customer->email }}</p>
         </div>
 
+        <hr />
+
         <!-- Invoice Items -->
         <h6>Invoice Items</h6>
-        <div>
-            <table class="table">
+        <table>
+            <thead>
+                <tr>
+                    <th>Item</th>
+                    <th>Unit Price</th>
+                    <th>Qty</th>
+                    <th>Total Price</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach ($invoice->items as $item)
+                    <tr>
+                        <td>{{ $item->product->name }}</td>
+                        <td>${{ number_format($item->price, 2) }}</td>
+                        <td>{{ $item->quantity }}</td>
+                        <td>${{ number_format($item->price * $item->quantity, 2) }}</td>
+                    </tr>
+                @endforeach
+            </tbody>
+        </table>
+
+        <!-- Additional Items -->
+        @if ($invoice->additionalItems->isNotEmpty())
+            <h6>Additional Items</h6>
+            <table>
                 <thead>
                     <tr>
                         <th>Item</th>
                         <th>Unit Price</th>
                         <th>Qty</th>
                         <th>Total Price</th>
+                        <th>Added Date</th>
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach ($invoice->items as $item)
+                    @foreach ($invoice->additionalItems as $addedItem)
                         <tr>
-                            <td>{{ $item->product->name }}</td>
-                            <td>${{ number_format($item->price, 2) }}</td>
-                            <td>{{ $item->quantity }}</td>
-                            <td>${{ number_format($item->price * $item->quantity, 2) }}</td>
+                            <td>{{ $addedItem->product->name }}</td>
+                            <td>${{ number_format($addedItem->price, 2) }}</td>
+                            <td>{{ $addedItem->quantity }}</td>
+                            <td>${{ number_format($addedItem->total_price, 2) }}</td>
+                            <td>{{ optional($addedItem->added_date)->format('d/m/Y') }}</td>
                         </tr>
                     @endforeach
                 </tbody>
             </table>
-        </div>
-
-        <!-- Additional Items -->
-        @if ($invoice->additionalItems->isNotEmpty())
-            <h6>Additional Items</h6>
-            <div>
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>Item</th>
-                            <th>Unit Price</th>
-                            <th>Qty</th>
-                            <th>Total Price</th>
-                            <th>Added Date</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach ($invoice->additionalItems as $addedItem)
-                            <tr>
-                                <td>{{ $addedItem->product->name }}</td>
-                                <td>${{ number_format($addedItem->price, 2) }}</td>
-                                <td>{{ $addedItem->quantity }}</td>
-                                <td>${{ number_format($addedItem->total_price, 2) }}</td>
-                                <td>{{ optional($addedItem->added_date)->format('d/m/Y') }}</td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
         @endif
 
-        <!-- Returned Items -->
-        @if ($invoice->returnDetails->isNotEmpty())
-            <h6>Returned Items</h6>
-            <div>
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>Item</th>
-                            <th>Qty</th>
-                            <th>Days Used</th>
-                            <th>Cost</th>
-                            <th>Return Date</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach ($invoice->returnDetails as $return)
-                            <tr>
-                                <td>{{ $return->invoiceItem->product->name }}</td>
-                                <td>{{ $return->returned_quantity }}</td>
-                                <td>{{ $return->days_used }}</td>
-                                <td>${{ number_format($return->cost, 2) }}</td>
-                                <td>{{ optional($return->return_date)->format('d/m/Y') }}</td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
-        @endif
-
-        <!-- Summary -->
+        <!-- Invoice Summary -->
         <h6>Invoice Summary</h6>
-        <table class="table">
+        <table>
             <tr>
                 <td><strong>Subtotal:</strong></td>
                 <td class="text-end">${{ number_format($totals['subtotal'], 2) }}</td>
@@ -226,10 +168,17 @@
             </tr>
         </table>
 
+        <!-- Salesperson -->
+        <p><strong>Salesperson:</strong> {{ $invoice->user->name ?? 'N/A' }}</p>
+        Thanks for your business!<br>
+        <span>
+            {{ $invoice->paid ? 'Payment: Paid' : 'Payment: Not Paid' }}
+        </span>
+
         <hr />
-        <div>
-            <p><strong>CONDITION:</strong> I declare having received the merchandise mentioned above in good condition and agree to return it on time.</p>
-        </div>
+
+        <!-- Conditions -->
+        <p><strong>CONDITION:</strong> I declare having received the merchandise mentioned above in good condition and agree to return it on time. I will reimburse the value of any missing, damaged, or broken article.</p>
     </div>
 </body>
 

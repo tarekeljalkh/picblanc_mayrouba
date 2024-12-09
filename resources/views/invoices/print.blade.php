@@ -127,7 +127,10 @@
                         <tr>
                             <td>
                                 <strong>Salesperson:</strong> {{ $invoice->user->name ?? 'N/A' }}<br>
-                                Thanks for your business!
+                                Thanks for your business!<br>
+                                <span>
+                                    {{ $invoice->paid ? 'Payment: Paid' : 'Payment: Not Paid' }}
+                                </span>
                             </td>
                             <td class="text-end">
                                 @php

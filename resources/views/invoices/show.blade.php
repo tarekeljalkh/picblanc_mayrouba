@@ -140,7 +140,8 @@
                                         <td>{{ $return->returned_quantity }}</td>
                                         <td>{{ $return->days_used }}</td>
                                         <td>${{ number_format($return->cost, 2) }}</td>
-                                        <td>{{ optional($return->invoiceItem->rental_start_date)->format('d/m/Y H:i') }}</td>
+                                        <td>{{ optional($return->invoiceItem->rental_start_date)->format('d/m/Y H:i') }}
+                                        </td>
                                         <td>{{ optional($return->return_date)->format('d/m/Y H:i') }}</td>
                                     </tr>
                                 @endforeach
@@ -159,7 +160,12 @@
                                         <span class="me-2 h6">Salesperson:</span>
                                         <span>{{ $invoice->user->name ?? 'N/A' }}</span>
                                     </p>
-                                    <span>Thanks for your business</span>
+                                    <p class="mb-1">
+                                        <span>Thanks for your business</span>
+                                    </p>
+                                    <span>
+                                        {{ $invoice->paid ? 'Payment: Paid' : 'Payment: Not Paid' }}
+                                    </span>
                                 </td>
                                 <td class="px-0 py-3 w-px-150">
                                     <p class="mb-2">Subtotal:</p>

@@ -25,7 +25,6 @@
                             <th>Name</th>
                             <th>Phone</th>
                             <th>Address</th>
-                            <th>Deposit Card</th>
                             <th>Has Rentals</th> <!-- New column -->
                             <th>Action</th>
                         </tr>
@@ -36,10 +35,6 @@
                                 <td>{{ $customer->name }}</td>
                                 <td>{{ $customer->phone }}</td>
                                 <td>{{ $customer->address }}</td>
-                                <td>
-                                    <img src="{{ $customer->deposit_card ? $customer->deposit_card : asset('no_card.jpg') }}"
-                                        width="50">
-                                </td>
                                 <td>
                                     <!-- Display if customer has rentals -->
                                     @if ($customer->hasRentals())
