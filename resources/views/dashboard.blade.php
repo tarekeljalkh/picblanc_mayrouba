@@ -94,7 +94,7 @@
 
                         <!-- Returned Invoices Card -->
                         <div class="col-sm-6 col-lg-3">
-                            <a href="{{ route('invoices.returned') }}"
+                            <a href="{{ route('invoices.index', ['status' => 'returned']) }}"
                                 class="d-flex justify-content-between align-items-center card-widget-5 border-end pb-4 pb-sm-0">
                                 <div>
                                     <h4 class="mb-0">{{ $returnedCount }}</h4>
