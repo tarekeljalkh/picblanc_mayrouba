@@ -5,8 +5,10 @@ namespace App\Http\Controllers;
 use App\Models\Category;
 use App\Models\Customer;
 use App\Models\Invoice;
+use App\Models\InvoiceItem;
 use App\Models\Product;
 use App\Traits\FileUploadTrait;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -32,98 +34,85 @@ class POSController extends Controller
     {
         Log::info('Checkout Request Payload:', $request->all());
 
-        try {
-            $request->validate([
-                'customer_id' => 'required|exists:customers,id',
-                'cart' => 'required|array',
-                'cart.*.id' => 'required|exists:products,id',
-                'cart.*.quantity' => 'required|integer|min:1',
-                'cart.*.price' => 'required|numeric|min:0',
-                'total_discount' => 'nullable|numeric|min:0',
-                'status' => 'required|boolean',
-                'payment_method' => 'required|in:cash,credit_card',
-                'rental_days' => 'required|integer|min:1',
-                'rental_start_date' => 'required|date_format:Y-m-d\TH:i',
-                'rental_end_date' => 'required|date_format:Y-m-d\TH:i|after_or_equal:rental_start_date',
-            ]);
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            Log::error('Validation Error:', $e->errors());
-            return response()->json(['error' => 'Validation Failed', 'details' => $e->errors()], 422);
-        }
+        // Validate input
+        $request->validate([
+            'customer_id' => 'nullable|exists:customers,id',
+            'cart' => 'required|array|min:1',
+            'cart.*.id' => 'required|exists:products,id',
+            'cart.*.quantity' => 'required|integer|min:1',
+            'total_discount' => 'nullable|numeric|min:0',
+            'status' => 'required|boolean',
+            'payment_method' => 'required|in:cash,credit_card',
+            'rental_days' => 'required|integer|min:1',
+            'rental_start_date' => 'required|date',
+            'rental_end_date' => 'required|date|after_or_equal:rental_start_date',
+        ]);
 
         try {
-            Log::info('Starting Database Transaction...');
             DB::beginTransaction();
 
-            $currentCategoryName = session('category', 'daily');
-            $category = Category::where('name', $currentCategoryName)->firstOrFail();
+            // Handle Customer
+            if ($request->filled('customer_id')) {
+                $customer = Customer::findOrFail($request->customer_id);
+            } else {
+                throw new \Exception('Customer selection is required.');
+            }
 
-            Log::info('Category Found:', ['name' => $category->name]);
+            // Retrieve the category
+            $categoryName = session('category', 'daily');
+            $category = Category::where('name', $categoryName)->firstOrFail();
 
-            $subtotal = array_sum(array_map(function ($item) {
-                $product = Product::findOrFail($item['id']);
-                Log::info('Calculating for Product:', ['product' => $product->name, 'type' => $product->type]);
-                if ($product->type === \App\Enums\ProductType::FIXED->value) {
-                    return $product->price * $item['quantity'];
-                } else {
-                    return $product->price * $item['quantity'] * request()->rental_days;
-                }
-            }, $request->cart));
+            // Calculate totals
+            $rentalStartDate = Carbon::parse($request->rental_start_date);
+            $rentalEndDate = Carbon::parse($request->rental_end_date);
+            $rentalDays = $rentalStartDate->diffInDays($rentalEndDate) + 1;
 
-            Log::info('Subtotal Calculated:', ['subtotal' => $subtotal]);
-
-            $rentalTotal = $subtotal;
-            $discountAmount = ($rentalTotal * ($request->total_discount ?? 0)) / 100;
-            $totalAmount = $rentalTotal - $discountAmount;
-
-            Log::info('Final Amounts:', [
-                'rental_total' => $rentalTotal,
-                'discount' => $discountAmount,
-                'total' => $totalAmount,
-            ]);
-
-            $invoice = Invoice::create([
-                'customer_id' => $request->customer_id,
-                'user_id' => Auth::id(),
-                'category_id' => $category->id,
-                'total_discount' => $request->total_discount ?? 0,
-                'amount_per_day' => $subtotal,
-                'total_amount' => $totalAmount,
-                'paid' => (bool) $request->status,
-                'payment_method' => $request->payment_method,
-                'days' => $request->rental_days,
-                'rental_start_date' => $request->rental_start_date,
-                'rental_end_date' => $request->rental_end_date,
-                'status' => $request->status ? 'active' : 'draft',
-                'note' => $request->note ?? null,
-            ]);
-
-            Log::info('Invoice Created:', ['invoice_id' => $invoice->id]);
-
+            $subtotal = 0;
+            $invoiceItems = [];
             foreach ($request->cart as $item) {
                 $product = Product::findOrFail($item['id']);
-                $totalPrice = ($product->type === \App\Enums\ProductType::FIXED->value)
-                    ? $product->price * $item['quantity']
-                    : $product->price * $item['quantity'] * $request->rental_days;
+                $quantity = $item['quantity'];
+                $price = $product->price;
+                $totalPrice = $price * $quantity * $rentalDays;
 
-                Log::info('Adding Product to Invoice:', [
-                    'product_id' => $product->id,
-                    'quantity' => $item['quantity'],
-                    'total_price' => $totalPrice,
-                ]);
+                $subtotal += $totalPrice;
 
-                $invoice->items()->create([
+                $invoiceItems[] = new InvoiceItem([
                     'product_id' => $product->id,
-                    'quantity' => $item['quantity'],
-                    'price' => $product->price,
+                    'quantity' => $quantity,
+                    'price' => $price,
                     'total_price' => $totalPrice,
                     'rental_start_date' => $request->rental_start_date,
                     'rental_end_date' => $request->rental_end_date,
+                    'days' => $rentalDays,
+                    'returned_quantity' => 0,
+                    'added_quantity' => 0,
                 ]);
             }
 
+            $discountAmount = ($subtotal * ($request->total_discount ?? 0)) / 100;
+            $rentalTotal = $subtotal - $discountAmount;
+
+            // Create the invoice
+            $invoice = new Invoice([
+                'customer_id' => $customer->id,
+                'user_id' => Auth::id(),
+                'category_id' => $category->id,
+                'rental_start_date' => $request->rental_start_date,
+                'rental_end_date' => $request->rental_end_date,
+                'total_discount' => $request->total_discount,
+                'total_amount' => $rentalTotal,
+                'paid' => $request->status,
+                'payment_method' => $request->payment_method,
+                'status' => $request->status ? 'active' : 'draft',
+                'days' => $rentalDays,
+            ]);
+
+            $invoice->save();
+            $invoice->items()->saveMany($invoiceItems);
+
             DB::commit();
-            Log::info('Transaction Committed Successfully');
+
             return response()->json(['invoice_id' => $invoice->id]);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -131,13 +120,10 @@ class POSController extends Controller
                 'message' => $e->getMessage(),
                 'line' => $e->getLine(),
                 'file' => $e->getFile(),
-                'trace' => $e->getTraceAsString(),
             ]);
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
-
-
 
 
     // public function checkout(Request $request)

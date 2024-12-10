@@ -28,20 +28,26 @@
                     <td>{{ $item->quantity - $item->returned_quantity }}</td>
                     <td>
                         <input type="number"
-                               class="form-control return-quantity"
+                               class="form-control return-quantity {{ $errors->has("returns.original.{$item->id}.quantity") ? 'is-invalid' : '' }}"
                                name="returns[original][{{ $item->id }}][quantity]"
                                max="{{ $item->quantity - $item->returned_quantity }}"
                                value="{{ old("returns.original.{$item->id}.quantity") }}"
                                {{ old("returns.original.{$item->id}.selected") ? '' : 'disabled' }}>
+                        @error("returns.original.{$item->id}.quantity")
+                            <div class="text-danger small">{{ $message }}</div>
+                        @enderror
                     </td>
                     <td>
                         <input type="datetime-local"
-                               class="form-control return-date"
+                               class="form-control return-date {{ $errors->has("returns.original.{$item->id}.return_date") ? 'is-invalid' : '' }}"
                                name="returns[original][{{ $item->id }}][return_date]"
                                min="{{ $invoice->rental_start_date }}"
                                max="{{ $invoice->rental_end_date }}"
                                value="{{ old("returns.original.{$item->id}.return_date") }}"
                                {{ old("returns.original.{$item->id}.selected") ? '' : 'disabled' }}>
+                        @error("returns.original.{$item->id}.return_date")
+                            <div class="text-danger small">{{ $message }}</div>
+                        @enderror
                     </td>
                     <td>
                         <input type="text"
@@ -68,20 +74,26 @@
                     <td>{{ $addedItem->quantity - $addedItem->returned_quantity }}</td>
                     <td>
                         <input type="number"
-                               class="form-control return-quantity"
+                               class="form-control return-quantity {{ $errors->has("returns.additional.{$addedItem->id}.quantity") ? 'is-invalid' : '' }}"
                                name="returns[additional][{{ $addedItem->id }}][quantity]"
                                max="{{ $addedItem->quantity - $addedItem->returned_quantity }}"
                                value="{{ old("returns.additional.{$addedItem->id}.quantity") }}"
                                {{ old("returns.additional.{$addedItem->id}.selected") ? '' : 'disabled' }}>
+                        @error("returns.additional.{$addedItem->id}.quantity")
+                            <div class="text-danger small">{{ $message }}</div>
+                        @enderror
                     </td>
                     <td>
                         <input type="datetime-local"
-                               class="form-control return-date"
+                               class="form-control return-date {{ $errors->has("returns.additional.{$addedItem->id}.return_date") ? 'is-invalid' : '' }}"
                                name="returns[additional][{{ $addedItem->id }}][return_date]"
                                min="{{ $invoice->rental_start_date }}"
                                max="{{ $invoice->rental_end_date }}"
                                value="{{ old("returns.additional.{$addedItem->id}.return_date") }}"
                                {{ old("returns.additional.{$addedItem->id}.selected") ? '' : 'disabled' }}>
+                        @error("returns.additional.{$addedItem->id}.return_date")
+                            <div class="text-danger small">{{ $message }}</div>
+                        @enderror
                     </td>
                     <td>
                         <input type="text"
