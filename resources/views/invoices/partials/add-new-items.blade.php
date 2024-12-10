@@ -6,6 +6,7 @@
                 <th>Product</th>
                 <th>Quantity</th>
                 <th>Price</th>
+                <th>Days</th>
                 <th>Total Price</th>
                 <th>Rental Start Date</th>
                 <th>Rental End Date</th>
@@ -18,7 +19,7 @@
                     <select name="products[0][product_id]" class="form-select product-select" required>
                         <option value="">Select Product</option>
                         @foreach ($products as $product)
-                            <option value="{{ $product->id }}" data-price="{{ $product->price }}">{{ $product->name }}</option>
+                            <option value="{{ $product->id }}" data-price="{{ $product->price }}" data-type="{{ $product->type }}">{{ $product->name }}</option>
                         @endforeach
                     </select>
                 </td>
@@ -29,13 +30,16 @@
                     <input type="text" name="products[0][price]" class="form-control price-input" value="0.00" readonly>
                 </td>
                 <td>
+                    <input type="number" name="products[0][days]" class="form-control days-input" value="1" readonly>
+                </td>
+                <td>
                     <input type="text" class="form-control total-price" value="0.00" readonly>
                 </td>
                 <td>
-                    <input type="datetime-local" name="products[0][rental_start_date]" class="form-control" value="{{ now()->toDateString() }}" required>
+                    <input type="datetime-local" name="products[0][rental_start_date]" class="form-control rental-start-date" required>
                 </td>
                 <td>
-                    <input type="datetime-local" name="products[0][rental_end_date]" class="form-control" value="{{ now()->addDays(1)->toDateString() }}" required>
+                    <input type="datetime-local" name="products[0][rental_end_date]" class="form-control rental-end-date" required>
                 </td>
                 <td>
                     <button type="button" class="btn btn-danger remove-row">Remove</button>
@@ -44,7 +48,7 @@
         </tbody>
         <tfoot>
             <tr>
-                <td colspan="3" class="text-end"><strong>Total:</strong></td>
+                <td colspan="4" class="text-end"><strong>Grand Total:</strong></td>
                 <td>
                     <input type="text" id="grandTotal" class="form-control" value="0.00" readonly>
                 </td>
@@ -72,7 +76,7 @@
                         <select name="products[${rowIndex}][product_id]" class="form-select product-select" required>
                             <option value="">Select Product</option>
                             @foreach ($products as $product)
-                                <option value="{{ $product->id }}" data-price="{{ $product->price }}">{{ $product->name }}</option>
+                                <option value="{{ $product->id }}" data-price="{{ $product->price }}" data-type="{{ $product->type }}">{{ $product->name }}</option>
                             @endforeach
                         </select>
                     </td>
@@ -83,13 +87,16 @@
                         <input type="text" name="products[${rowIndex}][price]" class="form-control price-input" value="0.00" readonly>
                     </td>
                     <td>
+                        <input type="number" name="products[${rowIndex}][days]" class="form-control days-input" value="1" readonly>
+                    </td>
+                    <td>
                         <input type="text" class="form-control total-price" value="0.00" readonly>
                     </td>
                     <td>
-                        <input type="date" name="products[${rowIndex}][rental_start_date]" class="form-control" value="{{ now()->toDateString() }}" required>
+                        <input type="datetime-local" name="products[${rowIndex}][rental_start_date]" class="form-control rental-start-date" required>
                     </td>
                     <td>
-                        <input type="date" name="products[${rowIndex}][rental_end_date]" class="form-control" value="{{ now()->addDays(1)->toDateString() }}" required>
+                        <input type="datetime-local" name="products[${rowIndex}][rental_end_date]" class="form-control rental-end-date" required>
                     </td>
                     <td>
                         <button type="button" class="btn btn-danger remove-row">Remove</button>
@@ -107,7 +114,7 @@
             }
         });
 
-        // Update price and total dynamically
+        // Calculate days and total dynamically
         document.getElementById('itemsTable').addEventListener('input', function (e) {
             const row = e.target.closest('tr');
             if (!row) return;
@@ -116,20 +123,34 @@
             const quantityInput = row.querySelector('.quantity-input');
             const priceInput = row.querySelector('.price-input');
             const totalPriceInput = row.querySelector('.total-price');
+            const startDateInput = row.querySelector('.rental-start-date');
+            const endDateInput = row.querySelector('.rental-end-date');
+            const daysInput = row.querySelector('.days-input');
 
             // Update price based on selected product
             if (productSelect) {
                 const selectedOption = productSelect.options[productSelect.selectedIndex];
                 const price = parseFloat(selectedOption.getAttribute('data-price')) || 0;
+                const type = selectedOption.getAttribute('data-type');
                 priceInput.value = price.toFixed(2);
+
+                // Calculate days
+                const startDate = new Date(startDateInput.value);
+                const endDate = new Date(endDateInput.value);
+                let days = 1;
+                if (!isNaN(startDate) && !isNaN(endDate) && startDate <= endDate) {
+                    const diffHours = Math.abs(endDate - startDate) / (1000 * 60 * 60);
+                    days = type === 'fixed' ? 1 : Math.ceil(diffHours / 24);
+                }
+                daysInput.value = days;
+
+                // Calculate total price
+                const quantity = parseFloat(quantityInput.value) || 1;
+                const totalPrice = type === 'fixed' ? price * quantity : price * quantity * days;
+                totalPriceInput.value = totalPrice.toFixed(2);
+
+                calculateGrandTotal();
             }
-
-            // Calculate total price
-            const quantity = parseFloat(quantityInput.value) || 1;
-            const price = parseFloat(priceInput.value) || 0;
-            totalPriceInput.value = (quantity * price).toFixed(2);
-
-            calculateGrandTotal();
         });
 
         // Calculate grand total

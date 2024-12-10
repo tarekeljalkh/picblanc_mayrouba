@@ -17,6 +17,7 @@ return new class extends Migration
             $table->foreignId('product_id')->constrained()->onDelete('cascade');
             $table->integer('quantity');
             $table->decimal('price', 10, 2);
+            $table->integer('days')->nullable();
             $table->decimal('total_price', 10, 2);
             $table->datetime('rental_start_date');
             $table->datetime('rental_end_date');

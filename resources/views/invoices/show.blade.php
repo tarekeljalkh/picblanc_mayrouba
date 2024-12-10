@@ -76,7 +76,7 @@
                                     <td class="text-nowrap text-heading">{{ $item->product->name }}</td>
                                     <td>${{ number_format($item->price, 2) }}</td>
                                     <td>{{ $item->quantity }}</td>
-                                    <td>${{ number_format($item->price * $item->quantity, 2) }}</td>
+                                    <td>${{ number_format($item->price * $item->quantity * $item->days, 2) }}</td>
                                     <td>{{ $item->rental_start_date ? \Carbon\Carbon::parse($item->rental_start_date)->format('d/m/y H:i') : 'N/A' }}
                                     </td>
                                     <td>{{ $item->rental_end_date ? \Carbon\Carbon::parse($item->rental_end_date)->format('d/m/y H:i') : 'N/A' }}
@@ -136,9 +136,10 @@
                             <tbody>
                                 @foreach ($invoice->returnDetails as $return)
                                     <tr>
-                                        <td class="text-nowrap text-heading">{{ $return->invoiceItem->product->name }}</td>
+                                        <td>{{ $return->invoiceItem->product->name }}</td>
                                         <td>{{ $return->returned_quantity }}</td>
                                         <td>{{ $return->days_used }}</td>
+                                        <!-- Ensure the cost uses the correct "usedCost" -->
                                         <td>${{ number_format($return->cost, 2) }}</td>
                                         <td>{{ optional($return->invoiceItem->rental_start_date)->format('d/m/Y H:i') }}
                                         </td>

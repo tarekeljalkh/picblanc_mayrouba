@@ -139,43 +139,51 @@ class Invoice extends Model
 
     public function calculateTotals()
     {
-        // Separate logic for standard and fixed products
+        // Subtotal for main items (standard and fixed)
         $subtotal = $this->items->sum(function ($item) {
-            $type = $item->product->type instanceof \App\Enums\ProductType ? $item->product->type->value : $item->product->type;
+            $type = $item->product->type instanceof \App\Enums\ProductType
+                ? $item->product->type->value
+                : $item->product->type;
 
             return $type === 'fixed'
-                ? $item->price * $item->quantity // Fixed product: price * quantity
-                : $item->price * $item->quantity * $this->days; // Standard product: price * quantity * days
+                ? $item->price * $item->quantity // Fixed: price * quantity
+                : $item->price * $item->quantity * $item->days; // Standard: price * quantity * days
         });
 
-        // Additional costs based on days remaining
+        // Additional costs for additional items
         $additionalCost = $this->additionalItems->sum(function ($item) {
-            $daysUsed = max(1, Carbon::parse($item->added_date)->diffInDays(Carbon::parse($this->rental_end_date)) + 1);
-            return $item->price * $item->quantity * $daysUsed;
+            $type = $item->product->type instanceof \App\Enums\ProductType
+                ? $item->product->type->value
+                : $item->product->type;
+
+            return $type === 'fixed'
+                ? $item->price * $item->quantity // Fixed: price * quantity
+                : $item->price * $item->quantity * $item->days; // Standard: price * quantity * days
         });
 
-        // Returned costs based on days used
+        // Costs for returned items
         $returnedCost = $this->returnDetails->sum(function ($return) {
             return $return->returned_quantity * $return->invoiceItem->price * $return->days_used;
         });
 
-        // Calculate total before discount
+        // Total before discount
         $totalBeforeDiscount = $subtotal + $additionalCost - $returnedCost;
 
-        // Discount calculation
-        $discountAmount = ($totalBeforeDiscount * $this->total_discount / 100);
+        // Discount amount
+        $discountAmount = ($totalBeforeDiscount * ($this->total_discount ?? 0) / 100);
 
-        // Final total
+        // Final total after discount
         $total = $totalBeforeDiscount - $discountAmount;
 
         return [
-            'subtotal' => $subtotal,
-            'additionalCost' => $additionalCost,
-            'returnedCost' => $returnedCost,
-            'discountAmount' => $discountAmount,
-            'total' => $total,
+            'subtotal' => round($subtotal, 2),
+            'additionalCost' => round($additionalCost, 2),
+            'returnedCost' => round($returnedCost, 2),
+            'discountAmount' => round($discountAmount, 2),
+            'total' => round($total, 2),
         ];
     }
+
 
     public function checkAndUpdateStatus()
     {

@@ -13,13 +13,13 @@ return new class extends Migration
     {
         Schema::create('return_details', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('invoice_id')->constrained('invoices')->onDelete('cascade'); // Link to invoices table
-            $table->foreignId('invoice_item_id')->constrained()->onDelete('cascade'); // Link to invoice_items table
-            $table->foreignId('product_id')->constrained()->onDelete('cascade'); // Link to products table
+            $table->foreignId('invoice_id')->constrained('invoices')->onDelete('cascade');
+            $table->foreignId('invoice_item_id')->nullable()->constrained('invoice_items')->onDelete('cascade');
+            $table->foreignId('product_id')->constrained('products')->onDelete('cascade');
             $table->integer('returned_quantity');
-            $table->integer('days_used'); // Tracks how many days the item was used
-            $table->decimal('cost', 10, 2); // Cost incurred for the returned items
-            $table->date('return_date'); // Date of the return
+            $table->integer('days_used');
+            $table->decimal('cost', 10, 2);
+            $table->date('return_date');
             $table->timestamps();
 
             // Indexes for faster lookups

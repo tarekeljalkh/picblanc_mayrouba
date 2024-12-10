@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\ProductType;
+use App\Models\AdditionalItem;
 use App\Models\Category;
 use App\Models\Customer;
 use App\Models\Invoice;
@@ -104,7 +106,6 @@ class InvoiceController extends Controller
             'total_discount' => 'nullable|numeric|min:0',
             'paid' => 'required|in:0,1',
             'payment_method' => 'required|in:cash,credit_card', // Validate payment method
-            'amount_per_day' => 'required|numeric', // Validating amount per day from the form
             'days' => 'required|integer', // Validating days from the form
             'total_amount' => 'required|numeric' // Validating total from the form
         ]);
@@ -135,7 +136,6 @@ class InvoiceController extends Controller
             'rental_start_date' => $request->rental_start_date,
             'rental_end_date' => $request->rental_end_date,
             'total_discount' => $request->total_discount ?? 0,
-            'amount_per_day' => $request->amount_per_day,
             'total_amount' => $request->total_amount,
             'paid' => $request->paid,
             'payment_method' => $request->payment_method, // Store payment method
@@ -308,70 +308,72 @@ class InvoiceController extends Controller
 
     public function processReturns(Request $request, $invoiceId)
     {
-        $invoice = Invoice::with('items.product')->findOrFail($invoiceId);
-
         $validated = $request->validate([
-            'returns' => 'required|array|min:1',
+            'returns' => 'required|array',
+            'returns.*.*.quantity' => 'required|integer|min:1',
+            'returns.*.*.return_date' => 'required|date',
         ]);
+
+        $invoice = Invoice::findOrFail($invoiceId);
 
         DB::beginTransaction();
 
         try {
-            foreach ($request->returns as $key => $return) {
-                // Skip unselected items
-                if (!isset($return['selected'])) {
-                    continue;
-                }
+            $totalRefund = 0;
 
-                $item = $invoice->items->find($key);
-                if (!$item) {
-                    return redirect()->back()->withErrors([
-                        "returns.{$key}.item_id" => "The selected item is invalid.",
+            foreach ($validated['returns'] as $type => $items) {
+                foreach ($items as $id => $item) {
+                    // Determine the model to use based on type
+                    $model = $type === 'original'
+                        ? InvoiceItem::findOrFail($id)
+                        : AdditionalItem::findOrFail($id);
+
+                    // Calculate the returned quantity
+                    $returnedQuantity = min($item['quantity'], $model->quantity - $model->returned_quantity);
+
+                    // Calculate days of use and unused cost
+                    $rentalStartDate = Carbon::parse($model->rental_start_date);
+                    $rentalEndDate = Carbon::parse($model->rental_end_date);
+                    $returnDate = Carbon::parse($item['return_date']);
+
+                    $daysUsed = max(1, $rentalStartDate->diffInDays($returnDate) + 1);
+                    $totalRentalDays = max(1, $rentalStartDate->diffInDays($rentalEndDate) + 1);
+                    $unusedDays = $totalRentalDays - $daysUsed;
+
+                    $dailyRate = $model->price; // Fix: Use fixed daily rate
+                    $usedCost = $returnedQuantity * $dailyRate * $daysUsed;
+                    $unusedCost = $returnedQuantity * $dailyRate * $unusedDays;
+
+                    // Create return detail entry
+                    ReturnDetail::create([
+                        'invoice_id' => $invoice->id,
+                        'invoice_item_id' => $type === 'original' ? $model->id : null, // Only for original items
+                        'product_id' => $model->product_id,
+                        'returned_quantity' => $returnedQuantity,
+                        'days_used' => $daysUsed,
+                        'cost' => $usedCost, // Cost for used days
+                        'return_date' => $item['return_date'],
                     ]);
+
+                    // Update returned quantity
+                    $model->returned_quantity += $returnedQuantity;
+                    $model->save();
+
+                    // Add unused cost to refund total
+                    $totalRefund += $unusedCost;
                 }
-
-                // Validate return fields
-                $validatedReturn = Validator::make($return, [
-                    'quantity' => 'required|integer|min:1|max:' . ($item->quantity - $item->returned_quantity),
-                    'return_date' => 'required|date|after_or_equal:' . $invoice->rental_start_date . '|before_or_equal:' . $invoice->rental_end_date,
-                ])->validate();
-
-                // Calculate the cost of the return
-                $returnDate = Carbon::parse($validatedReturn['return_date']);
-                $usedDays = $returnDate->diffInDays(Carbon::parse($invoice->rental_start_date)) + 1;
-                $usedCost = $item->price * $usedDays * $validatedReturn['quantity'];
-
-                // Create the return record
-                ReturnDetail::create([
-                    'invoice_id' => $invoice->id,
-                    'invoice_item_id' => $item->id,
-                    'product_id' => $item->product_id,
-                    'returned_quantity' => $validatedReturn['quantity'],
-                    'days_used' => $usedDays,
-                    'cost' => $usedCost,
-                    'return_date' => $validatedReturn['return_date'],
-                ]);
-
-                // Update the item's returned quantity
-                $item->increment('returned_quantity', $validatedReturn['quantity']);
-
-                // Update the invoice total amount
-                $invoice->decrement('total_amount', $usedCost);
             }
 
-            // Check if all items in the invoice are returned
-            $allReturned = $invoice->items->every(function ($item) {
-                return $item->quantity === $item->returned_quantity;
-            });
-
-            if ($allReturned) {
-                $invoice->status = 'returned'; // Update the status to 'returned'
-            }
-
+            // Update the invoice total amount
+            $invoice->total_amount -= $totalRefund;
             $invoice->save();
+
             DB::commit();
 
-            return redirect()->route('invoices.show', $invoiceId)->with('success', 'Returns processed successfully.');
+            return redirect()->route('invoices.show', $invoice->id)->with(
+                'success',
+                'Returns processed successfully. Refund Amount: $' . number_format($totalRefund, 2)
+            );
         } catch (\Exception $e) {
             DB::rollBack();
             return redirect()->back()->with('error', 'Failed to process returns: ' . $e->getMessage());
@@ -381,51 +383,69 @@ class InvoiceController extends Controller
 
     public function addItems(Request $request, $invoiceId)
     {
-        // Validate the incoming request
         $validated = $request->validate([
             'products' => 'required|array|min:1',
             'products.*.product_id' => 'required|exists:products,id',
             'products.*.quantity' => 'required|integer|min:1',
             'products.*.price' => 'required|numeric|min:0',
+            'products.*.days' => 'required|integer|min:1',
             'products.*.rental_start_date' => 'required|date',
             'products.*.rental_end_date' => 'required|date|after_or_equal:products.*.rental_start_date',
         ]);
 
-        // Find the invoice
         $invoice = Invoice::findOrFail($invoiceId);
+
+        // Preload product details and key by ID
+        $productDetails = Product::whereIn('id', collect($validated['products'])->pluck('product_id'))->get()->keyBy('id');
 
         DB::beginTransaction();
 
         try {
-            foreach ($validated['products'] as $product) {
+            foreach ($validated['products'] as $index => $product) {
                 $productId = $product['product_id'];
                 $quantity = $product['quantity'];
                 $price = $product['price'];
+                $days = $product['days']; // Use the days from the request
                 $rentalStartDate = Carbon::parse($product['rental_start_date']);
                 $rentalEndDate = Carbon::parse($product['rental_end_date']);
 
-                // Calculate the number of days for the rental period
-                $days = max($rentalStartDate->diffInDays($rentalEndDate), 1);
+                // Retrieve product details and determine type
+                $productData = $productDetails[$productId];
+                $productType = $productData->type; // Assuming 'type' column stores the type (standard or fixed)
 
-                // Calculate total price for the item
-                $totalPrice = $price * $quantity * $days;
+                // Validate the provided days against rental dates for standard products
+                if ($productType === ProductType::STANDARD->value) {
+                    $calculatedDays = ceil($rentalEndDate->diffInHours($rentalStartDate) / 24);
+                    if ($calculatedDays != $days) {
+                        return redirect()->back()->withErrors([
+                            "products.{$index}.days" => 'The provided days do not match the rental period.',
+                        ])->withInput();
+                    }
+                }
 
-                // Add the new item to the invoice
+                // Calculate the total price for the item
+                $totalPrice = ($productType === ProductType::FIXED->value)
+                    ? $price * $quantity
+                    : $price * $quantity * $days;
+
+                // Insert additional item
                 $invoice->additionalItems()->create([
                     'product_id' => $productId,
                     'quantity' => $quantity,
                     'price' => $price,
+                    'days' => $days,
                     'total_price' => $totalPrice,
                     'rental_start_date' => $rentalStartDate,
                     'rental_end_date' => $rentalEndDate,
                 ]);
 
-                // Update the invoice total
+                // Increment the invoice total
                 $invoice->total_amount += $totalPrice;
             }
 
-            // Save the updated invoice
+            // Save the updated invoice total
             $invoice->save();
+
             DB::commit();
 
             return redirect()->route('invoices.show', $invoiceId)->with('success', 'Items added successfully.');

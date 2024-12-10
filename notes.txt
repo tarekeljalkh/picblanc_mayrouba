@@ -15,3 +15,7 @@ return redirect()->route('customers.index')->with('info', 'Here is some informat
 
 
 php artisan serve --host=192.168.100.238 --port=8000
+
+
+manage returns should have also additional items,
+and create invoice customer should have a deposit card to scan

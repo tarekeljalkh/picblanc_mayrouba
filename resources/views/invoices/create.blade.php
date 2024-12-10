@@ -124,21 +124,13 @@
                             </div>
                         </div>
 
-                        {{-- Discount, Amount Per Day --}}
+                        {{-- Discount --}}
 
                         <div class="mb-4 row">
                             <label for="total_discount" class="col-md-2 col-form-label">Total Discount (%)</label>
                             <div class="col-md-10">
                                 <input type="number" class="form-control" id="total_discount" name="total_discount"
                                     value="0" min="0" max="100" />
-                            </div>
-                        </div>
-
-                        <div class="mb-4 row">
-                            <label for="amount_per_day" class="col-md-2 col-form-label">Amount Per Day</label>
-                            <div class="col-md-10">
-                                <input type="text" class="form-control" id="amount_per_day" name="amount_per_day"
-                                    value="0.00" readonly />
                             </div>
                         </div>
 
