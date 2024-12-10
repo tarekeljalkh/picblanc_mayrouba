@@ -147,7 +147,7 @@ class InvoiceController extends Controller
         // Calculate and Add Invoice Items
         $rentalStartDate = Carbon::parse($request->rental_start_date);
         $rentalEndDate = Carbon::parse($request->rental_end_date);
-        $rentalDays = $rentalStartDate->diffInDays($rentalEndDate) + 1;
+        $rentalDays = $rentalStartDate->diffInDays($rentalEndDate);
 
         $invoiceItems = [];
         foreach ($request->products as $index => $product_id) {
@@ -229,7 +229,7 @@ class InvoiceController extends Controller
         // Calculate rental days for updated items
         $rentalStartDate = Carbon::parse($request->rental_start_date);
         $rentalEndDate = Carbon::parse($request->rental_end_date);
-        $rentalDays = $rentalStartDate->diffInDays($rentalEndDate) + 1;
+        $rentalDays = $rentalStartDate->diffInDays($rentalEndDate);
 
         // Update invoice details
         $invoice->total_discount = $request->total_discount ?? 0;
@@ -332,15 +332,28 @@ class InvoiceController extends Controller
                         ? InvoiceItem::findOrFail($id)
                         : AdditionalItem::findOrFail($id);
 
-                    $returnedQuantity = min($item['quantity'], $model->quantity - $model->returned_quantity);
+                    $returnedQuantity = $item['quantity'];
 
+                    // Calculate rental hours and days used
                     $rentalStartDate = Carbon::parse($model->rental_start_date);
                     $returnDate = Carbon::parse($item['return_date']);
 
-                    $daysUsed = max(1, $rentalStartDate->diffInDays($returnDate) + 1);
+                    $hoursUsed = $rentalStartDate->diffInHours($returnDate);
+                    $daysUsed = floor($hoursUsed / 24);
+                    if ($hoursUsed % 24 > 12) {
+                        $daysUsed++;
+                    }
+                    $daysUsed = max(1, $daysUsed);
+
+                    $totalRentalDays = max(1, $rentalStartDate->diffInDays($model->rental_end_date));
+                    $unusedDays = max(0, $totalRentalDays - $daysUsed);
+
+                    // Calculate costs
                     $dailyRate = $model->price;
                     $usedCost = $returnedQuantity * $dailyRate * $daysUsed;
+                    $unusedCost = $returnedQuantity * $dailyRate * $unusedDays;
 
+                    // Record return details
                     ReturnDetail::create([
                         'invoice_id' => $invoice->id,
                         'invoice_item_id' => $type === 'original' ? $model->id : null,
@@ -351,13 +364,16 @@ class InvoiceController extends Controller
                         'return_date' => $item['return_date'],
                     ]);
 
+                    // Update returned quantity
                     $model->returned_quantity += $returnedQuantity;
                     $model->save();
 
-                    $totalRefund += $usedCost;
+                    // Add refund for unused days
+                    $totalRefund += $unusedCost;
                 }
             }
 
+            // Update the invoice total amount (reduce refund amount)
             $invoice->total_amount -= $totalRefund;
             $invoice->save();
 
@@ -372,6 +388,89 @@ class InvoiceController extends Controller
             return redirect()->back()->with('error', 'Failed to process returns: ' . $e->getMessage());
         }
     }
+
+
+    // public function processReturns(Request $request, $invoiceId)
+    // {
+    //     $validated = $request->validate([
+    //         'returns' => 'required|array',
+    //         'returns.*.*.selected' => 'sometimes|required|boolean',
+    //         'returns.*.*.quantity' => 'required_with:returns.*.*.selected|integer|min:1',
+    //         'returns.*.*.return_date' => 'required_with:returns.*.*.selected|date',
+    //     ]);
+
+    //     $invoice = Invoice::findOrFail($invoiceId);
+
+    //     DB::beginTransaction();
+
+    //     try {
+    //         $totalRefund = 0;
+
+    //         foreach ($validated['returns'] as $type => $items) {
+    //             foreach ($items as $id => $item) {
+    //                 if (!isset($item['selected']) || !$item['selected']) {
+    //                     continue; // Skip unselected items
+    //                 }
+
+    //                 // Find the model based on the type (original or additional item)
+    //                 $model = $type === 'original'
+    //                     ? InvoiceItem::findOrFail($id)
+    //                     : AdditionalItem::findOrFail($id);
+
+    //                 // Calculate returned quantity
+    //                 $returnedQuantity = min($item['quantity'], $model->quantity - $model->returned_quantity);
+
+    //                 // Calculate rental days used and non-used
+    //                 $rentalStartDate = Carbon::parse($model->rental_start_date);
+    //                 $rentalEndDate = Carbon::parse($model->rental_end_date);
+    //                 $returnDate = Carbon::parse($item['return_date']);
+
+    //                 $daysUsed = max(1, $rentalStartDate->diffInDays($returnDate) + 1);
+    //                 $totalRentalDays = max(1, $rentalStartDate->diffInDays($rentalEndDate) + 1);
+    //                 $unusedDays = max(0, $totalRentalDays - $daysUsed);
+
+    //                 // Calculate daily rate
+    //                 $dailyRate = $model->price;
+
+    //                 // Calculate costs
+    //                 $usedCost = $returnedQuantity * $dailyRate * $daysUsed;
+    //                 $unusedCost = $returnedQuantity * $dailyRate * $unusedDays;
+
+    //                 // Record return details
+    //                 ReturnDetail::create([
+    //                     'invoice_id' => $invoice->id,
+    //                     'invoice_item_id' => $type === 'original' ? $model->id : null,
+    //                     'product_id' => $model->product_id,
+    //                     'returned_quantity' => $returnedQuantity,
+    //                     'days_used' => $daysUsed,
+    //                     'cost' => $usedCost, // Cost for used days
+    //                     'return_date' => $item['return_date'],
+    //                 ]);
+
+    //                 // Update returned quantity
+    //                 $model->returned_quantity += $returnedQuantity;
+    //                 $model->save();
+
+    //                 // Add refund for unused days
+    //                 $totalRefund += $unusedCost;
+    //             }
+    //         }
+
+    //         // Update the invoice total amount (reduce refund amount)
+    //         $invoice->total_amount -= $totalRefund;
+    //         $invoice->save();
+
+    //         DB::commit();
+
+    //         return redirect()->route('invoices.show', $invoice->id)->with(
+    //             'success',
+    //             'Returns processed successfully. Refund Amount: $' . number_format($totalRefund, 2)
+    //         );
+    //     } catch (\Exception $e) {
+    //         DB::rollBack();
+    //         return redirect()->back()->with('error', 'Failed to process returns: ' . $e->getMessage());
+    //     }
+    // }
 
 
 
@@ -529,5 +628,4 @@ class InvoiceController extends Controller
         // Pass the selected category to the view
         return view('invoices.overdue', compact('invoices', 'selectedCategory'));
     }
-
 }

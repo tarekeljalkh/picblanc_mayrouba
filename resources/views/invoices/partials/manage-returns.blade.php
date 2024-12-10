@@ -15,94 +15,98 @@
         <tbody>
             <!-- Original Invoice Items -->
             @foreach ($invoice->items as $item)
-                <tr>
-                    <td>
-                        <input type="checkbox"
-                               class="form-check-input return-checkbox"
-                               name="returns[original][{{ $item->id }}][selected]"
-                               value="1"
-                               {{ old("returns.original.{$item->id}.selected") ? 'checked' : '' }}>
-                    </td>
-                    <td>{{ $item->product->name }}</td>
-                    <td>{{ $item->quantity }}</td>
-                    <td>{{ $item->quantity - $item->returned_quantity }}</td>
-                    <td>
-                        <input type="number"
-                               class="form-control return-quantity {{ $errors->has("returns.original.{$item->id}.quantity") ? 'is-invalid' : '' }}"
-                               name="returns[original][{{ $item->id }}][quantity]"
-                               max="{{ $item->quantity - $item->returned_quantity }}"
-                               value="{{ old("returns.original.{$item->id}.quantity") }}"
-                               {{ old("returns.original.{$item->id}.selected") ? '' : 'disabled' }}>
-                        @error("returns.original.{$item->id}.quantity")
-                            <div class="text-danger small">{{ $message }}</div>
-                        @enderror
-                    </td>
-                    <td>
-                        <input type="datetime-local"
-                               class="form-control return-date {{ $errors->has("returns.original.{$item->id}.return_date") ? 'is-invalid' : '' }}"
-                               name="returns[original][{{ $item->id }}][return_date]"
-                               min="{{ $invoice->rental_start_date }}"
-                               max="{{ $invoice->rental_end_date }}"
-                               value="{{ old("returns.original.{$item->id}.return_date") }}"
-                               {{ old("returns.original.{$item->id}.selected") ? '' : 'disabled' }}>
-                        @error("returns.original.{$item->id}.return_date")
-                            <div class="text-danger small">{{ $message }}</div>
-                        @enderror
-                    </td>
-                    <td>
-                        <input type="text"
-                               class="form-control days-of-use"
-                               name="returns[original][{{ $item->id }}][days_of_use]"
-                               value=""
-                               readonly>
-                    </td>
-                </tr>
+                @if ($item->quantity - $item->returned_quantity > 0)
+                    <tr>
+                        <td>
+                            <input type="checkbox"
+                                class="form-check-input return-checkbox"
+                                name="returns[original][{{ $item->id }}][selected]"
+                                value="1"
+                                {{ old("returns.original.{$item->id}.selected") ? 'checked' : '' }}>
+                        </td>
+                        <td>{{ $item->product->name }}</td>
+                        <td>{{ $item->quantity }}</td>
+                        <td>{{ $item->quantity - $item->returned_quantity }}</td>
+                        <td>
+                            <input type="number"
+                                class="form-control return-quantity {{ $errors->has("returns.original.{$item->id}.quantity") ? 'is-invalid' : '' }}"
+                                name="returns[original][{{ $item->id }}][quantity]"
+                                max="{{ $item->quantity - $item->returned_quantity }}"
+                                value="{{ old("returns.original.{$item->id}.quantity") }}"
+                                {{ old("returns.original.{$item->id}.selected") ? '' : 'disabled' }}>
+                            @error("returns.original.{$item->id}.quantity")
+                                <div class="text-danger small">{{ $message }}</div>
+                            @enderror
+                        </td>
+                        <td>
+                            <input type="datetime-local"
+                                class="form-control return-date {{ $errors->has("returns.original.{$item->id}.return_date") ? 'is-invalid' : '' }}"
+                                name="returns[original][{{ $item->id }}][return_date]"
+                                data-start-date="{{ $item->rental_start_date }}"
+                                data-end-date="{{ $item->rental_end_date }}"
+                                value="{{ old("returns.original.{$item->id}.return_date") }}"
+                                {{ old("returns.original.{$item->id}.selected") ? '' : 'disabled' }}>
+                            @error("returns.original.{$item->id}.return_date")
+                                <div class="text-danger small">{{ $message }}</div>
+                            @enderror
+                        </td>
+                        <td>
+                            <input type="text"
+                                class="form-control days-of-use"
+                                name="returns[original][{{ $item->id }}][days_of_use]"
+                                value=""
+                                readonly>
+                        </td>
+                    </tr>
+                @endif
             @endforeach
 
             <!-- Additional Items -->
             @foreach ($invoice->additionalItems as $addedItem)
-                <tr>
-                    <td>
-                        <input type="checkbox"
-                               class="form-check-input return-checkbox"
-                               name="returns[additional][{{ $addedItem->id }}][selected]"
-                               value="1"
-                               {{ old("returns.additional.{$addedItem->id}.selected") ? 'checked' : '' }}>
-                    </td>
-                    <td>{{ $addedItem->product->name }}</td>
-                    <td>{{ $addedItem->quantity }}</td>
-                    <td>{{ $addedItem->quantity - $addedItem->returned_quantity }}</td>
-                    <td>
-                        <input type="number"
-                               class="form-control return-quantity {{ $errors->has("returns.additional.{$addedItem->id}.quantity") ? 'is-invalid' : '' }}"
-                               name="returns[additional][{{ $addedItem->id }}][quantity]"
-                               max="{{ $addedItem->quantity - $addedItem->returned_quantity }}"
-                               value="{{ old("returns.additional.{$addedItem->id}.quantity") }}"
-                               {{ old("returns.additional.{$addedItem->id}.selected") ? '' : 'disabled' }}>
-                        @error("returns.additional.{$addedItem->id}.quantity")
-                            <div class="text-danger small">{{ $message }}</div>
-                        @enderror
-                    </td>
-                    <td>
-                        <input type="datetime-local"
-                               class="form-control return-date {{ $errors->has("returns.additional.{$addedItem->id}.return_date") ? 'is-invalid' : '' }}"
-                               name="returns[additional][{{ $addedItem->id }}][return_date]"
-                               min="{{ $invoice->rental_start_date }}"
-                               max="{{ $invoice->rental_end_date }}"
-                               value="{{ old("returns.additional.{$addedItem->id}.return_date") }}"
-                               {{ old("returns.additional.{$addedItem->id}.selected") ? '' : 'disabled' }}>
-                        @error("returns.additional.{$addedItem->id}.return_date")
-                            <div class="text-danger small">{{ $message }}</div>
-                        @enderror
-                    </td>
-                    <td>
-                        <input type="text"
-                               class="form-control days-of-use"
-                               name="returns[additional][{{ $addedItem->id }}][days_of_use]"
-                               value=""
-                               readonly>
-                    </td>
-                </tr>
+                @if ($addedItem->quantity - $addedItem->returned_quantity > 0)
+                    <tr>
+                        <td>
+                            <input type="checkbox"
+                                class="form-check-input return-checkbox"
+                                name="returns[additional][{{ $addedItem->id }}][selected]"
+                                value="1"
+                                {{ old("returns.additional.{$addedItem->id}.selected") ? 'checked' : '' }}>
+                        </td>
+                        <td>{{ $addedItem->product->name }}</td>
+                        <td>{{ $addedItem->quantity }}</td>
+                        <td>{{ $addedItem->quantity - $addedItem->returned_quantity }}</td>
+                        <td>
+                            <input type="number"
+                                class="form-control return-quantity {{ $errors->has("returns.additional.{$addedItem->id}.quantity") ? 'is-invalid' : '' }}"
+                                name="returns[additional][{{ $addedItem->id }}][quantity]"
+                                max="{{ $addedItem->quantity - $addedItem->returned_quantity }}"
+                                value="{{ old("returns.additional.{$addedItem->id}.quantity") }}"
+                                {{ old("returns.additional.{$addedItem->id}.selected") ? '' : 'disabled' }}>
+                            @error("returns.additional.{$addedItem->id}.quantity")
+                                <div class="text-danger small">{{ $message }}</div>
+                            @enderror
+                        </td>
+                        <td>
+                            <input type="datetime-local"
+                                class="form-control return-date {{ $errors->has("returns.additional.{$addedItem->id}.return_date") ? 'is-invalid' : '' }}"
+                                name="returns[additional][{{ $addedItem->id }}][return_date]"
+                                data-start-date="{{ $addedItem->rental_start_date }}"
+                                data-end-date="{{ $addedItem->rental_end_date }}"
+                                value="{{ old("returns.additional.{$addedItem->id}.return_date") }}"
+                                {{ old("returns.additional.{$addedItem->id}.selected") ? '' : 'disabled' }}>
+                            @error("returns.additional.{$addedItem->id}.return_date")
+                                <div class="text-danger small">{{ $message }}</div>
+                            @enderror
+                        </td>
+                        <td>
+                            <input type="text"
+                                class="form-control days-of-use"
+                                name="returns[additional][{{ $addedItem->id }}][days_of_use]"
+                                value=""
+                                readonly>
+                        </td>
+                    </tr>
+                @endif
             @endforeach
         </tbody>
     </table>
@@ -112,11 +116,29 @@
 </form>
 
 @push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        const checkboxes = document.querySelectorAll('.return-checkbox');
+        function initializeFlatpickr() {
+            document.querySelectorAll('.return-date').forEach(input => {
+                const startDate = input.getAttribute('data-start-date');
+                const endDate = input.getAttribute('data-end-date');
 
-        checkboxes.forEach(checkbox => {
+                flatpickr(input, {
+                    enableTime: true,
+                    dateFormat: 'Y-m-d H:i',
+                    minDate: startDate,
+                    maxDate: endDate,
+                    onChange: function () {
+                        calculateDaysOfUse(input);
+                    },
+                });
+            });
+        }
+
+        initializeFlatpickr();
+
+        document.querySelectorAll('.return-checkbox').forEach(checkbox => {
             checkbox.addEventListener('change', function () {
                 const row = this.closest('tr');
                 const quantityInput = row.querySelector('.return-quantity');
@@ -136,22 +158,22 @@
             });
         });
 
-        const dateInputs = document.querySelectorAll('.return-date');
-        dateInputs.forEach(input => {
-            input.addEventListener('change', function () {
-                const row = this.closest('tr');
-                const rentalStartDate = new Date(this.getAttribute('min'));
-                const returnDate = new Date(this.value);
-                const daysOfUseInput = row.querySelector('.days-of-use');
+        function calculateDaysOfUse(input) {
+            const row = input.closest('tr');
+            const rentalStartDate = new Date(input.getAttribute('data-start-date'));
+            const returnDate = new Date(input.value);
+            const daysOfUseInput = row.querySelector('.days-of-use');
 
-                if (returnDate >= rentalStartDate) {
-                    const daysUsed = Math.max(1, Math.floor((returnDate - rentalStartDate) / (1000 * 60 * 60 * 24)) + 1);
-                    daysOfUseInput.value = daysUsed;
-                } else {
-                    daysOfUseInput.value = '';
-                }
-            });
-        });
+            if (returnDate >= rentalStartDate) {
+                const hoursUsed = (returnDate - rentalStartDate) / (1000 * 60 * 60);
+                const daysUsed = Math.floor(hoursUsed / 24);
+                const remainingHours = hoursUsed % 24;
+
+                daysOfUseInput.value = remainingHours > 12 ? daysUsed + 1 : daysUsed;
+            } else {
+                daysOfUseInput.value = '';
+            }
+        }
     });
 </script>
 @endpush

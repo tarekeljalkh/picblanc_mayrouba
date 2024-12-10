@@ -215,13 +215,14 @@
     <script src="{{ asset('assets/js/forms-selects.js') }}"></script>
 
     <script>
+        // Initialize date pickers for rental start and end dates
         flatpickr("#rental_start_date, #rental_end_date", {
-            enableTime: true, // Enable time picker
-            dateFormat: "Y-m-d H:i", // Format for date and time
+            enableTime: true,
+            dateFormat: "Y-m-d H:i",
             altInput: true,
-            altFormat: "F j, Y h:i K", // User-friendly format
+            altFormat: "F j, Y h:i K",
             allowInput: true,
-            onChange: function(selectedDates, dateStr, instance) {
+            onChange: function() {
                 calculateInvoiceTotal();
             }
         });
@@ -270,10 +271,14 @@
                 }
             });
 
-            // Calculate the rental duration in days
+            // Calculate the rental duration in days (handle partial days)
             let startDate = new Date($('#rental_start_date').val());
             let endDate = new Date($('#rental_end_date').val());
-            let days = (startDate && endDate) ? Math.floor((endDate - startDate) / (1000 * 60 * 60 * 24) + 1) : 0;
+            let totalHours = (endDate - startDate) / (1000 * 60 * 60); // Total rental duration in hours
+            let days = Math.floor(totalHours / 24); // Full days
+            if (totalHours % 24 > 12) days++; // Count as additional day if more than 12 hours
+            days = Math.max(1, days); // Ensure at least 1 day
+
             $('#days').val(days);
 
             // Calculate discount
@@ -288,10 +293,8 @@
             checkFormValidity();
         }
 
-
         function checkFormValidity() {
-            let hasCustomer = $('#select_customer').val() || ($('#customer_name').val() && $('#customer_phone').val() && $(
-                '#customer_address').val());
+            let hasCustomer = $('#select_customer').val() || ($('#customer_name').val() && $('#customer_phone').val() && $('#customer_address').val());
             let hasProducts = false;
 
             $('#invoice-items-table .product-select').each(function() {
@@ -342,12 +345,10 @@
 
         $('#total_discount').on('input', calculateInvoiceTotal);
 
-        // Listen for payment status changes
         $('input[name="paid"]').on('change', function() {
-            const paymentStatus = $('input[name="paid"]:checked').val(); // Get selected payment status
-            const createButton = $('#create-invoice-button'); // Select the button
+            const paymentStatus = $('input[name="paid"]:checked').val();
+            const createButton = $('#create-invoice-button');
 
-            // Update button based on payment status
             if (paymentStatus === "1") {
                 createButton.text('Save Invoice').removeClass('btn-danger').addClass('btn-primary');
             } else {
@@ -355,10 +356,10 @@
             }
         });
 
-        // Trigger the button update on page load
         $(document).ready(function() {
             $('input[name="paid"]:checked').trigger('change');
         });
     </script>
+
 
 @endsection

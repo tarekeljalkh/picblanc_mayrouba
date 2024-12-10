@@ -65,7 +65,7 @@ class POSController extends Controller
             // Calculate totals
             $rentalStartDate = Carbon::parse($request->rental_start_date);
             $rentalEndDate = Carbon::parse($request->rental_end_date);
-            $rentalDays = $rentalStartDate->diffInDays($rentalEndDate) + 1;
+            $rentalDays = $rentalStartDate->diffInDays($rentalEndDate);
 
             $subtotal = 0;
             $invoiceItems = [];

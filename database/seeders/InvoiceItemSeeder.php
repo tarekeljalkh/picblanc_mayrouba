@@ -26,11 +26,11 @@ class InvoiceItemSeeder extends Seeder
         // Set rental dates and calculate days between them
         $startDate1 = Carbon::now()->subDays(10);
         $endDate1 = Carbon::now()->subDays(5);
-        $days1 = $startDate1->diffInDays($endDate1) + 1;
+        $days1 = $startDate1->diffInDays($endDate1);
 
         $startDate2 = Carbon::now()->subDays(20);
         $endDate2 = Carbon::now()->subDays(15);
-        $days2 = $startDate2->diffInDays($endDate2) + 1;
+        $days2 = $startDate2->diffInDays($endDate2);
 
         // Add items to the first invoice
         InvoiceItem::create([

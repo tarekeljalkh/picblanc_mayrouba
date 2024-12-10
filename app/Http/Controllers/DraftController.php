@@ -138,7 +138,7 @@ class DraftController extends Controller
         // Calculate and Add Invoice Items
         $rentalStartDate = Carbon::parse($request->rental_start_date);
         $rentalEndDate = Carbon::parse($request->rental_end_date);
-        $rentalDays = $rentalStartDate->diffInDays($rentalEndDate) + 1;
+        $rentalDays = $rentalStartDate->diffInDays($rentalEndDate);
 
         $invoiceItems = [];
         foreach ($request->products as $index => $product_id) {
@@ -219,7 +219,7 @@ class DraftController extends Controller
         // Calculate rental days for updated items
         $rentalStartDate = Carbon::parse($request->rental_start_date);
         $rentalEndDate = Carbon::parse($request->rental_end_date);
-        $rentalDays = $rentalStartDate->diffInDays($rentalEndDate) + 1;
+        $rentalDays = $rentalStartDate->diffInDays($rentalEndDate);
 
         // Update invoice details
         $invoice->total_discount = $request->total_discount ?? 0;
@@ -331,7 +331,7 @@ class DraftController extends Controller
 
                 // Calculate the cost of the return
                 $returnDate = Carbon::parse($validatedReturn['return_date']);
-                $usedDays = $returnDate->diffInDays(Carbon::parse($invoice->rental_start_date)) + 1;
+                $usedDays = $returnDate->diffInDays(Carbon::parse($invoice->rental_start_date));
                 $usedCost = $item->price * $usedDays * $validatedReturn['quantity'];
 
                 // Create the return record

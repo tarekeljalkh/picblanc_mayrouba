@@ -4,6 +4,7 @@
 
 @push('styles')
     <link rel="stylesheet" href="{{ asset('assets/vendor/libs/select2/select2.css') }}" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 @endpush
 
 @section('content')
@@ -63,12 +64,12 @@
                 <!-- Rental Dates and Days Calculation -->
                 <div class="mb-3">
                     <label for="rental-start-date" class="form-label">Rental Start Date</label>
-                    <input type="datetime-local" class="form-control" id="rental-start-date">
+                    <input type="text" class="form-control" id="rental-start-date">
                 </div>
 
                 <div class="mb-3">
                     <label for="rental-end-date" class="form-label">Rental End Date</label>
-                    <input type="datetime-local" class="form-control" id="rental-end-date">
+                    <input type="text" class="form-control" id="rental-end-date">
                 </div>
 
                 <div class="mb-3">
@@ -162,27 +163,45 @@
     @push('scripts')
         <script src="{{ asset('assets/vendor/libs/select2/select2.js') }}"></script>
         <script src="{{ asset('assets/js/forms-selects.js') }}"></script>
-
+        <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
         <script>
             let cart = [];
 
-            $(document).ready(function() {
+            $(document).ready(function () {
+                // Initialize Select2 for customer selection
                 $('#customer-select').select2({
                     placeholder: 'Select A Customer',
-                    allowClear: true
+                    allowClear: true,
+                }).on('change', function () {
+                    validateCheckoutButton();
                 });
 
-                // Disable checkout if no rental dates are selected
+                // Initialize Flatpickr for rental dates
+                flatpickr("#rental-start-date, #rental-end-date", {
+                    enableTime: true,
+                    dateFormat: "Y-m-d H:i",
+                    altInput: true,
+                    altFormat: "F j, Y h:i K",
+                    allowInput: true,
+                    onChange: function () {
+                        calculateDays();
+                        calculateTotalAmount();
+                        validateCheckoutButton();
+                    }
+                });
+
+                // Function to validate checkout button
                 function validateCheckoutButton() {
                     const startDate = $('#rental-start-date').val();
                     const endDate = $('#rental-end-date').val();
                     const isCartEmpty = cart.length === 0;
+                    const customerSelected = $('#customer-select').val();
 
-                    $('#checkout-btn').prop('disabled', !(startDate && endDate && !isCartEmpty));
-                }
+                    // Enable or disable the checkout button
+                    const isValid = startDate && endDate && !isCartEmpty && customerSelected;
+                    $('#checkout-btn').prop('disabled', !isValid);
 
-                // Change button appearance based on payment status
-                $('input[name="payment_status"]').on('change', function() {
+                    // Update button text and color based on payment status
                     const paymentStatus = $('input[name="payment_status"]:checked').val();
                     const checkoutBtn = $('#checkout-btn');
 
@@ -191,29 +210,28 @@
                     } else if (paymentStatus === '0') {
                         checkoutBtn.removeClass('btn-success').addClass('btn-danger').text('Save as Draft');
                     }
-                });
+                }
 
-                // Trigger button change on page load
-                $('input[name="payment_status"]:checked').trigger('change');
-
-                $('#rental-start-date, #rental-end-date').on('change', function() {
-                    calculateDays();
+                // Event listener for payment status change
+                $('input[name="payment_status"]').on('change', function () {
                     validateCheckoutButton();
                 });
 
-                $('#search-product').on('input', function() {
+                // Real-time product search
+                $('#search-product').on('input', function () {
                     const searchTerm = $(this).val().toLowerCase();
-                    $('#product-list .product-card-container').each(function() {
+                    $('#product-list .product-card-container').each(function () {
                         const productName = $(this).find('.card-title').text().toLowerCase();
                         $(this).toggle(productName.includes(searchTerm));
                     });
                 });
 
-                $('.clickable-card').on('click', function() {
+                // Add product to cart
+                $('.clickable-card').on('click', function () {
                     const productId = $(this).data('id');
                     const productName = $(this).data('name');
                     const productPrice = parseFloat($(this).data('price'));
-                    const productType = $(this).data('type'); // Get the product type
+                    const productType = $(this).data('type');
 
                     let productInCart = cart.find(item => item.id === productId);
                     if (productInCart) {
@@ -223,39 +241,47 @@
                             id: productId,
                             name: productName,
                             price: productPrice,
-                            type: productType, // Store product type in the cart
-                            quantity: 1
+                            type: productType,
+                            quantity: 1,
                         });
                     }
                     renderCart();
                     validateCheckoutButton();
                 });
 
+                $('#total-discount').on('input', function () {
+                    calculateTotalAmount();
+                    validateCheckoutButton();
+                });
+
+                // Calculate rental days
                 function calculateDays() {
                     const startDate = new Date($('#rental-start-date').val());
                     const endDate = new Date($('#rental-end-date').val());
 
                     if (!isNaN(startDate) && !isNaN(endDate) && startDate <= endDate) {
-                        // Calculate the rental duration in whole days
-                        const days = Math.max(Math.floor((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1, 0);
-                        $('#rental-days').val(days);
+                        const diffHours = (endDate - startDate) / (1000 * 60 * 60);
+                        const days = Math.floor(diffHours / 24);
+                        const remainingHours = diffHours % 24;
+
+                        const totalDays = remainingHours > 12 ? days + 1 : days;
+                        $('#rental-days').val(totalDays);
                     } else {
                         $('#rental-days').val(0);
                     }
 
-                    calculateTotalAmount(); // Ensure total amount is recalculated based on updated days
+                    calculateTotalAmount();
                 }
 
+                // Calculate total amount
                 function calculateTotalAmount() {
-                    const days = parseInt($('#rental-days').val()) || 1; // Default to 1 if no days entered
+                    const days = parseInt($('#rental-days').val()) || 1;
                     const totalDiscount = parseFloat($('#total-discount').val()) || 0;
 
                     let total = cart.reduce((sum, item) => {
                         if (item.type === 'fixed') {
-                            // Fixed products are not multiplied by days
                             return sum + (item.price * item.quantity);
                         } else {
-                            // Standard products are multiplied by days
                             return sum + (item.price * item.quantity * days);
                         }
                     }, 0);
@@ -266,50 +292,53 @@
                     $('#total-amount').val(grandTotal.toFixed(2));
                 }
 
+                // Render the cart dynamically
                 function renderCart() {
                     let cartHtml = '';
                     if (cart.length > 0) {
                         cart.forEach((item, index) => {
                             cartHtml += `
-            <div class="cart-item mb-3">
-                <div class="d-flex justify-content-between align-items-center">
-                    <span><strong>${item.name}</strong></span>
-                    <button class="btn btn-danger btn-sm remove-from-cart" data-index="${index}">Remove</button>
-                </div>
-                <div class="form-row mt-2">
-                    <div class="d-flex justify-content-between">
-                        <div class="col">
-                            <label>Qty</label>
-                            <input type="number" class="form-control form-control-sm quantity" data-index="${index}" value="${item.quantity}" />
-                        </div>
-                        <div class="col">
-                            <label>Price</label>
-                            <input type="text" class="form-control form-control-sm price" value="${item.type === 'fixed'
-                                ? (item.price * item.quantity).toFixed(2)
-                                : (item.price * item.quantity * ($('#rental-days').val() || 1)).toFixed(2)}" readonly />
-                        </div>
-                    </div>
-                </div>
-            </div>
-            `;
+                                <div class="cart-item mb-3">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span><strong>${item.name}</strong></span>
+                                        <button class="btn btn-danger btn-sm remove-from-cart" data-index="${index}">Remove</button>
+                                    </div>
+                                    <div class="form-row mt-2">
+                                        <div class="d-flex justify-content-between">
+                                            <div class="col">
+                                                <label>Qty</label>
+                                                <input type="number" class="form-control form-control-sm quantity" data-index="${index}" value="${item.quantity}" />
+                                            </div>
+                                            <div class="col">
+                                                <label>Price</label>
+                                                <input type="text" class="form-control form-control-sm price" value="${item.type === 'fixed'
+                                                    ? (item.price * item.quantity).toFixed(2)
+                                                    : (item.price * item.quantity * ($('#rental-days').val() || 1)).toFixed(2)}" readonly />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
                         });
                     } else {
                         cartHtml = '<p>No items in the cart.</p>';
                     }
 
                     $('#cart').html(cartHtml);
-                    attachInputListeners();
+                    attachCartListeners();
                     calculateTotalAmount();
                 }
 
-                function attachInputListeners() {
-                    $('.quantity').on('input', function() {
+                // Attach listeners to cart inputs and buttons
+                function attachCartListeners() {
+                    $('.quantity').on('input', function () {
                         const index = $(this).data('index');
-                        cart[index].quantity = parseFloat($(this).val()) || 0;
+                        cart[index].quantity = parseFloat($(this).val()) || 1;
                         renderCart();
+                        validateCheckoutButton();
                     });
 
-                    $('.remove-from-cart').on('click', function() {
+                    $('.remove-from-cart').on('click', function () {
                         const index = $(this).data('index');
                         cart.splice(index, 1);
                         renderCart();
@@ -317,10 +346,11 @@
                     });
                 }
 
-                $('#checkout-btn').on('click', function() {
+                // Checkout button click handler
+                $('#checkout-btn').on('click', function () {
                     const selectedCustomer = $('#customer-select').val();
                     const paymentStatus = $('input[name="payment_status"]:checked').val();
-                    const paymentMethod = $('input[name="payment_method"]:checked').val();
+                    const paymentMethod = $('input[name="payment_method"]').val();
 
                     const startDateWithTime = $('#rental-start-date').val();
                     const endDateWithTime = $('#rental-end-date').val();
@@ -341,19 +371,20 @@
                             total_amount: $('#total-amount').val(),
                             note: $('#note').val()
                         },
-                        success: function(response) {
-                            window.location.href = '{{ route('invoices.show', ':id') }}'.replace(
-                                ':id', response.invoice_id);
+                        success: function (response) {
+                            window.location.href = '{{ route('invoices.show', ':id') }}'.replace(':id', response.invoice_id);
                         },
-                        error: function() {
+                        error: function () {
                             alert('Error processing checkout.');
                         }
                     });
                 });
 
+                // Initialize validation and calculations
                 validateCheckoutButton();
             });
         </script>
+
     @endpush
 
 @endsection

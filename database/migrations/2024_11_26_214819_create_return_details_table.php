@@ -19,7 +19,7 @@ return new class extends Migration
             $table->integer('returned_quantity');
             $table->integer('days_used');
             $table->decimal('cost', 10, 2);
-            $table->date('return_date');
+            $table->datetime('return_date');
             $table->timestamps();
 
             // Indexes for faster lookups
