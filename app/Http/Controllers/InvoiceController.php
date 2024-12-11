@@ -377,6 +377,20 @@ class InvoiceController extends Controller
             $invoice->total_amount -= $totalRefund;
             $invoice->save();
 
+            // Check if all items have been fully returned
+            $allItemsReturned = $invoice->items->every(function ($item) {
+                return $item->quantity === $item->returned_quantity;
+            });
+
+            $allAdditionalItemsReturned = $invoice->additionalItems->every(function ($item) {
+                return $item->quantity === $item->returned_quantity;
+            });
+
+            if ($allItemsReturned && $allAdditionalItemsReturned) {
+                $invoice->status = 'returned'; // Set status to 'returned'
+                $invoice->save();
+            }
+
             DB::commit();
 
             return redirect()->route('invoices.show', $invoice->id)->with(
@@ -388,6 +402,7 @@ class InvoiceController extends Controller
             return redirect()->back()->with('error', 'Failed to process returns: ' . $e->getMessage());
         }
     }
+
 
 
     // public function processReturns(Request $request, $invoiceId)
