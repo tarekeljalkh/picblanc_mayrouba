@@ -167,12 +167,12 @@
         <script>
             let cart = [];
 
-            $(document).ready(function () {
+            $(document).ready(function() {
                 // Initialize Select2 for customer selection
                 $('#customer-select').select2({
                     placeholder: 'Select A Customer',
                     allowClear: true,
-                }).on('change', function () {
+                }).on('change', function() {
                     validateCheckoutButton();
                 });
 
@@ -183,7 +183,7 @@
                     altInput: true,
                     altFormat: "F j, Y h:i K",
                     allowInput: true,
-                    onChange: function () {
+                    onChange: function() {
                         calculateDays();
                         calculateTotalAmount();
                         validateCheckoutButton();
@@ -213,21 +213,21 @@
                 }
 
                 // Event listener for payment status change
-                $('input[name="payment_status"]').on('change', function () {
+                $('input[name="payment_status"]').on('change', function() {
                     validateCheckoutButton();
                 });
 
                 // Real-time product search
-                $('#search-product').on('input', function () {
+                $('#search-product').on('input', function() {
                     const searchTerm = $(this).val().toLowerCase();
-                    $('#product-list .product-card-container').each(function () {
+                    $('#product-list .product-card-container').each(function() {
                         const productName = $(this).find('.card-title').text().toLowerCase();
                         $(this).toggle(productName.includes(searchTerm));
                     });
                 });
 
                 // Add product to cart
-                $('.clickable-card').on('click', function () {
+                $('.clickable-card').on('click', function() {
                     const productId = $(this).data('id');
                     const productName = $(this).data('name');
                     const productPrice = parseFloat($(this).data('price'));
@@ -249,7 +249,7 @@
                     validateCheckoutButton();
                 });
 
-                $('#total-discount').on('input', function () {
+                $('#total-discount').on('input', function() {
                     calculateTotalAmount();
                     validateCheckoutButton();
                 });
@@ -258,20 +258,38 @@
                 function calculateDays() {
                     const startDate = new Date($('#rental-start-date').val());
                     const endDate = new Date($('#rental-end-date').val());
+                    let days = 0;
 
                     if (!isNaN(startDate) && !isNaN(endDate) && startDate <= endDate) {
-                        const diffHours = (endDate - startDate) / (1000 * 60 * 60);
-                        const days = Math.floor(diffHours / 24);
-                        const remainingHours = diffHours % 24;
+                        // Calculate the total time difference in milliseconds
+                        const diffTime = endDate - startDate;
 
-                        const totalDays = remainingHours > 12 ? days + 1 : days;
-                        $('#rental-days').val(totalDays);
-                    } else {
-                        $('#rental-days').val(0);
+                        // Convert time difference to total hours
+                        const totalHours = diffTime / (1000 * 60 * 60);
+
+                        // Calculate full 24-hour days
+                        const fullDays = Math.floor(totalHours / 24);
+
+                        // Check if end date is on or after 12 PM
+                        const endHour = endDate.getHours();
+                        const endMinutes = endDate.getMinutes();
+
+                        // Include the start day
+                        days = fullDays + 1;
+
+                        // Adjust if end date's time is before 12 PM
+                        if (endHour < 12 || (endHour === 12 && endMinutes === 0)) {
+                            days--; // Exclude the last day if it's before 12 PM
+                        }
+
+                        // Ensure a minimum of 1 day
+                        days = Math.max(1, days);
                     }
 
-                    calculateTotalAmount();
+                    $('#rental-days').val(days);
+                    calculateTotalAmount(); // Recalculate total amount after updating days
                 }
+
 
                 // Calculate total amount
                 function calculateTotalAmount() {
@@ -331,14 +349,14 @@
 
                 // Attach listeners to cart inputs and buttons
                 function attachCartListeners() {
-                    $('.quantity').on('input', function () {
+                    $('.quantity').on('input', function() {
                         const index = $(this).data('index');
                         cart[index].quantity = parseFloat($(this).val()) || 1;
                         renderCart();
                         validateCheckoutButton();
                     });
 
-                    $('.remove-from-cart').on('click', function () {
+                    $('.remove-from-cart').on('click', function() {
                         const index = $(this).data('index');
                         cart.splice(index, 1);
                         renderCart();
@@ -347,7 +365,7 @@
                 }
 
                 // Checkout button click handler
-                $('#checkout-btn').on('click', function () {
+                $('#checkout-btn').on('click', function() {
                     const selectedCustomer = $('#customer-select').val();
                     const paymentStatus = $('input[name="payment_status"]:checked').val();
                     const paymentMethod = $('input[name="payment_method"]').val();
@@ -371,10 +389,11 @@
                             total_amount: $('#total-amount').val(),
                             note: $('#note').val()
                         },
-                        success: function (response) {
-                            window.location.href = '{{ route('invoices.show', ':id') }}'.replace(':id', response.invoice_id);
+                        success: function(response) {
+                            window.location.href = '{{ route('invoices.show', ':id') }}'.replace(
+                                ':id', response.invoice_id);
                         },
-                        error: function () {
+                        error: function() {
                             alert('Error processing checkout.');
                         }
                     });
@@ -384,7 +403,6 @@
                 validateCheckoutButton();
             });
         </script>
-
     @endpush
 
 @endsection

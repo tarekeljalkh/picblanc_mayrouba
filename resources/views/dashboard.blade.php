@@ -121,8 +121,8 @@
                             <th>Client</th>
                             <th>Total</th>
                             <th>Return Date</th>
-                            <th>Payment Status</th>
                             <th>Invoice Status</th>
+                            <th>Payment Status</th>
                             <th class="cell-fit">Action</th>
                         </tr>
                     </thead>
@@ -132,11 +132,6 @@
                                 <td>{{ $invoice->customer->name ?? 'N/A' }}</td>
                                 <td>${{ number_format($invoice->total_amount ?? 0, 2) }}</td>
                                 <td>{{ $invoice->created_at->format('d/m/Y') }}</td>
-                                <td>
-                                    <span class="badge {{ $invoice->paid ? 'bg-success' : 'bg-danger' }}">
-                                        {{ $invoice->paid ? 'Paid' : 'Unpaid' }}
-                                    </span>
-                                </td>
                                 <td>
                                     @php
                                         $statusClasses = [
@@ -149,6 +144,11 @@
 
                                     <span class="badge {{ $statusClasses[$invoice->status] ?? 'bg-secondary' }}">
                                         {{ ucfirst($invoice->status) }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge {{ $invoice->paid ? 'bg-success' : 'bg-danger' }}">
+                                        {{ $invoice->paid ? 'Paid' : 'Unpaid' }}
                                     </span>
                                 </td>
                                 <td>

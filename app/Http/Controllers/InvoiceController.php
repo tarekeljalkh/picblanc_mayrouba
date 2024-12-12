@@ -107,7 +107,8 @@ class InvoiceController extends Controller
             'paid' => 'required|in:0,1',
             'payment_method' => 'required|in:cash,credit_card', // Validate payment method
             'days' => 'required|integer', // Validating days from the form
-            'total_amount' => 'required|numeric' // Validating total from the form
+            'total_amount' => 'required|numeric', // Validating total from the form
+            'note' => 'nullable',
         ]);
 
         // Handle Customer
@@ -141,6 +142,7 @@ class InvoiceController extends Controller
             'payment_method' => $request->payment_method, // Store payment method
             'status' => $status, // Set the status dynamically
             'days' => $request->days,
+            'note' => $request->note,
         ]);
         $invoice->save();
 
@@ -377,20 +379,6 @@ class InvoiceController extends Controller
             $invoice->total_amount -= $totalRefund;
             $invoice->save();
 
-            // Check if all items have been fully returned
-            $allItemsReturned = $invoice->items->every(function ($item) {
-                return $item->quantity === $item->returned_quantity;
-            });
-
-            $allAdditionalItemsReturned = $invoice->additionalItems->every(function ($item) {
-                return $item->quantity === $item->returned_quantity;
-            });
-
-            if ($allItemsReturned && $allAdditionalItemsReturned) {
-                $invoice->status = 'returned'; // Set status to 'returned'
-                $invoice->save();
-            }
-
             DB::commit();
 
             return redirect()->route('invoices.show', $invoice->id)->with(
@@ -402,7 +390,6 @@ class InvoiceController extends Controller
             return redirect()->back()->with('error', 'Failed to process returns: ' . $e->getMessage());
         }
     }
-
 
 
     // public function processReturns(Request $request, $invoiceId)

@@ -39,6 +39,7 @@ class DashbboardController extends Controller
         // Fetch latest invoices for the selected category
         $invoices = Invoice::with('customer')
             ->where('category_id', $category->id)
+            ->where('status', '!=', 'returned')
             ->orderBy('created_at', 'desc')
             ->paginate(10);
 
@@ -75,7 +76,7 @@ class DashbboardController extends Controller
         }
 
         // Fetch total income (paid invoices) within the date range and category
-        $totalIncome = Invoice::where('category_id', $category->id)
+        $totalPaid = Invoice::where('category_id', $category->id)
             ->where('paid', true)
             ->whereBetween('created_at', [$from, $to])
             ->sum('total_amount');
@@ -92,32 +93,12 @@ class DashbboardController extends Controller
             ->whereBetween('created_at', [$from, $to])
             ->sum('total_amount');
 
-        // Fetch fixed products and their totals
-        $fixedProducts = Product::where('type', 'fixed')
-            ->with(['invoiceItems' => function ($query) use ($from, $to) {
-                $query->whereBetween('created_at', [$from, $to]);
-            }])
-            ->get();
-
-        $fixedProductBalances = $fixedProducts->map(function ($product) {
-            $totalQuantity = $product->invoiceItems->sum('quantity');
-            $totalRevenue = $product->invoiceItems->sum(fn($item) => $item->quantity * $item->price);
-
-            return [
-                'description' => $product->name, // Only the product name, no extra text
-                'amount' => $totalRevenue,
-                'quantity' => $totalQuantity,
-            ];
-        });
-
         // Combine all data for the table
         $trialBalanceData = [
-            ['description' => 'Total Paid Invoices', 'amount' => $totalIncome],
+            ['description' => 'Total Paid Invoices', 'amount' => $totalPaid],
             ['description' => 'Total Unpaid Invoices', 'amount' => $totalUnpaid],
             ['description' => 'Total Paid by Credit Card', 'amount' => $totalCreditCard],
         ];
-
-        $trialBalanceData = array_merge($trialBalanceData, $fixedProductBalances->toArray());
 
         return view('trial-balance.index', compact(
             'trialBalanceData',
@@ -125,7 +106,6 @@ class DashbboardController extends Controller
             'toDate'
         ));
     }
-
 
     public function trialBalanceByProducts(Request $request)
     {

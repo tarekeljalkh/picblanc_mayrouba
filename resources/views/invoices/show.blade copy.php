@@ -88,7 +88,6 @@
                                         <span class="me-2 h6">Salesperson:</span>
                                         <span>{{ $invoice->user->name ?? 'N/A' }}</span>
                                     </p>
-                                    <span>Thanks for your business</span>
                                 </td>
                                 <td class="px-0 py-6 w-px-100">
                                     <p class="mb-2">Subtotal:</p>

@@ -294,7 +294,8 @@
         }
 
         function checkFormValidity() {
-            let hasCustomer = $('#select_customer').val() || ($('#customer_name').val() && $('#customer_phone').val() && $('#customer_address').val());
+            let hasCustomer = $('#select_customer').val() || ($('#customer_name').val() && $('#customer_phone').val() && $(
+                '#customer_address').val());
             let hasProducts = false;
 
             $('#invoice-items-table .product-select').each(function() {

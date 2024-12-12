@@ -34,8 +34,8 @@
                             </div>
                             <br>
                             <div class="text-heading">
-                                <p>Rental Start: {{ $invoice->rental_start_date->format('d/m/Y') }}</p>
-                                <p>Rental End: {{ $invoice->rental_end_date->format('d/m/Y') }}</p>
+                                <p>Rental Start: {{ $invoice->rental_start_date->format('d/m/Y h:i A') }}</p>
+                                <p>Rental End: {{ $invoice->rental_end_date->format('d/m/Y h:i A') }}</p>
                                 <p>Rental Days: {{ $invoice->days }} day(s)</p>
                             </div>
                         </div>
@@ -77,9 +77,9 @@
                                     <td>${{ number_format($item->price, 2) }}</td>
                                     <td>{{ $item->quantity }}</td>
                                     <td>${{ number_format($item->price * $item->quantity * $item->days, 2) }}</td>
-                                    <td>{{ $item->rental_start_date ? \Carbon\Carbon::parse($item->rental_start_date)->format('d/m/y H:i') : 'N/A' }}
+                                    <td>{{ $item->rental_start_date ? \Carbon\Carbon::parse($item->rental_start_date)->format('d/m/Y h:i A') : 'N/A' }}
                                     </td>
-                                    <td>{{ $item->rental_end_date ? \Carbon\Carbon::parse($item->rental_end_date)->format('d/m/y H:i') : 'N/A' }}
+                                    <td>{{ $item->rental_end_date ? \Carbon\Carbon::parse($item->rental_end_date)->format('d/m/Y h:i A') : 'N/A' }}
                                     </td>
                                 </tr>
                             @endforeach
@@ -109,8 +109,8 @@
                                         <td>${{ number_format($addedItem->price, 2) }}</td>
                                         <td>{{ $addedItem->quantity }}</td>
                                         <td>${{ number_format($addedItem->total_price, 2) }}</td>
-                                        <td>{{ optional($addedItem->rental_start_date)->format('d/m/Y H:i') }}</td>
-                                        <td>{{ optional($addedItem->rental_end_date)->format('d/m/Y H:i') }}</td>
+                                        <td>{{ optional($addedItem->rental_start_date)->format('d/m/Y h:i A') }}</td>
+                                        <td>{{ optional($addedItem->rental_end_date)->format('d/m/Y h:i A') }}</td>
                                     </tr>
                                 @endforeach
                             </tbody>
@@ -141,9 +141,9 @@
                                         <td>{{ $return->days_used }}</td>
                                         <!-- Ensure the cost uses the correct "usedCost" -->
                                         <td>${{ number_format($return->cost, 2) }}</td>
-                                        <td>{{ optional($return->invoiceItem->rental_start_date)->format('d/m/Y H:i') }}
+                                        <td>{{ optional($return->invoiceItem->rental_start_date)->format('d/m/Y h:i A') }}
                                         </td>
-                                        <td>{{ optional($return->return_date)->format('d/m/Y H:i') }}</td>
+                                        <td>{{ optional($return->return_date)->format('d/m/Y h:i A') }}</td>
                                     </tr>
                                 @endforeach
                             </tbody>
@@ -162,11 +162,8 @@
                                         <span>{{ $invoice->user->name ?? 'N/A' }}</span>
                                     </p>
                                     <p class="mb-1">
-                                        <span>Thanks for your business</span>
-                                    </p>
-                                    <span>
                                         {{ $invoice->paid ? 'Payment: Paid' : 'Payment: Not Paid' }}
-                                    </span>
+                                    </p>
                                 </td>
                                 <td class="px-0 py-3 w-px-150">
                                     <p class="mb-2">Subtotal:</p>
@@ -198,6 +195,13 @@
                 <div class="card-body p-0">
                     <div class="row">
                         <div class="col-12">
+                            @if ($invoice->note)
+                                <span class="fw-medium text-heading">NOTE:</span>
+                                <span>{{ $invoice->note }}</span>
+                                <br>
+                                <br>
+                            @endif
+
                             <span class="fw-medium text-heading">CONDITION:</span>
                             <span>I declare having received the merchandise mentioned above in good condition and I agree to
                                 return it on time. I will reimburse the value of any missing, damaged, or broken
@@ -226,6 +230,12 @@
                         <a href="{{ route('invoices.edit', $invoice->id) }}"
                             class="btn btn-label-secondary d-grid w-100">Edit</a>
                     </div>
+                    <a
+                    class="btn btn-success d-grid w-100"
+                    href="https://wa.me/+961{{ $invoice->customer->phone }}?text={{ urlencode('Download your invoice PDF here: ' . route('invoices.download', $invoice->id)) }}" target="_blank"
+                    target="_blank">
+                    Send via WhatsApp
+                </a>
                 </div>
             </div>
         </div>

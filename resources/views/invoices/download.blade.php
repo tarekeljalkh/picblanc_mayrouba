@@ -70,8 +70,8 @@
             <div>
                 <h5>Rental Agreement #{{ $invoice->id }}</h5>
                 <p><strong>Date Issued:</strong> {{ $invoice->created_at->format('M d, Y') }}</p>
-                <p><strong>Rental Start:</strong> {{ $invoice->rental_start_date->format('d/m/Y') }}</p>
-                <p><strong>Rental End:</strong> {{ $invoice->rental_end_date->format('d/m/Y') }}</p>
+                <p><strong>Rental Start:</strong> {{ $invoice->rental_start_date->format('d/m/Y h:i A') }}</p>
+                <p><strong>Rental End:</strong> {{ $invoice->rental_end_date->format('d/m/Y h:i A') }}</p>
                 <p><strong>Rental Days:</strong> {{ $invoice->days }} day(s)</p>
             </div>
         </div>
@@ -132,7 +132,7 @@
                             <td>${{ number_format($addedItem->price, 2) }}</td>
                             <td>{{ $addedItem->quantity }}</td>
                             <td>${{ number_format($addedItem->total_price, 2) }}</td>
-                            <td>{{ optional($addedItem->added_date)->format('d/m/Y') }}</td>
+                            <td>{{ optional($addedItem->added_date)->format('d/m/Y h:i A') }}</td>
                         </tr>
                     @endforeach
                 </tbody>
@@ -169,16 +169,21 @@
         </table>
 
         <!-- Salesperson -->
-        <p><strong>Salesperson:</strong> {{ $invoice->user->name ?? 'N/A' }}</p>
-        Thanks for your business!<br>
+        <p><strong>Salesperson:</strong> {{ $invoice->user->name ?? 'N/A' }}</p><br>
         <span>
             {{ $invoice->paid ? 'Payment: Paid' : 'Payment: Not Paid' }}
         </span>
 
         <hr />
 
+        <!-- Note -->
+        @if ($invoice->note)
+            <p><strong>NOTE:</strong> {{ $invoice->note }}</p>
+        @endif
+
         <!-- Conditions -->
-        <p><strong>CONDITION:</strong> I declare having received the merchandise mentioned above in good condition and agree to return it on time. I will reimburse the value of any missing, damaged, or broken article.</p>
+        <p><strong>CONDITION:</strong> I declare having received the merchandise mentioned above in good condition and
+            agree to return it on time. I will reimburse the value of any missing, damaged, or broken article.</p>
     </div>
 </body>
 

@@ -21,8 +21,8 @@
                     <div>
                         <h5 class="mb-3">Rental Agreement #{{ $invoice->id }}</h5>
                         <p class="mb-1"><strong>Date Issued:</strong> {{ $invoice->created_at->format('M d, Y') }}</p>
-                        <p class="mb-1"><strong>Rental Start:</strong> {{ $invoice->rental_start_date->format('d/m/Y') }}</p>
-                        <p><strong>Rental End:</strong> {{ $invoice->rental_end_date->format('d/m/Y') }}</p>
+                        <p class="mb-1"><strong>Rental Start:</strong> {{ $invoice->rental_start_date->format('d/m/Y h:i A') }}</p>
+                        <p><strong>Rental End:</strong> {{ $invoice->rental_end_date->format('d/m/Y h:i A') }}</p>
                         <p><strong>Rental Days:</strong> {{ $invoice->days }} day(s)</p>
                     </div>
                 </div>
@@ -83,7 +83,7 @@
                                     <td>${{ number_format($addedItem->price, 2) }}</td>
                                     <td>{{ $addedItem->quantity }}</td>
                                     <td>${{ number_format($addedItem->total_price, 2) }}</td>
-                                    <td>{{ optional($addedItem->added_date)->format('d/m/Y') }}</td>
+                                    <td>{{ optional($addedItem->added_date)->format('d/m/Y h:i A') }}</td>
                                 </tr>
                             @endforeach
                         </tbody>
@@ -112,7 +112,7 @@
                                     <td>{{ $return->returned_quantity }}</td>
                                     <td>{{ $return->days_used }}</td>
                                     <td>${{ number_format($return->cost, 2) }}</td>
-                                    <td>{{ optional($return->return_date)->format('d/m/Y') }}</td>
+                                    <td>{{ optional($return->return_date)->format('d/m/Y h:i A') }}</td>
                                 </tr>
                             @endforeach
                         </tbody>
@@ -127,7 +127,6 @@
                         <tr>
                             <td>
                                 <strong>Salesperson:</strong> {{ $invoice->user->name ?? 'N/A' }}<br>
-                                Thanks for your business!<br>
                                 <span>
                                     {{ $invoice->paid ? 'Payment: Paid' : 'Payment: Not Paid' }}
                                 </span>
@@ -157,7 +156,10 @@
 
             <hr>
             <div>
-                <p>I declare having received the merchandise mentioned above in good condition and agree to return it on time.</p>
+                @if ($invoice->note)
+                <p><strong>NOTE:</strong> {{ $invoice->note }}</p>
+                @endif
+                <p><strong>CONDITION:</strong> I declare having received the merchandise mentioned above in good condition and agree to return it on time.</p>
                 <hr>
                 <p>Mayrouba - Tel: 03 71 57 57 | Warde - Tel: 70 100 015 | Mzaar Intercontinental Hotel - Tel: 03 788 733</p>
             </div>
