@@ -16,6 +16,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use App\Traits\FileUploadTrait;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class InvoiceController extends Controller
 {
@@ -104,78 +105,100 @@ class InvoiceController extends Controller
             'prices' => 'required|array|min:1',
             'prices.*' => 'numeric|min:0',
             'total_discount' => 'nullable|numeric|min:0',
+            'deposit' => 'nullable|numeric|min:0', // Validate deposit
             'paid' => 'required|in:0,1',
             'payment_method' => 'required|in:cash,credit_card', // Validate payment method
-            'days' => 'required|integer', // Validating days from the form
-            'total_amount' => 'required|numeric', // Validating total from the form
+            'days' => 'required|integer', // Validate days
+            'total_amount' => 'required|numeric', // Validate total amount
             'note' => 'nullable',
         ]);
 
-        // Handle Customer
-        if ($request->filled('customer_id')) {
-            $customer = Customer::findOrFail($request->customer_id);
-        } else {
-            $customer = Customer::create([
-                'name' => $request->customer_name,
-                'phone' => $request->customer_phone,
-                'address' => $request->customer_address,
-            ]);
-        }
+        try {
+            DB::beginTransaction();
 
-        // Retrieve the selected category from the session
-        $categoryName = session('category', 'daily');
-        $category = Category::where('name', $categoryName)->firstOrFail();
+            // Handle Customer
+            if ($request->filled('customer_id')) {
+                $customer = Customer::findOrFail($request->customer_id);
+            } else {
+                $customer = Customer::create([
+                    'name' => $request->customer_name,
+                    'phone' => $request->customer_phone,
+                    'address' => $request->customer_address,
+                ]);
+            }
 
-        // Determine the invoice status based on the payment status
-        $status = $request->paid ? 'active' : 'draft';
+            // Retrieve the selected category from the session
+            $categoryName = session('category', 'daily');
+            $category = Category::where('name', $categoryName)->firstOrFail();
 
-        // Create the Invoice
-        $invoice = new Invoice([
-            'customer_id' => $customer->id,
-            'user_id' => auth()->user()->id,
-            'category_id' => $category->id, // Associate the invoice with the selected category
-            'rental_start_date' => $request->rental_start_date,
-            'rental_end_date' => $request->rental_end_date,
-            'total_discount' => $request->total_discount ?? 0,
-            'total_amount' => $request->total_amount,
-            'paid' => $request->paid,
-            'payment_method' => $request->payment_method, // Store payment method
-            'status' => $status, // Set the status dynamically
-            'days' => $request->days,
-            'note' => $request->note,
-        ]);
-        $invoice->save();
+            // Calculate totals
+            $rentalStartDate = Carbon::parse($request->rental_start_date);
+            $rentalEndDate = Carbon::parse($request->rental_end_date);
+            $rentalDays = $rentalStartDate->diffInDays($rentalEndDate);
 
-        // Calculate and Add Invoice Items
-        $rentalStartDate = Carbon::parse($request->rental_start_date);
-        $rentalEndDate = Carbon::parse($request->rental_end_date);
-        $rentalDays = $rentalStartDate->diffInDays($rentalEndDate);
+            $subtotal = 0;
+            $invoiceItems = [];
+            foreach ($request->products as $index => $product_id) {
+                $quantity = $request->quantities[$index];
+                $price = $request->prices[$index];
+                $totalPrice = $quantity * $price * $rentalDays;
 
-        $invoiceItems = [];
-        foreach ($request->products as $index => $product_id) {
-            $quantity = $request->quantities[$index];
-            $price = $request->prices[$index];
-            $totalPrice = $quantity * $price * $rentalDays;
+                $subtotal += $totalPrice;
 
-            $invoiceItems[] = new InvoiceItem([
-                'product_id' => $product_id,
-                'quantity' => $quantity,
-                'price' => $price,
-                'total_price' => $totalPrice,
+                $invoiceItems[] = new InvoiceItem([
+                    'product_id' => $product_id,
+                    'quantity' => $quantity,
+                    'price' => $price,
+                    'total_price' => $totalPrice,
+                    'rental_start_date' => $request->rental_start_date,
+                    'rental_end_date' => $request->rental_end_date,
+                    'days' => $rentalDays,
+                    'returned_quantity' => 0,
+                    'added_quantity' => 0,
+                ]);
+            }
+
+            $discountAmount = ($subtotal * ($request->total_discount ?? 0)) / 100;
+            $totalAmount = $subtotal - $discountAmount; // Total amount after discount, no deposit deduction
+
+            // Determine the invoice status based on the payment status
+            $status = $request->paid ? 'active' : 'draft';
+
+            // Create the Invoice
+            $invoice = new Invoice([
+                'customer_id' => $customer->id,
+                'user_id' => auth()->user()->id,
+                'category_id' => $category->id,
                 'rental_start_date' => $request->rental_start_date,
                 'rental_end_date' => $request->rental_end_date,
+                'total_discount' => $request->total_discount ?? 0,
+                'deposit' => $request->deposit ?? 0, // Store deposit separately
+                'total_amount' => $totalAmount, // Keep total amount intact
+                'paid' => $request->paid,
+                'payment_method' => $request->payment_method,
+                'status' => $status,
                 'days' => $rentalDays,
-                'returned_quantity' => 0, // Initial value
-                'added_quantity' => 0, // Initial value
+                'note' => $request->note,
             ]);
+            $invoice->save();
+
+            // Attach items to the invoice
+            $invoice->items()->saveMany($invoiceItems);
+
+            DB::commit();
+
+            return redirect()->route('invoices.show', $invoice->id)->with('success', 'Invoice created successfully');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Store Invoice Exception:', [
+                'message' => $e->getMessage(),
+                'line' => $e->getLine(),
+                'file' => $e->getFile(),
+            ]);
+
+            return redirect()->back()->with('error', 'An error occurred while creating the invoice.');
         }
-
-        // Attach items to the invoice
-        $invoice->items()->saveMany($invoiceItems);
-
-        return redirect()->route('invoices.show', $invoice->id)->with('success', 'Invoice created successfully');
     }
-
 
 
     /**

@@ -83,6 +83,13 @@
                     <input type="number" class="form-control" id="total-discount" value="0">
                 </div>
 
+                <!-- Deposit -->
+                <div class="mb-3">
+                    <label for="deposit" class="form-label">Deposit ($)</label>
+                    <input type="number" class="form-control" id="deposit" value="0" min="0">
+                </div>
+
+
                 <!-- Payment Status -->
                 <div class="mb-4">
                     <label class="form-label">Payment Status</label><br>
@@ -190,7 +197,7 @@
                     }
                 });
 
-                // Function to validate checkout button
+                // Validate checkout button
                 function validateCheckoutButton() {
                     const startDate = $('#rental-start-date').val();
                     const endDate = $('#rental-end-date').val();
@@ -212,7 +219,7 @@
                     }
                 }
 
-                // Event listener for payment status change
+                // Listen for payment status change
                 $('input[name="payment_status"]').on('change', function() {
                     validateCheckoutButton();
                 });
@@ -249,9 +256,9 @@
                     validateCheckoutButton();
                 });
 
-                $('#total-discount').on('input', function() {
+                // Trigger calculations when deposit changes
+                $('#total-discount, #deposit').on('input', function() {
                     calculateTotalAmount();
-                    validateCheckoutButton();
                 });
 
                 // Calculate rental days
@@ -261,40 +268,28 @@
                     let days = 0;
 
                     if (!isNaN(startDate) && !isNaN(endDate) && startDate <= endDate) {
-                        // Calculate the total time difference in milliseconds
                         const diffTime = endDate - startDate;
-
-                        // Convert time difference to total hours
                         const totalHours = diffTime / (1000 * 60 * 60);
-
-                        // Calculate full 24-hour days
                         const fullDays = Math.floor(totalHours / 24);
-
-                        // Check if end date is on or after 12 PM
                         const endHour = endDate.getHours();
                         const endMinutes = endDate.getMinutes();
 
-                        // Include the start day
                         days = fullDays + 1;
-
-                        // Adjust if end date's time is before 12 PM
                         if (endHour < 12 || (endHour === 12 && endMinutes === 0)) {
-                            days--; // Exclude the last day if it's before 12 PM
+                            days--;
                         }
-
-                        // Ensure a minimum of 1 day
                         days = Math.max(1, days);
                     }
 
                     $('#rental-days').val(days);
-                    calculateTotalAmount(); // Recalculate total amount after updating days
+                    calculateTotalAmount();
                 }
-
 
                 // Calculate total amount
                 function calculateTotalAmount() {
                     const days = parseInt($('#rental-days').val()) || 1;
                     const totalDiscount = parseFloat($('#total-discount').val()) || 0;
+                    const deposit = parseFloat($('#deposit').val()) || 0; // Get deposit value
 
                     let total = cart.reduce((sum, item) => {
                         if (item.type === 'fixed') {
@@ -305,7 +300,7 @@
                     }, 0);
 
                     const discountAmount = (total * totalDiscount) / 100;
-                    const grandTotal = total - discountAmount;
+                    const grandTotal = total - discountAmount - deposit; // Subtract deposit
 
                     $('#total-amount').val(grandTotal.toFixed(2));
                 }
@@ -368,10 +363,11 @@
                 $('#checkout-btn').on('click', function() {
                     const selectedCustomer = $('#customer-select').val();
                     const paymentStatus = $('input[name="payment_status"]:checked').val();
-                    const paymentMethod = $('input[name="payment_method"]').val();
+                    const paymentMethod = $('input[name="payment_method"]:checked').val();
 
                     const startDateWithTime = $('#rental-start-date').val();
                     const endDateWithTime = $('#rental-end-date').val();
+                    const deposit = $('#deposit').val(); // Get deposit value
 
                     $.ajax({
                         url: '{{ route('pos.checkout') }}',
@@ -381,6 +377,7 @@
                             cart: cart,
                             customer_id: selectedCustomer,
                             total_discount: $('#total-discount').val(),
+                            deposit: deposit, // Pass deposit to backend
                             status: paymentStatus,
                             payment_method: paymentMethod,
                             rental_days: $('#rental-days').val(),
@@ -390,8 +387,7 @@
                             note: $('#note').val()
                         },
                         success: function(response) {
-                            window.location.href = '{{ route('invoices.show', ':id') }}'.replace(
-                                ':id', response.invoice_id);
+                            window.location.href = '{{ route('invoices.show', ':id') }}'.replace(':id', response.invoice_id);
                         },
                         error: function() {
                             alert('Error processing checkout.');
@@ -399,10 +395,10 @@
                     });
                 });
 
-                // Initialize validation and calculations
                 validateCheckoutButton();
             });
         </script>
+
     @endpush
 
 @endsection

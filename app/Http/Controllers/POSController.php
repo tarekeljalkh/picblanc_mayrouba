@@ -41,6 +41,7 @@ class POSController extends Controller
             'cart.*.id' => 'required|exists:products,id',
             'cart.*.quantity' => 'required|integer|min:1',
             'total_discount' => 'nullable|numeric|min:0',
+            'deposit' => 'nullable|numeric|min:0', // Validate deposit
             'status' => 'required|boolean',
             'payment_method' => 'required|in:cash,credit_card',
             'rental_days' => 'required|integer|min:1',
@@ -90,8 +91,9 @@ class POSController extends Controller
                 ]);
             }
 
+            // Calculate discount and final total
             $discountAmount = ($subtotal * ($request->total_discount ?? 0)) / 100;
-            $rentalTotal = $subtotal - $discountAmount;
+            $totalAmount = $subtotal - $discountAmount; // Do not subtract deposit here
 
             // Create the invoice
             $invoice = new Invoice([
@@ -101,7 +103,8 @@ class POSController extends Controller
                 'rental_start_date' => $request->rental_start_date,
                 'rental_end_date' => $request->rental_end_date,
                 'total_discount' => $request->total_discount,
-                'total_amount' => $rentalTotal,
+                'deposit' => $request->deposit ?? 0, // Save the deposit separately
+                'total_amount' => $totalAmount, // Keep total as the full amount after discount
                 'paid' => $request->status,
                 'payment_method' => $request->payment_method,
                 'status' => $request->status ? 'active' : 'draft',
@@ -124,7 +127,6 @@ class POSController extends Controller
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
-
 
     // public function checkout(Request $request)
     // {

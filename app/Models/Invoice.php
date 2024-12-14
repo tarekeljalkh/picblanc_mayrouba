@@ -14,7 +14,7 @@ class Invoice extends Model
         'category_id',
         'total_discount',
         'total_amount',
-        'amount_per_day',
+        'deposit',
         'paid',
         'payment_method',
         'status',
@@ -137,6 +137,12 @@ class Invoice extends Model
         return $query->where('rental_end_date', '<', now())->where('paid', 0);
     }
 
+    public function getBalanceDueAttribute()
+    {
+        return $this->total_amount - $this->deposit;
+    }
+
+
     public function calculateTotals()
     {
         // Subtotal for main items (standard and fixed)
@@ -172,17 +178,69 @@ class Invoice extends Model
         // Discount amount
         $discountAmount = ($totalBeforeDiscount * ($this->total_discount ?? 0) / 100);
 
-        // Final total after discount
-        $total = $totalBeforeDiscount - $discountAmount;
+        // Get deposit amount (ensure it's numeric and non-negative)
+        $deposit = max(0, (float)($this->deposit ?? 0));
+
+        // Final total after discount and deposit (ensure non-negative total)
+        $total = max(0, $totalBeforeDiscount - $discountAmount - $deposit);
 
         return [
             'subtotal' => round($subtotal, 2),
             'additionalCost' => round($additionalCost, 2),
             'returnedCost' => round($returnedCost, 2),
             'discountAmount' => round($discountAmount, 2),
+            'deposit' => round($deposit, 2), // Include deposit in the returned data
             'total' => round($total, 2),
         ];
     }
+
+
+    // public function calculateTotals()
+    // {
+    //     // Subtotal for main items (standard and fixed)
+    //     $subtotal = $this->items->sum(function ($item) {
+    //         $type = $item->product->type instanceof \App\Enums\ProductType
+    //             ? $item->product->type->value
+    //             : $item->product->type;
+
+    //         return $type === 'fixed'
+    //             ? $item->price * $item->quantity // Fixed: price * quantity
+    //             : $item->price * $item->quantity * $item->days; // Standard: price * quantity * days
+    //     });
+
+    //     // Additional costs for additional items
+    //     $additionalCost = $this->additionalItems->sum(function ($item) {
+    //         $type = $item->product->type instanceof \App\Enums\ProductType
+    //             ? $item->product->type->value
+    //             : $item->product->type;
+
+    //         return $type === 'fixed'
+    //             ? $item->price * $item->quantity // Fixed: price * quantity
+    //             : $item->price * $item->quantity * $item->days; // Standard: price * quantity * days
+    //     });
+
+    //     // Costs for returned items
+    //     $returnedCost = $this->returnDetails->sum(function ($return) {
+    //         return $return->returned_quantity * $return->invoiceItem->price * $return->days_used;
+    //     });
+
+    //     // Total before discount
+    //     $totalBeforeDiscount = $subtotal + $additionalCost - $returnedCost;
+
+    //     // Discount amount
+    //     $discountAmount = ($totalBeforeDiscount * ($this->total_discount ?? 0) / 100);
+
+    //     // Final total after discount
+    //     $total = $totalBeforeDiscount - $discountAmount;
+
+    //     return [
+    //         'subtotal' => round($subtotal, 2),
+    //         'additionalCost' => round($additionalCost, 2),
+    //         'returnedCost' => round($returnedCost, 2),
+    //         'discountAmount' => round($discountAmount, 2),
+    //         'total' => round($total, 2),
+    //     ];
+    // }
 
 
     public function checkAndUpdateStatus()

@@ -17,6 +17,7 @@ return new class extends Migration
             $table->foreignId('category_id')->nullable()->constrained('categories')->after('id');
             $table->decimal('total_vat', 5, 2)->default(0); // VAT percentage
             $table->decimal('total_discount', 5, 2)->default(0); // Discount percentage
+            $table->decimal('deposit', 10, 2)->default(0); // Deposit amount
             $table->decimal('total_amount', 10, 2); // Total amount of the invoice
             $table->boolean('paid')->default(false); // Paid status
             $table->enum('payment_method', ['cash', 'credit_card']);

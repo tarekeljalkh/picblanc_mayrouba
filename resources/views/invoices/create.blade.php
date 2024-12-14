@@ -134,6 +134,16 @@
                             </div>
                         </div>
 
+                        {{-- Deposit --}}
+                        <div class="mb-4 row">
+                            <label for="deposit" class="col-md-2 col-form-label">Deposit</label>
+                            <div class="col-md-10">
+                                <input type="number" class="form-control" id="deposit" name="deposit" value="0"
+                                    min="0" />
+                            </div>
+                        </div>
+
+
                         {{-- Days and Total Amount --}}
                         <div class="mb-4 row">
                             <label for="days" class="col-md-2 col-form-label">Days</label>
@@ -285,8 +295,11 @@
             let discount = parseFloat($('#total_discount').val()) || 0;
             let discountAmount = (subtotal * discount) / 100;
 
+            // Get deposit amount
+            let deposit = parseFloat($('#deposit').val()) || 0;
+
             // Final total amount
-            let totalAmount = (subtotal - discountAmount) * days + fixedTotal; // Fixed products are added directly
+            let totalAmount = (subtotal - discountAmount) * days + fixedTotal - deposit; // Subtract deposit
             $('#total_amount').val(totalAmount.toFixed(2));
 
             // Update form validity
@@ -345,6 +358,7 @@
         });
 
         $('#total_discount').on('input', calculateInvoiceTotal);
+        $('#deposit').on('input', calculateInvoiceTotal); // Listen for deposit input changes
 
         $('input[name="paid"]').on('change', function() {
             const paymentStatus = $('input[name="paid"]:checked').val();

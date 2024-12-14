@@ -170,6 +170,9 @@
                                     <p class="mb-2">Additional Costs:</p>
                                     <p class="mb-2 text-danger">Returned Costs:</p>
                                     <p class="mb-2">Discount ({{ $invoice->total_discount }}%):</p>
+                                    @if ($invoice->deposit > 0)
+                                        <p class="mb-2">Deposit:</p> <!-- Show deposit only if greater than zero -->
+                                    @endif
                                     <p class="mb-0">Total:</p>
                                 </td>
                                 <td class="text-end px-0 py-6 w-px-100 fw-medium text-heading">
@@ -178,18 +181,24 @@
                                         $addedCost = $totals['additionalCost'];
                                         $returnedCost = $totals['returnedCost'];
                                         $discountAmount = $totals['discountAmount'];
+                                        $deposit = $invoice->deposit ?? 0;
                                         $total = $totals['total'];
                                     @endphp
                                     <p class="fw-medium mb-2">${{ number_format($subtotal, 2) }}</p>
                                     <p class="fw-medium mb-2">${{ number_format($addedCost, 2) }}</p>
                                     <p class="fw-medium mb-2 text-danger">- ${{ number_format($returnedCost, 2) }}</p>
                                     <p class="fw-medium mb-2">- ${{ number_format($discountAmount, 2) }}</p>
+                                    @if ($deposit > 0)
+                                        <p class="fw-medium mb-2">- ${{ number_format($deposit, 2) }}</p>
+                                        <!-- Display deposit -->
+                                    @endif
                                     <p class="fw-medium mb-0">${{ number_format($total, 2) }}</p>
                                 </td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
+
 
                 <hr class="mt-0 mb-6">
                 <div class="card-body p-0">
@@ -230,12 +239,11 @@
                         <a href="{{ route('invoices.edit', $invoice->id) }}"
                             class="btn btn-label-secondary d-grid w-100">Edit</a>
                     </div>
-                    <a
-                    class="btn btn-success d-grid w-100"
-                    href="https://wa.me/+961{{ $invoice->customer->phone }}?text={{ urlencode('Download your invoice PDF here: ' . route('invoices.download', $invoice->id)) }}" target="_blank"
-                    target="_blank">
-                    Send via WhatsApp
-                </a>
+                    <a class="btn btn-success d-grid w-100"
+                        href="https://wa.me/+961{{ $invoice->customer->phone }}?text={{ urlencode('Download your invoice PDF here: ' . route('invoices.download', $invoice->id)) }}"
+                        target="_blank" target="_blank">
+                        Send via WhatsApp
+                    </a>
                 </div>
             </div>
         </div>

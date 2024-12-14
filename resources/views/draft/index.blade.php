@@ -42,6 +42,8 @@
                             <th>Total</th>
                             <th>Status</th>
                             <th>Paid</th>
+                            <th>From</th>
+                            <th>To</th>
                             <th>Action</th>
                         </tr>
                     </thead>
@@ -59,6 +61,8 @@
                                         <span class="badge bg-danger">Unpaid</span>
                                     @endif
                                 </td>
+                                <td>{{ $invoice->rental_start_date->format('d/m/Y h:i A') }}</td>
+                                <td>{{ $invoice->rental_end_date->format('d/m/Y h:i A') }}</td>
                                 <td>
                                     <a href="{{ route('invoices.edit', $invoice->id) }}" class="btn btn-warning">Edit</a>
                                     <a href="{{ route('invoices.show', $invoice->id) }}" class="btn btn-warning">Show</a>

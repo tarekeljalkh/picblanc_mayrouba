@@ -120,9 +120,10 @@
                         <tr>
                             <th>Client</th>
                             <th>Total</th>
-                            <th>Return Date</th>
                             <th>Invoice Status</th>
                             <th>Payment Status</th>
+                            <th>From</th>
+                            <th>To</th>
                             <th class="cell-fit">Action</th>
                         </tr>
                     </thead>
@@ -131,7 +132,6 @@
                             <tr>
                                 <td>{{ $invoice->customer->name ?? 'N/A' }}</td>
                                 <td>${{ number_format($invoice->total_amount ?? 0, 2) }}</td>
-                                <td>{{ $invoice->created_at->format('d/m/Y') }}</td>
                                 <td>
                                     @php
                                         $statusClasses = [
@@ -151,6 +151,8 @@
                                         {{ $invoice->paid ? 'Paid' : 'Unpaid' }}
                                     </span>
                                 </td>
+                                <td>{{ $invoice->rental_start_date->format('d/m/Y h:i A') }}</td>
+                                <td>{{ $invoice->rental_end_date->format('d/m/Y h:i A') }}</td>
                                 <td>
                                     <a href="{{ route('invoices.show', $invoice->id) }}" class="btn btn-info">View</a>
                                 </td>

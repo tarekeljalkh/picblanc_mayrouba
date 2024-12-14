@@ -144,7 +144,7 @@
         <table>
             <tr>
                 <td><strong>Subtotal:</strong></td>
-                <td class="text-end">${{ number_format($totals['subtotal'], 2) }}</td>
+                <td class="text-end">${{ number_format($totals['subtotal'] ?? 0, 2) }}</td>
             </tr>
             @if ($totals['additionalCost'] > 0)
                 <tr>
@@ -160,13 +160,20 @@
             @endif
             <tr>
                 <td><strong>Discount:</strong></td>
-                <td class="text-end">- ${{ number_format($totals['discountAmount'], 2) }}</td>
+                <td class="text-end text-danger">- ${{ number_format($totals['discountAmount'] ?? 0, 2) }}</td>
             </tr>
+            @if (($totals['deposit'] ?? 0) > 0)
+                <tr>
+                    <td><strong>Deposit:</strong></td>
+                    <td class="text-end text-danger">- ${{ number_format($totals['deposit'], 2) }}</td>
+                </tr>
+            @endif
             <tr>
                 <td><strong>Total:</strong></td>
-                <td class="text-end">${{ number_format($totals['total'], 2) }}</td>
+                <td class="text-end"><strong>${{ number_format($totals['total'], 2) }}</strong></td>
             </tr>
         </table>
+
 
         <!-- Salesperson -->
         <p><strong>Salesperson:</strong> {{ $invoice->user->name ?? 'N/A' }}</p><br>
