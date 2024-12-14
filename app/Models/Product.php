@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Product extends Model
 {
+    use HasFactory;
 
     protected $fillable = [
         'name',
@@ -21,49 +22,42 @@ class Product extends Model
         'type' => ProductType::class,
     ];
 
-    use HasFactory;
-
     // Relationship to get invoice items for the product
     public function invoiceItems()
     {
         return $this->hasMany(InvoiceItem::class, 'product_id');
     }
 
-        // Relationship to get returned items for the product
-        public function returnedItems()
-        {
-            return $this->hasMany(ReturnDetail::class, 'product_id');
-        }
+    // Relationship to get returned items (return details) for the product
+    public function returnDetails()
+    {
+        return $this->hasManyThrough(
+            ReturnDetail::class,     // Final target model
+            InvoiceItem::class,      // Intermediate model
+            'product_id',            // Foreign key on InvoiceItem
+            'invoice_item_id',       // Foreign key on ReturnDetail
+            'id',                    // Local key on Product
+            'id'                     // Local key on InvoiceItem
+        );
+    }
 
     // Calculate the total rented quantity (active invoices only)
     public function rentedQuantity()
     {
-        return $this->invoiceItems()
-            ->whereHas('invoice', function ($query) {
-                $query->where('status', 'active'); // Only consider active rentals
-            })
-            ->sum('quantity');
+        return $this->activeRentals()->sum('quantity');
     }
 
-    // Calculate the total returned quantity
-    public function returnedQuantity()
-    {
-        return $this->returnedItems()->sum('returned_quantity');
-    }
-
-
-    // Get the detailed rentals including customer and dates
-    public function rentals()
+    // Active rentals including invoice status check
+    public function activeRentals()
     {
         return $this->invoiceItems()->whereHas('invoice', function ($query) {
             $query->where('status', 'active');
         });
     }
 
-        // Define the relationship with Category
-        public function category()
-        {
-            return $this->belongsTo(Category::class);
-        }
-
+    // Define the relationship with Category
+    public function category()
+    {
+        return $this->belongsTo(Category::class);
+    }
 }
