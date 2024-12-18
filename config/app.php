@@ -70,7 +70,8 @@ return [
     |
     */
 
-    'timezone' => 'UTC',
+    // 'timezone' => 'UTC',
+    'timezone' => 'Asia/Beirut', // Adjust as per your time zone
 
     /*
     |--------------------------------------------------------------------------

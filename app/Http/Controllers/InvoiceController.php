@@ -105,11 +105,10 @@ class InvoiceController extends Controller
             'quantities.*' => 'integer|min:1',
             'prices' => 'required|array|min:1',
             'prices.*' => 'numeric|min:0',
-            'total_discount' => 'nullable|numeric|min:0',
+            'total_discount' => 'nullable|numeric|min:0|max:100',
             'deposit' => 'nullable|numeric|min:0',
             'paid' => 'required|in:0,1',
             'payment_method' => 'required|in:cash,credit_card',
-            'total_amount' => 'required|numeric',
             'note' => 'nullable',
         ];
 
@@ -149,9 +148,9 @@ class InvoiceController extends Controller
                 if ($categoryName === 'daily') {
                     $rentalStartDate = Carbon::parse($request->rental_start_date);
                     $rentalEndDate = Carbon::parse($request->rental_end_date);
-                    $rentalDays = $rentalStartDate->diffInDays($rentalEndDate);
+                    $rentalDays = $rentalStartDate->diffInDays($rentalEndDate) + 1; // Ensure at least 1 day
 
-                    $totalPrice = $quantity * $price * max(1, $rentalDays); // Ensure at least 1 day
+                    $totalPrice = $quantity * $price * $rentalDays;
                     $invoiceItems[] = new InvoiceItem([
                         'product_id' => $product_id,
                         'quantity' => $quantity,
@@ -159,7 +158,7 @@ class InvoiceController extends Controller
                         'total_price' => $totalPrice,
                         'rental_start_date' => $request->rental_start_date,
                         'rental_end_date' => $request->rental_end_date,
-                        'days' => max(1, $rentalDays),
+                        'days' => $rentalDays,
                         'returned_quantity' => 0,
                         'added_quantity' => 0,
                     ]);
@@ -179,8 +178,16 @@ class InvoiceController extends Controller
                 $subtotal += $totalPrice;
             }
 
-            $discountAmount = ($subtotal * ($request->total_discount ?? 0)) / 100;
-            $totalAmount = $subtotal - $discountAmount; // Total amount after discount, no deposit deduction
+            // Apply discount
+            $totalDiscount = $request->total_discount ?? 0;
+            $discountAmount = ($subtotal * $totalDiscount) / 100;
+
+            // Calculate the total amount after applying the discount
+            $totalAmount = $subtotal - $discountAmount;
+
+            // Add deposit to total amount if applicable
+            $deposit = $request->deposit ?? 0;
+            $totalAmount -= $deposit;
 
             // Determine the invoice status based on the payment status
             $status = $request->paid ? 'active' : 'draft';
@@ -190,8 +197,8 @@ class InvoiceController extends Controller
                 'customer_id' => $customer->id,
                 'user_id' => auth()->user()->id,
                 'category_id' => $category->id,
-                'total_discount' => $request->total_discount ?? 0,
-                'deposit' => $request->deposit ?? 0,
+                'total_discount' => $totalDiscount,
+                'deposit' => $deposit,
                 'total_amount' => $totalAmount,
                 'paid' => $request->paid,
                 'payment_method' => $request->payment_method,

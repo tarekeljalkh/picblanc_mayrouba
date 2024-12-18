@@ -183,7 +183,7 @@ class Invoice extends Model
         $discountAmount = ($totalAfterAdjustments * ($this->total_discount ?? 0)) / 100;
 
         // Final total
-        $total = $totalAfterAdjustments - $discountAmount;
+        $total = $totalAfterAdjustments - $discountAmount - ($this->deposit ?? 0);
 
         return [
             'subtotal' => round($subtotal, 2),

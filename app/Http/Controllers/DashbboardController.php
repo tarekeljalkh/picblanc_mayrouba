@@ -78,7 +78,6 @@ class DashbboardController extends Controller
         // Fetch total paid invoices (including additional items)
         $totalPaid = Invoice::where('category_id', $category->id)
             ->where('paid', true)
-            ->where('status', 'returned')
             ->whereBetween('created_at', [$from, $to])
             ->with('additionalItems')
             ->get()
@@ -87,7 +86,6 @@ class DashbboardController extends Controller
         // Fetch total unpaid invoices (including additional items)
         $totalUnpaid = Invoice::where('category_id', $category->id)
             ->where('paid', false)
-            ->where('status', 'returned')
             ->whereBetween('created_at', [$from, $to])
             ->with('additionalItems')
             ->get()
@@ -95,16 +93,24 @@ class DashbboardController extends Controller
 
         // Fetch total returned invoices (optional adjustment if required)
         $totalPaidCreditCard = Invoice::where('category_id', $category->id)
-            ->where('status', 'returned')
+            ->where('paid', true)
             ->where('payment_method', '=', 'credit_card')
             ->whereBetween('created_at', [$from, $to])
             ->sum('total_amount');
+
+        $totalUnpaidCreditCard = Invoice::where('category_id', $category->id)
+            ->where('paid', false)
+            ->where('payment_method', '=', 'credit_card')
+            ->whereBetween('created_at', [$from, $to])
+            ->sum('total_amount');
+
 
         // Combine all data for the table
         $trialBalanceData = [
             ['description' => 'Total Paid Invoices', 'amount' => $totalPaid],
             ['description' => 'Total Unpaid Invoices', 'amount' => $totalUnpaid],
             ['description' => 'Total Paid by Credit Card', 'amount' => $totalPaidCreditCard],
+            ['description' => 'Total UnPaid by Credit Card', 'amount' => $totalUnpaidCreditCard],
         ];
 
         return view('trial-balance.index', compact(
@@ -183,55 +189,58 @@ class DashbboardController extends Controller
             return redirect()->back()->withErrors('Invalid category selected.');
         }
 
-        // Fetch all returned items for products (original and additional)
-        $productSales = Product::with(['invoiceItems' => function ($query) use ($from, $to, $category) {
-            $query->where('status', 'returned') // Only include returned items
-                ->whereBetween('created_at', [$from, $to])
-                ->whereHas('invoice', function ($invoiceQuery) use ($category) {
-                    $invoiceQuery->where('category_id', $category->id);
-                });
-        }, 'additionalItems' => function ($query) use ($from, $to, $category) {
-            $query->where('status', 'returned') // Only include returned additional items
-                ->whereBetween('created_at', [$from, $to])
-                ->whereHas('invoice', function ($invoiceQuery) use ($category) {
-                    $invoiceQuery->where('category_id', $category->id);
-                });
-        }])->get();
+        // Fetch all products with invoice items and additional items
+        $productSales = Product::with([
+            'invoiceItems' => function ($query) use ($from, $to, $category) {
+                $query->whereBetween('created_at', [$from, $to])
+                    ->whereHas('invoice', function ($invoiceQuery) use ($category) {
+                        $invoiceQuery->where('category_id', $category->id);
+                    });
+            },
+            'additionalItems' => function ($query) use ($from, $to, $category) {
+                $query->whereBetween('created_at', [$from, $to])
+                    ->whereHas('invoice', function ($invoiceQuery) use ($category) {
+                        $invoiceQuery->where('category_id', $category->id);
+                    });
+            }
+        ])->get();
 
-        // Calculate total income and other data from returned items
+        // Calculate total income and other data from items
         $totalIncome = 0;
         $productBalances = [];
 
         foreach ($productSales as $product) {
-            // Original items
-            $totalQuantity = $product->invoiceItems->sum('returned_quantity');
-            $totalIncomeForProduct = $product->invoiceItems->sum(function ($item) use ($product) {
-                return $item->price * $item->returned_quantity;
-            });
+            $totalQuantity = 0;
+            $totalIncomeForProduct = 0;
 
-            // Additional items
-            $totalAdditionalQuantity = $product->additionalItems->sum('returned_quantity');
-            $totalIncomeForAdditionalItems = $product->additionalItems->sum(function ($item) use ($product) {
-                return $item->price * $item->returned_quantity;
-            });
+            // Calculate totals for original invoice items
+            foreach ($product->invoiceItems as $item) {
+                $days = $item->days ?? 1; // Use 1 day if 'days' is null
+                $totalQuantity += $item->quantity;
+                $totalIncomeForProduct += $item->price * $item->quantity * $days;
+            }
 
-            // Combine totals
-            $combinedTotalQuantity = $totalQuantity + $totalAdditionalQuantity;
-            $combinedTotalIncome = $totalIncomeForProduct + $totalIncomeForAdditionalItems;
+            // Calculate totals for additional items
+            foreach ($product->additionalItems as $item) {
+                $days = $item->days ?? 1; // Use 1 day if 'days' is null
+                $totalQuantity += $item->quantity;
+                $totalIncomeForProduct += $item->price * $item->quantity * $days;
+            }
 
-            $averagePrice = $combinedTotalQuantity > 0 ? $combinedTotalIncome / $combinedTotalQuantity : 0;
+            $averagePrice = $totalQuantity > 0 ? $totalIncomeForProduct / $totalQuantity : 0;
 
-            if ($combinedTotalQuantity > 0) {
+            if ($totalQuantity > 0) {
                 $productBalances[] = [
                     'product' => $product->name,
-                    'quantity' => $combinedTotalQuantity,
-                    'price_per_unit' => $averagePrice,
-                    'total' => $combinedTotalIncome,
+                    'quantity' => $totalQuantity,
+                    'price_per_unit' => round($averagePrice, 2),
+                    'total' => round($totalIncomeForProduct, 2),
                 ];
-                $totalIncome += $combinedTotalIncome;
+                $totalIncome += $totalIncomeForProduct;
             }
         }
 
+        // Pass totals and product balances to the view
         return view('trial-balance.products', compact('productBalances', 'totalIncome', 'fromDate', 'toDate'));
     }
 

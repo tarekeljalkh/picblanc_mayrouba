@@ -4,7 +4,7 @@
 
 @push('styles')
     <link rel="stylesheet" href="{{ asset('assets/vendor/libs/select2/select2.css') }}" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="{{ asset('assets/vendor/libs/flatpickr/flatpickr.css') }}">
 @endpush
 
 @section('content')
@@ -180,7 +180,7 @@
     @push('scripts')
         <script src="{{ asset('assets/vendor/libs/select2/select2.js') }}"></script>
         <script src="{{ asset('assets/js/forms-selects.js') }}"></script>
-        <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+        <script src="{{ asset('assets/vendor/libs/flatpickr/flatpickr.js') }}"></script>
         <script>
             let cart = [];
 

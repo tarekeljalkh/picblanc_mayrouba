@@ -4,7 +4,8 @@
 
 @push('styles')
     <link rel="stylesheet" href="{{ asset('assets/vendor/css/pages/app-invoice.css') }}" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="{{ asset('assets/vendor/libs/flatpickr/flatpickr.css') }}" />
+
     <link rel="stylesheet" href="{{ asset('assets/vendor/libs/select2/select2.css') }}" />
 @endpush
 
@@ -224,7 +225,7 @@
 
     {{-- Include jQuery, Flatpickr, and Select2 CDN --}}
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="{{ asset('assets/vendor/libs/flatpickr/flatpickr.js') }}"></script>
     <script src="{{ asset('assets/vendor/libs/select2/select2.js') }}"></script>
     <script src="{{ asset('assets/js/forms-selects.js') }}"></script>
 
