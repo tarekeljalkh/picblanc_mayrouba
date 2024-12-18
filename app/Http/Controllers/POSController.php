@@ -34,8 +34,12 @@ class POSController extends Controller
     {
         Log::info('Checkout Request Payload:', $request->all());
 
-        // Validate input
-        $request->validate([
+        // Retrieve the category
+        $categoryName = session('category', 'daily');
+        $category = Category::where('name', $categoryName)->firstOrFail();
+
+        // Validation rules
+        $rules = [
             'customer_id' => 'nullable|exists:customers,id',
             'cart' => 'required|array|min:1',
             'cart.*.id' => 'required|exists:products,id',
@@ -44,10 +48,16 @@ class POSController extends Controller
             'deposit' => 'nullable|numeric|min:0', // Validate deposit
             'status' => 'required|boolean',
             'payment_method' => 'required|in:cash,credit_card',
-            'rental_days' => 'required|integer|min:1',
-            'rental_start_date' => 'required|date',
-            'rental_end_date' => 'required|date|after_or_equal:rental_start_date',
-        ]);
+            'rental_days' => 'nullable|integer|min:1', // Optional if provided manually
+        ];
+
+        // Add date validation only for "daily" category
+        if ($categoryName === 'daily') {
+            $rules['rental_start_date'] = 'required|date';
+            $rules['rental_end_date'] = 'required|date|after_or_equal:rental_start_date';
+        }
+
+        $request->validate($rules);
 
         try {
             DB::beginTransaction();
@@ -59,14 +69,13 @@ class POSController extends Controller
                 throw new \Exception('Customer selection is required.');
             }
 
-            // Retrieve the category
-            $categoryName = session('category', 'daily');
-            $category = Category::where('name', $categoryName)->firstOrFail();
-
-            // Calculate totals
-            $rentalStartDate = Carbon::parse($request->rental_start_date);
-            $rentalEndDate = Carbon::parse($request->rental_end_date);
-            $rentalDays = $rentalStartDate->diffInDays($rentalEndDate);
+            // Calculate rental days (default to 1 for "season" or when dates are not required)
+            $rentalDays = 1;
+            if ($categoryName === 'daily') {
+                $rentalStartDate = Carbon::parse($request->rental_start_date);
+                $rentalEndDate = Carbon::parse($request->rental_end_date);
+                $rentalDays = max($rentalStartDate->diffInDays($rentalEndDate), 1); // Ensure at least 1 day
+            }
 
             $subtotal = 0;
             $invoiceItems = [];
@@ -74,7 +83,11 @@ class POSController extends Controller
                 $product = Product::findOrFail($item['id']);
                 $quantity = $item['quantity'];
                 $price = $product->price;
-                $totalPrice = $price * $quantity * $rentalDays;
+
+                // Adjust calculation for "fixed" or "per-day" products
+                $totalPrice = $product->type === 'fixed'
+                    ? $price * $quantity
+                    : $price * $quantity * $rentalDays;
 
                 $subtotal += $totalPrice;
 
@@ -83,9 +96,9 @@ class POSController extends Controller
                     'quantity' => $quantity,
                     'price' => $price,
                     'total_price' => $totalPrice,
-                    'rental_start_date' => $request->rental_start_date,
-                    'rental_end_date' => $request->rental_end_date,
-                    'days' => $rentalDays,
+                    'rental_start_date' => $categoryName === 'daily' ? $request->rental_start_date : null,
+                    'rental_end_date' => $categoryName === 'daily' ? $request->rental_end_date : null,
+                    'days' => $categoryName === 'daily' ? $rentalDays : 1,
                     'returned_quantity' => 0,
                     'added_quantity' => 0,
                 ]);
@@ -93,15 +106,15 @@ class POSController extends Controller
 
             // Calculate discount and final total
             $discountAmount = ($subtotal * ($request->total_discount ?? 0)) / 100;
-            $totalAmount = $subtotal - $discountAmount; // Do not subtract deposit here
+            $totalAmount = $subtotal - $discountAmount;
 
             // Create the invoice
             $invoice = new Invoice([
                 'customer_id' => $customer->id,
                 'user_id' => Auth::id(),
                 'category_id' => $category->id,
-                'rental_start_date' => $request->rental_start_date,
-                'rental_end_date' => $request->rental_end_date,
+                'rental_start_date' => $categoryName === 'daily' ? $request->rental_start_date : null,
+                'rental_end_date' => $categoryName === 'daily' ? $request->rental_end_date : null,
                 'total_discount' => $request->total_discount,
                 'deposit' => $request->deposit ?? 0, // Save the deposit separately
                 'total_amount' => $totalAmount, // Keep total as the full amount after discount
@@ -201,7 +214,8 @@ class POSController extends Controller
         // Validate incoming request data
         $request->validate([
             'name' => 'required|string|min:3',
-            'phone' => 'required|numeric|unique:customers,phone',
+            'phone' => 'required|numeric|unique:customers,phone,phone2',
+            'phone2' => 'nullable|numeric|unique:customers,phone,phone2',
             'address' => 'nullable|string',
             'deposit_card' => 'nullable|file|mimes:jpeg,png,jpg,gif|max:2048', // Optional file validation
         ]);
@@ -216,6 +230,7 @@ class POSController extends Controller
         $customer = new Customer();
         $customer->name = $request->name;
         $customer->phone = $request->phone;
+        $customer->phone2 = $request->phone2;
         $customer->address = $request->address;
         $customer->deposit_card = $filePath;
         $customer->save();

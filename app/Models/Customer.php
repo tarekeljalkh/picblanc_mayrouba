@@ -10,7 +10,7 @@ class Customer extends Model
     use HasFactory;
 
         // Fields that can be mass assigned
-        protected $fillable = ['name', 'phone', 'address', 'deposit_card'];
+        protected $fillable = ['name', 'phone', 'phone2', 'address', 'deposit_card'];
 
         // Relationships
         public function invoices()

@@ -6,6 +6,7 @@ use App\DataTables\CustomerDataTable;
 use App\Models\Customer;
 use App\Models\Invoice;
 use App\Traits\FileUploadTrait;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 
 class CustomerController extends Controller
@@ -47,7 +48,8 @@ class CustomerController extends Controller
         // Validate incoming request data
         $request->validate([
             'name' => 'required|string|min:3',
-            'phone' => 'required|numeric',
+            'phone' => 'required|numeric|unique:customers,phone,phone2',
+            'phone2' => 'nullable|numeric|unique:customers,phone,phone2',
             'address' => 'required|string',
             'deposit_card' => 'required|file|mimes:jpeg,png,jpg,gif', // Validate image upload
         ]);
@@ -59,6 +61,7 @@ class CustomerController extends Controller
         $customer = new Customer();
         $customer->name = $request->name;
         $customer->phone = $request->phone;
+        $customer->phone2 = $request->phone2;
         $customer->address = $request->address;
         $customer->deposit_card = $filePath; // Save the file path if uploaded
         $customer->save();
@@ -90,8 +93,20 @@ class CustomerController extends Controller
         // Validate incoming request data
         $request->validate([
             'name' => 'required|min:3',
-            'phone' => 'required|numeric',
-            'address' => 'required|string',
+            'phone' => [
+                'required',
+                'numeric',
+                'unique:customers,phone,' . $id,       // Exclude current customer ID for phone
+                'unique:customers,phone2,' . $id       // Ensure phone is not in phone2 of other customers
+            ],
+            'phone2' => [
+                'nullable',
+                'numeric',
+                'unique:customers,phone,' . $id,       // Ensure phone2 is not in phone column of other customers
+                'unique:customers,phone2,' . $id,      // Exclude current customer ID for phone2
+                'different:phone'                      // Ensure phone2 is different from phone
+            ],
+                    'address' => 'required|string',
             'deposit_card' => 'nullable|image|max:2048', // Optional image file upload
         ]);
 
@@ -103,6 +118,7 @@ class CustomerController extends Controller
         // Update customer details
         $customer->name = $request->name;
         $customer->phone = $request->phone;
+        $customer->phone2 = $request->phone2;
         $customer->address = $request->address;
         $customer->deposit_card = $filePath ?? $customer->deposit_card; // Keep old file if no new one uploaded
         $customer->save();

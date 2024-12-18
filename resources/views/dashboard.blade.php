@@ -122,8 +122,10 @@
                             <th>Total</th>
                             <th>Invoice Status</th>
                             <th>Payment Status</th>
+                            @if (session('category') === 'daily')
                             <th>From</th>
                             <th>To</th>
+                            @endif
                             <th class="cell-fit">Action</th>
                         </tr>
                     </thead>
@@ -151,8 +153,10 @@
                                         {{ $invoice->paid ? 'Paid' : 'Unpaid' }}
                                     </span>
                                 </td>
+                                @if (session('category') === 'daily')
                                 <td>{{ $invoice->rental_start_date->format('d/m/Y h:i A') }}</td>
                                 <td>{{ $invoice->rental_end_date->format('d/m/Y h:i A') }}</td>
+                                @endif
                                 <td>
                                     <a href="{{ route('invoices.show', $invoice->id) }}" class="btn btn-info">View</a>
                                 </td>

@@ -29,14 +29,18 @@
                         <div>
                             <h5 class="mb-6">Rental Agreement #{{ $invoice->id }}</h5>
                             <div class="mb-1 text-heading">
-                                <span>Date Issued:</span>
+                                <span>Date Created:</span>
                                 <span class="fw-medium">{{ $invoice->created_at->format('M d, Y') }}</span>
                             </div>
                             <br>
                             <div class="text-heading">
-                                <p>Rental Start: {{ $invoice->rental_start_date->format('d/m/Y h:i A') }}</p>
-                                <p>Rental End: {{ $invoice->rental_end_date->format('d/m/Y h:i A') }}</p>
-                                <p>Rental Days: {{ $invoice->days }} day(s)</p>
+                                @if ($invoice->category->name === 'daily')
+                                    <p>Rental Start: {{ $invoice->rental_start_date->format('d/m/Y h:i A') }}</p>
+                                    <p>Rental End: {{ $invoice->rental_end_date->format('d/m/Y h:i A') }}</p>
+                                    <p>Rental Days: {{ $invoice->days }} day(s)</p>
+                                @else
+                                    <p>Category: Season</p>
+                                @endif
                             </div>
                         </div>
                     </div>
@@ -66,8 +70,10 @@
                                 <th>Unit Price</th>
                                 <th>Qty</th>
                                 <th>Total Price</th>
-                                <th>From Date</th>
-                                <th>To Date</th>
+                                @if ($invoice->category->name === 'daily')
+                                    <th>From Date</th>
+                                    <th>To Date</th>
+                                @endif
                             </tr>
                         </thead>
                         <tbody>
@@ -76,11 +82,19 @@
                                     <td class="text-nowrap text-heading">{{ $item->product->name }}</td>
                                     <td>${{ number_format($item->price, 2) }}</td>
                                     <td>{{ $item->quantity }}</td>
-                                    <td>${{ number_format($item->price * $item->quantity * $item->days, 2) }}</td>
-                                    <td>{{ $item->rental_start_date ? \Carbon\Carbon::parse($item->rental_start_date)->format('d/m/Y h:i A') : 'N/A' }}
+                                    <td>
+                                        @if ($invoice->category->name === 'daily')
+                                            ${{ number_format($item->price * $item->quantity * $item->days, 2) }}
+                                        @else
+                                            ${{ number_format($item->price * $item->quantity, 2) }}
+                                        @endif
                                     </td>
-                                    <td>{{ $item->rental_end_date ? \Carbon\Carbon::parse($item->rental_end_date)->format('d/m/Y h:i A') : 'N/A' }}
-                                    </td>
+                                    @if ($invoice->category->name === 'daily')
+                                        <td>{{ $item->rental_start_date ? \Carbon\Carbon::parse($item->rental_start_date)->format('d/m/Y h:i A') : 'N/A' }}
+                                        </td>
+                                        <td>{{ $item->rental_end_date ? \Carbon\Carbon::parse($item->rental_end_date)->format('d/m/Y h:i A') : 'N/A' }}
+                                        </td>
+                                    @endif
                                 </tr>
                             @endforeach
                         </tbody>
@@ -98,8 +112,10 @@
                                     <th>Unit Price</th>
                                     <th>Qty</th>
                                     <th>Total Price</th>
-                                    <th>From Date</th>
-                                    <th>To Date</th>
+                                    @if ($invoice->category->name === 'daily')
+                                        <th>From Date</th>
+                                        <th>To Date</th>
+                                    @endif
                                 </tr>
                             </thead>
                             <tbody>
@@ -108,9 +124,17 @@
                                         <td class="text-nowrap text-heading">{{ $addedItem->product->name }}</td>
                                         <td>${{ number_format($addedItem->price, 2) }}</td>
                                         <td>{{ $addedItem->quantity }}</td>
-                                        <td>${{ number_format($addedItem->total_price, 2) }}</td>
-                                        <td>{{ optional($addedItem->rental_start_date)->format('d/m/Y h:i A') }}</td>
-                                        <td>{{ optional($addedItem->rental_end_date)->format('d/m/Y h:i A') }}</td>
+                                        <td>
+                                            @if ($invoice->category->name === 'daily')
+                                                ${{ number_format($addedItem->price * $addedItem->quantity * $addedItem->days, 2) }}
+                                            @else
+                                                ${{ number_format($addedItem->price * $addedItem->quantity, 2) }}
+                                            @endif
+                                        </td>
+                                        @if ($invoice->category->name === 'daily')
+                                            <td>{{ optional($addedItem->rental_start_date)->format('d/m/Y h:i A') }}</td>
+                                            <td>{{ optional($addedItem->rental_end_date)->format('d/m/Y h:i A') }}</td>
+                                        @endif
                                     </tr>
                                 @endforeach
                             </tbody>
@@ -127,22 +151,67 @@
                                 <tr>
                                     <th>Item</th>
                                     <th>Qty</th>
-                                    <th>Days Used</th>
+                                    @if ($invoice->category->name === 'daily')
+                                        <th>Days Used</th>
+                                    @endif
                                     <th>Cost</th>
-                                    <th>From Date</th>
+                                    @if ($invoice->category->name === 'daily')
+                                        <th>From Date</th>
+                                    @endif
                                     <th>Return Date</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @foreach ($invoice->returnDetails as $return)
+                                    @php
+                                        // Dynamically calculate cost
+                                        if ($invoice->category->name === 'daily') {
+                                            $cost =
+                                                $return->days_used *
+                                                $return->returned_quantity *
+                                                ($return->invoiceItem->price ?? ($return->additionalItem->price ?? 0));
+                                        } else {
+                                            $cost =
+                                                $return->returned_quantity *
+                                                ($return->invoiceItem->price ?? ($return->additionalItem->price ?? 0));
+                                        }
+                                    @endphp
                                     <tr>
-                                        <td>{{ $return->invoiceItem->product->name }}</td>
-                                        <td>{{ $return->returned_quantity }}</td>
-                                        <td>{{ $return->days_used }}</td>
-                                        <!-- Ensure the cost uses the correct "usedCost" -->
-                                        <td>${{ number_format($return->cost, 2) }}</td>
-                                        <td>{{ optional($return->invoiceItem->rental_start_date)->format('d/m/Y h:i A') }}
+                                        <!-- Item Name -->
+                                        <td>
+                                            @if ($return->invoice_item_id && $return->invoiceItem)
+                                                {{ $return->invoiceItem->product->name }}
+                                            @elseif ($return->additional_item_id && $return->additionalItem)
+                                                {{ $return->additionalItem->product->name }}
+                                            @else
+                                                N/A
+                                            @endif
                                         </td>
+                                        <!-- Quantity -->
+                                        <td>{{ $return->returned_quantity }}</td>
+
+                                        <!-- Days Used (only for daily mode) -->
+                                        @if ($invoice->category->name === 'daily')
+                                            <td>{{ $return->days_used }}</td>
+                                        @endif
+
+                                        <!-- Cost -->
+                                        <td>${{ number_format($cost, 2) }}</td>
+
+                                        <!-- From Date -->
+                                        @if ($invoice->category->name === 'daily')
+                                            <td>
+                                                @if ($return->invoice_item_id && $return->invoiceItem)
+                                                    {{ optional($return->invoiceItem->rental_start_date)->format('d/m/Y h:i A') }}
+                                                @elseif ($return->additional_item_id && $return->additionalItem)
+                                                    {{ optional($return->additionalItem->rental_start_date)->format('d/m/Y h:i A') }}
+                                                @else
+                                                    N/A
+                                                @endif
+                                            </td>
+                                        @endif
+
+                                        <!-- Return Date -->
                                         <td>{{ optional($return->return_date)->format('d/m/Y h:i A') }}</td>
                                     </tr>
                                 @endforeach
@@ -150,6 +219,7 @@
                         </table>
                     </div>
                 @endif
+
 
                 <!-- Invoice Summary -->
                 <div class="table-responsive">
@@ -168,10 +238,11 @@
                                 <td class="px-0 py-3 w-px-150">
                                     <p class="mb-2">Subtotal:</p>
                                     <p class="mb-2">Additional Costs:</p>
-                                    <p class="mb-2 text-danger">Returned Costs:</p>
+                                    <p class="mb-2 text-danger">Cost for Used Days:</p>
+                                    <p class="mb-2 text-success">Refund for Unused Days:</p>
                                     <p class="mb-2">Discount ({{ $invoice->total_discount }}%):</p>
                                     @if ($invoice->deposit > 0)
-                                        <p class="mb-2">Deposit:</p> <!-- Show deposit only if greater than zero -->
+                                        <p class="mb-2">Deposit:</p>
                                     @endif
                                     <p class="mb-0">Total:</p>
                                 </td>
@@ -179,20 +250,27 @@
                                     @php
                                         $subtotal = $totals['subtotal'];
                                         $addedCost = $totals['additionalCost'];
-                                        $returnedCost = $totals['returnedCost'];
+                                        $costForUsedDays = $totals['costForUsedDays'] ?? 0; // Default to 0 if not present
+                                        $refundForUnusedDays = $totals['refundForUnusedDays'] ?? 0; // Default to 0 if not present
                                         $discountAmount = $totals['discountAmount'];
                                         $deposit = $invoice->deposit ?? 0;
                                         $total = $totals['total'];
                                     @endphp
                                     <p class="fw-medium mb-2">${{ number_format($subtotal, 2) }}</p>
                                     <p class="fw-medium mb-2">${{ number_format($addedCost, 2) }}</p>
-                                    <p class="fw-medium mb-2 text-danger">- ${{ number_format($returnedCost, 2) }}</p>
+                                    <p class="fw-medium mb-2 text-danger">
+                                        ${{ number_format($costForUsedDays, 2) }}
+                                    </p>
+                                    <p class="fw-medium mb-2 text-success">
+                                        ${{ number_format($refundForUnusedDays, 2) }}
+                                    </p>
                                     <p class="fw-medium mb-2">- ${{ number_format($discountAmount, 2) }}</p>
                                     @if ($deposit > 0)
                                         <p class="fw-medium mb-2">- ${{ number_format($deposit, 2) }}</p>
-                                        <!-- Display deposit -->
                                     @endif
-                                    <p class="fw-medium mb-0">${{ number_format($total, 2) }}</p>
+                                    <p class="fw-medium mb-0">
+                                        ${{ number_format($total, 2) }}
+                                    </p>
                                 </td>
                             </tr>
                         </tbody>

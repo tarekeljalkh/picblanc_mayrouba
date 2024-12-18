@@ -63,4 +63,15 @@ class AdditionalItem extends Model
         $this->total_price = $this->price * $this->quantity;
         return $this->total_price;
     }
+
+    public function getFormattedStartDateAttribute()
+{
+    return $this->rental_start_date ? $this->rental_start_date->format('d/m/Y h:i A') : 'N/A';
+}
+
+public function getFormattedEndDateAttribute()
+{
+    return $this->rental_end_date ? $this->rental_end_date->format('d/m/Y h:i A') : 'N/A';
+}
+
 }

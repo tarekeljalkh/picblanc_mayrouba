@@ -16,9 +16,11 @@ return new class extends Migration
             $table->foreignId('invoice_id')->constrained('invoices')->onDelete('cascade');
             $table->foreignId('invoice_item_id')->nullable()->constrained('invoice_items')->onDelete('cascade');
             $table->foreignId('product_id')->constrained('products')->onDelete('cascade');
+            $table->foreignId('additional_item_id')->nullable()->constrained('additional_items')->onDelete('cascade');
             $table->integer('returned_quantity');
             $table->integer('days_used');
             $table->decimal('cost', 10, 2);
+            $table->decimal('refund', 10, 2)->default(0);
             $table->datetime('return_date');
             $table->timestamps();
 

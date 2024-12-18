@@ -8,8 +8,10 @@
                 <th>Total Quantity</th>
                 <th>Remaining Quantity</th>
                 <th>Returned Quantity</th>
-                <th>Return Date</th>
-                <th>Days of Use</th>
+                @if (session('category') === 'daily')
+                    <th>Return Date</th>
+                    <th>Days of Use</th>
+                @endif
             </tr>
         </thead>
         <tbody>
@@ -27,31 +29,27 @@
                         <td>{{ $item->quantity - $item->returned_quantity }}</td>
                         <td>
                             <input type="number"
-                                class="form-control return-quantity {{ $errors->has("returns.original.{$item->id}.quantity") ? 'is-invalid' : '' }}"
+                                class="form-control return-quantity"
                                 name="returns[original][{{ $item->id }}][quantity]"
                                 max="{{ $item->quantity - $item->returned_quantity }}"
                                 value="{{ old("returns.original.{$item->id}.quantity") }}"
                                 {{ old("returns.original.{$item->id}.selected") ? '' : 'disabled' }}>
-                            @error("returns.original.{$item->id}.quantity")
-                                <div class="text-danger small">{{ $message }}</div>
-                            @enderror
                         </td>
-                        <td>
-                            <input type="datetime-local"
-                                class="form-control return-date {{ $errors->has("returns.original.{$item->id}.return_date") ? 'is-invalid' : '' }}"
-                                name="returns[original][{{ $item->id }}][return_date]"
-                                data-start-date="{{ $item->rental_start_date }}"
-                                data-end-date="{{ $item->rental_end_date }}"
-                                value="{{ old("returns.original.{$item->id}.return_date") }}"
-                                {{ old("returns.original.{$item->id}.selected") ? '' : 'disabled' }}>
-                            @error("returns.original.{$item->id}.return_date")
-                                <div class="text-danger small">{{ $message }}</div>
-                            @enderror
-                        </td>
-                        <td>
-                            <input type="text" class="form-control days-of-use"
-                                name="returns[original][{{ $item->id }}][days_of_use]" value="" readonly>
-                        </td>
+                        @if (session('category') === 'daily')
+                            <td>
+                                <input type="datetime-local"
+                                    class="form-control return-date"
+                                    name="returns[original][{{ $item->id }}][return_date]"
+                                    data-start-date="{{ $item->rental_start_date }}"
+                                    data-end-date="{{ $item->rental_end_date }}"
+                                    value="{{ old("returns.original.{$item->id}.return_date") }}"
+                                    {{ old("returns.original.{$item->id}.selected") ? '' : 'disabled' }}>
+                            </td>
+                            <td>
+                                <input type="text" class="form-control days-of-use"
+                                    name="returns[original][{{ $item->id }}][days_of_use]" value="" readonly>
+                            </td>
+                        @endif
                     </tr>
                 @endif
             @endforeach
@@ -70,31 +68,27 @@
                         <td>{{ $addedItem->quantity - $addedItem->returned_quantity }}</td>
                         <td>
                             <input type="number"
-                                class="form-control return-quantity {{ $errors->has("returns.additional.{$addedItem->id}.quantity") ? 'is-invalid' : '' }}"
+                                class="form-control return-quantity"
                                 name="returns[additional][{{ $addedItem->id }}][quantity]"
                                 max="{{ $addedItem->quantity - $addedItem->returned_quantity }}"
                                 value="{{ old("returns.additional.{$addedItem->id}.quantity") }}"
                                 {{ old("returns.additional.{$addedItem->id}.selected") ? '' : 'disabled' }}>
-                            @error("returns.additional.{$addedItem->id}.quantity")
-                                <div class="text-danger small">{{ $message }}</div>
-                            @enderror
                         </td>
-                        <td>
-                            <input type="datetime-local"
-                                class="form-control return-date {{ $errors->has("returns.additional.{$addedItem->id}.return_date") ? 'is-invalid' : '' }}"
-                                name="returns[additional][{{ $addedItem->id }}][return_date]"
-                                data-start-date="{{ $addedItem->rental_start_date }}"
-                                data-end-date="{{ $addedItem->rental_end_date }}"
-                                value="{{ old("returns.additional.{$addedItem->id}.return_date") }}"
-                                {{ old("returns.additional.{$addedItem->id}.selected") ? '' : 'disabled' }}>
-                            @error("returns.additional.{$addedItem->id}.return_date")
-                                <div class="text-danger small">{{ $message }}</div>
-                            @enderror
-                        </td>
-                        <td>
-                            <input type="text" class="form-control days-of-use"
-                                name="returns[additional][{{ $addedItem->id }}][days_of_use]" value="" readonly>
-                        </td>
+                        @if (session('category') === 'daily')
+                            <td>
+                                <input type="datetime-local"
+                                    class="form-control return-date"
+                                    name="returns[additional][{{ $addedItem->id }}][return_date]"
+                                    data-start-date="{{ $addedItem->rental_start_date }}"
+                                    data-end-date="{{ $addedItem->rental_end_date }}"
+                                    value="{{ old("returns.additional.{$addedItem->id}.return_date") }}"
+                                    {{ old("returns.additional.{$addedItem->id}.selected") ? '' : 'disabled' }}>
+                            </td>
+                            <td>
+                                <input type="text" class="form-control days-of-use"
+                                    name="returns[additional][{{ $addedItem->id }}][days_of_use]" value="" readonly>
+                            </td>
+                        @endif
                     </tr>
                 @endif
             @endforeach
@@ -106,95 +100,61 @@
 </form>
 
 @push('scripts')
-    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            function initializeFlatpickr() {
-                document.querySelectorAll('.return-date').forEach(input => {
-                    const startDate = input.getAttribute('data-start-date');
-                    const endDate = input.getAttribute('data-end-date');
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        function initializeFlatpickr() {
+            document.querySelectorAll('.return-date').forEach(input => {
+                const startDate = input.getAttribute('data-start-date');
+                const endDate = input.getAttribute('data-end-date');
 
-                    flatpickr(input, {
-                        enableTime: true,
-                        dateFormat: 'Y-m-d H:i',
-                        minDate: startDate,
-                        maxDate: endDate,
-                        onChange: function() {
-                            calculateDaysOfUse(input);
-                        },
-                    });
-                });
-            }
-
-            initializeFlatpickr();
-
-            document.querySelectorAll('.return-checkbox').forEach(checkbox => {
-                checkbox.addEventListener('change', function() {
-                    const row = this.closest('tr');
-                    const quantityInput = row.querySelector('.return-quantity');
-                    const dateInput = row.querySelector('.return-date');
-                    const daysOfUseInput = row.querySelector('.days-of-use');
-
-                    if (this.checked) {
-                        quantityInput.disabled = false;
-                        dateInput.disabled = false;
-                    } else {
-                        quantityInput.disabled = true;
-                        dateInput.disabled = true;
-                        daysOfUseInput.value = '';
-                        quantityInput.value = '';
-                        dateInput.value = '';
-                    }
+                flatpickr(input, {
+                    enableTime: true,
+                    dateFormat: 'Y-m-d H:i',
+                    minDate: startDate,
+                    maxDate: endDate,
+                    onChange: function () {
+                        calculateDaysOfUse(input);
+                    },
                 });
             });
+        }
 
+        initializeFlatpickr();
 
-            function calculateDaysOfUse(input) {
-                const row = input.closest('tr');
-                const rentalStartDate = new Date(input.getAttribute('data-start-date'));
-                const returnDate = new Date(input.value);
+        document.querySelectorAll('.return-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', function () {
+                const row = this.closest('tr');
+                const quantityInput = row.querySelector('.return-quantity');
+                const dateInput = row.querySelector('.return-date');
                 const daysOfUseInput = row.querySelector('.days-of-use');
 
-                if (!isNaN(rentalStartDate) && !isNaN(returnDate) && returnDate >= rentalStartDate) {
-                    const startMidnight = new Date(rentalStartDate);
-                    const endMidnight = new Date(returnDate);
+                const enableInputs = this.checked;
+                quantityInput.disabled = !enableInputs;
+                if (dateInput) dateInput.disabled = !enableInputs;
 
-                    startMidnight.setHours(0, 0, 0, 0); // Midnight of start day
-                    endMidnight.setHours(0, 0, 0, 0); // Midnight of end day
-
-                    const fullDays = (endMidnight - startMidnight) / (1000 * 60 * 60 * 24); // Full days in between
-                    let daysUsed = fullDays; // Total full days
-
-                    if (rentalStartDate.getHours() >= 12) {
-                        daysUsed++; // Include start day if it begins after noon
-                    }
-
-                    if (returnDate.getHours() >= 12) {
-                        daysUsed++; // Include end day if it ends after noon
-                    }
-
-                    daysOfUseInput.value = Math.max(1, daysUsed); // Ensure at least 1 day
-                } else {
-                    daysOfUseInput.value = '';
+                if (!enableInputs) {
+                    quantityInput.value = '';
+                    if (dateInput) dateInput.value = '';
+                    if (daysOfUseInput) daysOfUseInput.value = '';
                 }
-            }
-
-            // function calculateDaysOfUse(input) {
-            //     const row = input.closest('tr');
-            //     const rentalStartDate = new Date(input.getAttribute('data-start-date'));
-            //     const returnDate = new Date(input.value);
-            //     const daysOfUseInput = row.querySelector('.days-of-use');
-
-            //     if (returnDate >= rentalStartDate) {
-            //         const hoursUsed = (returnDate - rentalStartDate) / (1000 * 60 * 60);
-            //         const daysUsed = Math.floor(hoursUsed / 24) + 1;
-            //         const remainingHours = hoursUsed % 24;
-
-            //         daysOfUseInput.value = remainingHours > 12 ? daysUsed + 1 : daysUsed;
-            //     } else {
-            //         daysOfUseInput.value = '';
-            //     }
-            // }
+            });
         });
-    </script>
+
+        function calculateDaysOfUse(input) {
+            const row = input.closest('tr');
+            const rentalStartDate = new Date(input.getAttribute('data-start-date'));
+            const returnDate = new Date(input.value);
+            const daysOfUseInput = row.querySelector('.days-of-use');
+
+            if (!isNaN(rentalStartDate) && !isNaN(returnDate) && returnDate >= rentalStartDate) {
+                const diffTime = returnDate - rentalStartDate;
+                const daysUsed = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                daysOfUseInput.value = Math.max(1, daysUsed);
+            } else {
+                daysOfUseInput.value = '';
+            }
+        }
+    });
+</script>
 @endpush

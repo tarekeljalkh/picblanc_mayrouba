@@ -14,6 +14,19 @@
             <div class="card">
                 <h5 class="card-header">Add New Customer</h5>
                 <div class="card-body">
+                    {{-- Display Validation Errors --}}
+                    @if ($errors->any())
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <strong>There were some problems with your input:</strong>
+                            <ul>
+                                @foreach ($errors->all() as $error)
+                                    <li>{{ $error }}</li>
+                                @endforeach
+                            </ul>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    @endif
+
                     <form action="{{ route('customers.store') }}" method="POST" enctype="multipart/form-data">
                         @csrf
                         {{-- Name --}}
@@ -34,6 +47,16 @@
                             </div>
                         </div>
                         {{-- End Phone --}}
+
+                        {{-- Phone2 --}}
+                        <div class="mb-4 row">
+                            <label for="phone2" class="col-md-2 col-form-label">Second Phone</label>
+                            <div class="col-md-10">
+                                <input class="form-control" type="number" id="phone2" name="phone2" />
+                            </div>
+                        </div>
+                        {{-- End Phone --}}
+
 
                         {{-- Address --}}
                         <div class="mb-4 row">

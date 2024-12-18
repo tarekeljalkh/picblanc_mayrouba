@@ -20,11 +20,12 @@
                         </div>
                         <div>
                             <h5 class="mb-3">Rental Agreement #{{ $invoice->id }}</h5>
-                            <p class="mb-1"><strong>Date Issued:</strong> {{ $invoice->created_at->format('M d, Y') }}</p>
-                            <p class="mb-1"><strong>Rental Start:</strong>
-                                {{ $invoice->rental_start_date->format('d/m/Y h:i A') }}</p>
-                            <p><strong>Rental End:</strong> {{ $invoice->rental_end_date->format('d/m/Y h:i A') }}</p>
-                            <p><strong>Rental Days:</strong> {{ $invoice->days }} day(s)</p>
+                            <p class="mb-1"><strong>Date Created:</strong> {{ $invoice->created_at->format('M d, Y') }}</p>
+                            @if ($invoice->category->name === 'daily')
+                                <p class="mb-1"><strong>Rental Start:</strong> {{ $invoice->rental_start_date->format('d/m/Y h:i A') }}</p>
+                                <p><strong>Rental End:</strong> {{ $invoice->rental_end_date->format('d/m/Y h:i A') }}</p>
+                                <p><strong>Rental Days:</strong> {{ $invoice->days }} day(s)</p>
+                            @endif
                         </div>
                     </div>
                 </div>
@@ -48,6 +49,10 @@
                                 <th>Unit Price</th>
                                 <th>Qty</th>
                                 <th>Total Price</th>
+                                @if ($invoice->category->name === 'daily')
+                                    <th>From Date</th>
+                                    <th>To Date</th>
+                                @endif
                             </tr>
                         </thead>
                         <tbody>
@@ -56,7 +61,11 @@
                                     <td>{{ $item->product->name }}</td>
                                     <td>${{ number_format($item->price, 2) }}</td>
                                     <td>{{ $item->quantity }}</td>
-                                    <td>${{ number_format($item->price * $item->quantity * $item->days, 2) }}</td>
+                                    <td>${{ number_format($item->price * $item->quantity * ($invoice->category->name === 'daily' ? $item->days : 1), 2) }}</td>
+                                    @if ($invoice->category->name === 'daily')
+                                        <td>{{ optional($item->rental_start_date)->format('d/m/Y h:i A') }}</td>
+                                        <td>{{ optional($item->rental_end_date)->format('d/m/Y h:i A') }}</td>
+                                    @endif
                                 </tr>
                             @endforeach
                         </tbody>
@@ -74,7 +83,10 @@
                                     <th>Unit Price</th>
                                     <th>Qty</th>
                                     <th>Total Price</th>
-                                    <th>Added Date</th>
+                                    @if ($invoice->category->name === 'daily')
+                                        <th>From Date</th>
+                                        <th>To Date</th>
+                                    @endif
                                 </tr>
                             </thead>
                             <tbody>
@@ -84,7 +96,10 @@
                                         <td>${{ number_format($addedItem->price, 2) }}</td>
                                         <td>{{ $addedItem->quantity }}</td>
                                         <td>${{ number_format($addedItem->total_price, 2) }}</td>
-                                        <td>{{ optional($addedItem->added_date)->format('d/m/Y h:i A') }}</td>
+                                        @if ($invoice->category->name === 'daily')
+                                            <td>{{ optional($addedItem->rental_start_date)->format('d/m/Y h:i A') }}</td>
+                                            <td>{{ optional($addedItem->rental_end_date)->format('d/m/Y h:i A') }}</td>
+                                        @endif
                                     </tr>
                                 @endforeach
                             </tbody>
@@ -101,18 +116,33 @@
                                 <tr>
                                     <th>Item</th>
                                     <th>Qty</th>
-                                    <th>Days Used</th>
+                                    @if ($invoice->category->name === 'daily')
+                                        <th>Days Used</th>
+                                    @endif
                                     <th>Cost</th>
-                                    <th>Return Date</th>
+                                    @if ($invoice->category->name === 'daily')
+                                        <th>Return Date</th>
+                                    @endif
                                 </tr>
                             </thead>
                             <tbody>
                                 @foreach ($invoice->returnDetails as $return)
+                                    @php
+                                        // Calculate the cost for returned items
+                                        $unitPrice = $return->invoiceItem?->price ?? $return->additionalItem?->price ?? 0;
+                                        $cost = $invoice->category->name === 'daily'
+                                            ? $unitPrice * $return->days_used * $return->returned_quantity
+                                            : $unitPrice * $return->returned_quantity;
+                                    @endphp
                                     <tr>
-                                        <td>{{ $return->invoiceItem->product->name }}</td>
+                                        <td>
+                                            {{ $return->invoiceItem->product->name ?? $return->additionalItem->product->name ?? 'N/A' }}
+                                        </td>
                                         <td>{{ $return->returned_quantity }}</td>
-                                        <td>{{ $return->days_used }}</td>
-                                        <td>${{ number_format($return->cost, 2) }}</td>
+                                        @if ($invoice->category->name === 'daily')
+                                            <td>{{ $return->days_used }}</td>
+                                        @endif
+                                        <td>${{ number_format($cost, 2) }}</td>
                                         <td>{{ optional($return->return_date)->format('d/m/Y h:i A') }}</td>
                                     </tr>
                                 @endforeach
@@ -128,18 +158,16 @@
                             <tr>
                                 <td>
                                     <strong>Salesperson:</strong> {{ $invoice->user->name ?? 'N/A' }}<br>
-                                    <span>
-                                        {{ $invoice->paid ? 'Payment: Paid' : 'Payment: Not Paid' }}
-                                    </span>
+                                    <span>{{ $invoice->paid ? 'Payment: Paid' : 'Payment: Not Paid' }}</span>
                                 </td>
                                 <td class="text-end">
                                     @php
                                         $subtotal = $totals['subtotal'];
                                         $addedCost = $totals['additionalCost'];
-                                        $returnedCost = $totals['returnedCost'];
+                                        $returnedCost = $invoice->returnDetails->sum('cost');
                                         $discountAmount = $totals['discountAmount'];
-                                        $deposit = $totals['deposit'] ?? 0; // Safely access deposit
-                                        $total = $totals['total'];
+                                        $deposit = $totals['deposit'] ?? 0;
+                                        $total = $subtotal + $addedCost - $returnedCost - $discountAmount - $deposit;
                                     @endphp
                                     <p>Subtotal: ${{ number_format($subtotal, 2) }}</p>
                                     @if ($addedCost > 0)
@@ -148,8 +176,7 @@
                                     @if ($returnedCost > 0)
                                         <p class="text-danger">Returned Costs: - ${{ number_format($returnedCost, 2) }}</p>
                                     @endif
-                                    <p>Discount ({{ $invoice->total_discount }}%): -
-                                        ${{ number_format($discountAmount, 2) }}</p>
+                                    <p>Discount ({{ $invoice->total_discount }}%): - ${{ number_format($discountAmount, 2) }}</p>
                                     @if ($deposit > 0)
                                         <p>Deposit: - ${{ number_format($deposit, 2) }}</p>
                                     @endif
@@ -159,7 +186,6 @@
                         </tbody>
                     </table>
                 </div>
-
                 <hr>
                 <div>
                     @if ($invoice->note)
@@ -171,6 +197,7 @@
                     <p>Mayrouba - Tel: 03 71 57 57 | Warde - Tel: 70 100 015 | Mzaar Intercontinental Hotel - Tel: 03 788
                         733</p>
                 </div>
+
             </div>
         </div>
     </div>

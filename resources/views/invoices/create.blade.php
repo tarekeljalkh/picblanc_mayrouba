@@ -66,21 +66,23 @@
                         </div>
 
                         {{-- Rental Dates --}}
-                        <div class="mb-4 row">
-                            <label for="rental_start_date" class="col-md-2 col-form-label">Rental Start Date</label>
-                            <div class="col-md-10">
-                                <input class="form-control" type="datetime-local" id="rental_start_date"
-                                    name="rental_start_date" required />
+                        @if (session('category') === 'daily')
+                            <div class="mb-4 row">
+                                <label for="rental_start_date" class="col-md-2 col-form-label">Rental Start Date</label>
+                                <div class="col-md-10">
+                                    <input class="form-control" type="datetime-local" id="rental_start_date"
+                                        name="rental_start_date" required />
+                                </div>
                             </div>
-                        </div>
 
-                        <div class="mb-4 row">
-                            <label for="rental_end_date" class="col-md-2 col-form-label">Rental End Date</label>
-                            <div class="col-md-10">
-                                <input class="form-control" type="datetime-local" id="rental_end_date"
-                                    name="rental_end_date" required />
+                            <div class="mb-4 row">
+                                <label for="rental_end_date" class="col-md-2 col-form-label">Rental End Date</label>
+                                <div class="col-md-10">
+                                    <input class="form-control" type="datetime-local" id="rental_end_date"
+                                        name="rental_end_date" required />
+                                </div>
                             </div>
-                        </div>
+                        @endif
 
                         {{-- Invoice Items --}}
                         <div class="mb-4 row">
@@ -145,13 +147,15 @@
 
 
                         {{-- Days and Total Amount --}}
-                        <div class="mb-4 row">
-                            <label for="days" class="col-md-2 col-form-label">Days</label>
-                            <div class="col-md-10">
-                                <input type="text" class="form-control" id="days" name="days" value="0"
-                                    readonly />
+                        @if (session('category') === 'daily')
+                            <div class="mb-4 row">
+                                <label for="days" class="col-md-2 col-form-label">Days</label>
+                                <div class="col-md-10">
+                                    <input type="text" class="form-control" id="days" name="days"
+                                        value="0" readonly />
+                                </div>
                             </div>
-                        </div>
+                        @endif
 
                         <div class="mb-4 row">
                             <label for="total_amount" class="col-md-2 col-form-label">Total Amount</label>
@@ -225,17 +229,21 @@
     <script src="{{ asset('assets/js/forms-selects.js') }}"></script>
 
     <script>
+        const category = "{{ session('category', 'daily') }}";
+
         // Initialize date pickers for rental start and end dates
-        flatpickr("#rental_start_date, #rental_end_date", {
-            enableTime: true,
-            dateFormat: "Y-m-d H:i",
-            altInput: true,
-            altFormat: "F j, Y h:i K",
-            allowInput: true,
-            onChange: function() {
-                calculateInvoiceTotal();
-            }
-        });
+        if (category === 'daily') {
+            flatpickr("#rental_start_date, #rental_end_date", {
+                enableTime: true,
+                dateFormat: "Y-m-d H:i",
+                altInput: true,
+                altFormat: "F j, Y h:i K",
+                allowInput: true,
+                onChange: function() {
+                    calculateInvoiceTotal();
+                }
+            });
+        }
 
         $('#select_customer').select2({
             placeholder: 'Select Existing Customer',
@@ -281,28 +289,31 @@
                 }
             });
 
-            // Calculate the rental duration in days (handle partial days)
-            let startDate = new Date($('#rental_start_date').val());
-            let endDate = new Date($('#rental_end_date').val());
-            let totalHours = (endDate - startDate) / (1000 * 60 * 60); // Total rental duration in hours
-            let days = Math.floor(totalHours / 24); // Full days
-            if (totalHours % 24 > 12) days++; // Count as additional day if more than 12 hours
-            days = Math.max(1, days); // Ensure at least 1 day
-
-            $('#days').val(days);
-
-            // Calculate discount
+            // Calculate total
             let discount = parseFloat($('#total_discount').val()) || 0;
             let discountAmount = (subtotal * discount) / 100;
-
-            // Get deposit amount
             let deposit = parseFloat($('#deposit').val()) || 0;
 
-            // Final total amount
-            let totalAmount = (subtotal - discountAmount) * days + fixedTotal - deposit; // Subtract deposit
-            $('#total_amount').val(totalAmount.toFixed(2));
+            let totalAmount;
 
-            // Update form validity
+            if (category === 'daily') {
+                // Calculate the rental duration in days
+                let startDate = new Date($('#rental_start_date').val());
+                let endDate = new Date($('#rental_end_date').val());
+                let totalHours = (endDate - startDate) / (1000 * 60 * 60); // Total rental duration in hours
+                let days = Math.floor(totalHours / 24); // Full days
+                if (totalHours % 24 > 12) days++; // Count as additional day if more than 12 hours
+                days = Math.max(1, days); // Ensure at least 1 day
+                $('#days').val(days);
+
+                // Final total for daily
+                totalAmount = (subtotal - discountAmount) * days + fixedTotal - deposit;
+            } else {
+                // Final total for season (no date calculation)
+                totalAmount = subtotal - discountAmount + fixedTotal - deposit;
+            }
+
+            $('#total_amount').val(totalAmount.toFixed(2));
             checkFormValidity();
         }
 
@@ -373,6 +384,10 @@
 
         $(document).ready(function() {
             $('input[name="paid"]:checked').trigger('change');
+            if (category !== 'daily') {
+                $('#rental_start_date, #rental_end_date').closest('.mb-4.row').hide();
+                $('#days').closest('.mb-4.row').hide();
+            }
         });
     </script>
 

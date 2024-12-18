@@ -53,6 +53,17 @@
                         </div>
                         {{-- End Phone --}}
 
+                        {{-- Phone2 --}}
+                        <div class="mb-4 row">
+                            <label for="phone2" class="col-md-2 col-form-label">Second Phone</label>
+                            <div class="col-md-10">
+                                <input class="form-control" type="number" id="phone2" name="phone2"
+                                    value="{{ old('phone2', $customer->phone2) }}" required minlength="10" maxlength="15" />
+                            </div>
+                        </div>
+                        {{-- End Phone2 --}}
+
+
                         {{-- Address --}}
                         <div class="mb-4 row">
                             <label for="address" class="col-md-2 col-form-label">Address</label>

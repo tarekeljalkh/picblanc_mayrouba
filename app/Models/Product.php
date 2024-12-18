@@ -28,6 +28,11 @@ class Product extends Model
         return $this->hasMany(InvoiceItem::class, 'product_id');
     }
 
+    public function additionalItems()
+{
+    return $this->hasMany(AdditionalItem::class, 'product_id', 'id');
+}
+
     // Relationship to get returned items (return details) for the product
     public function returnDetails()
     {

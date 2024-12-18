@@ -70,8 +70,10 @@
                             <th>Total</th>
                             <th>Status</th>
                             <th>Paid</th>
+                            @if (session('category') === 'daily')
                             <th>From</th>
                             <th>To</th>
+                            @endif
                             <th>Action</th>
                         </tr>
                     </thead>
@@ -90,8 +92,10 @@
                                         {{ $invoice->paid ? 'Paid' : 'Unpaid' }}
                                     </span>
                                 </td>
+                                @if (session('category') === 'daily')
                                 <td>{{ $invoice->rental_start_date->format('d/m/Y h:i A') }}</td>
                                 <td>{{ $invoice->rental_end_date->format('d/m/Y h:i A') }}</td>
+                                @endif
                                 <td>
                                     <a href="{{ route('invoices.edit', $invoice->id) }}" class="btn btn-warning btn-sm">Edit</a>
                                     <a href="{{ route('invoices.show', $invoice->id) }}" class="btn btn-info btn-sm">Show</a>

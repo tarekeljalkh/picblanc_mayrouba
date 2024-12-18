@@ -42,9 +42,14 @@
                     <select id="customer-select" class="select2 form-select form-select-lg" data-allow-clear="true">
                         <option value="" disabled selected>Select a customer</option>
                         @foreach ($customers as $customer)
+                            @php
+                                $phones = collect([$customer->phone, $customer->phone2])
+                                    ->filter()
+                                    ->implode(', '); // Combine phone and phone2
+                            @endphp
                             <option value="{{ $customer->id }}" data-phone="{{ $customer->phone }}"
                                 {{ session('new_customer_id') == $customer->id ? 'selected' : '' }}>
-                                {{ $customer->name }} ({{ $customer->phone }})
+                                {{ $customer->name }} ({{ $phones }})
                             </option>
                         @endforeach
                     </select>
@@ -62,21 +67,22 @@
                 </div>
 
                 <!-- Rental Dates and Days Calculation -->
-                <div class="mb-3">
-                    <label for="rental-start-date" class="form-label">Rental Start Date</label>
-                    <input type="text" class="form-control" id="rental-start-date">
-                </div>
+                @if (session('category') === 'daily')
+                    <div class="mb-3">
+                        <label for="rental-start-date" class="form-label">Rental Start Date</label>
+                        <input type="text" class="form-control" id="rental-start-date">
+                    </div>
 
-                <div class="mb-3">
-                    <label for="rental-end-date" class="form-label">Rental End Date</label>
-                    <input type="text" class="form-control" id="rental-end-date">
-                </div>
+                    <div class="mb-3">
+                        <label for="rental-end-date" class="form-label">Rental End Date</label>
+                        <input type="text" class="form-control" id="rental-end-date">
+                    </div>
 
-                <div class="mb-3">
-                    <label for="rental-days" class="form-label">Days</label>
-                    <input type="number" class="form-control" id="rental-days" readonly>
-                </div>
-
+                    <div class="mb-3">
+                        <label for="rental-days" class="form-label">Days</label>
+                        <input type="number" class="form-control" id="rental-days" readonly>
+                    </div>
+                @endif
                 <!-- Discount, and Total Amount -->
                 <div class="mb-3">
                     <label for="total-discount" class="form-label">Total Discount (%)</label>
@@ -153,6 +159,10 @@
                             <input type="text" class="form-control" id="customer_phone" name="phone" required>
                         </div>
                         <div class="mb-3">
+                            <label for="customer_phone2" class="form-label">Second Phone</label>
+                            <input type="text" class="form-control" id="customer_phone2" name="phone2">
+                        </div>
+                        <div class="mb-3">
                             <label for="customer_address" class="form-label">Address</label>
                             <input type="text" class="form-control" id="customer_address" name="address">
                         </div>
@@ -183,19 +193,22 @@
                     validateCheckoutButton();
                 });
 
-                // Initialize Flatpickr for rental dates
-                flatpickr("#rental-start-date, #rental-end-date", {
-                    enableTime: true,
-                    dateFormat: "Y-m-d H:i",
-                    altInput: true,
-                    altFormat: "F j, Y h:i K",
-                    allowInput: true,
-                    onChange: function() {
-                        calculateDays();
-                        calculateTotalAmount();
-                        validateCheckoutButton();
-                    }
-                });
+                // Initialize Flatpickr for rental dates (only if required for 'daily')
+                const category = '{{ session('category', 'daily') }}'; // Retrieve the category from the session
+                if (category === 'daily') {
+                    flatpickr("#rental-start-date, #rental-end-date", {
+                        enableTime: true,
+                        dateFormat: "Y-m-d H:i",
+                        altInput: true,
+                        altFormat: "F j, Y h:i K",
+                        allowInput: true,
+                        onChange: function() {
+                            calculateDays();
+                            calculateTotalAmount();
+                            validateCheckoutButton();
+                        },
+                    });
+                }
 
                 // Validate checkout button
                 function validateCheckoutButton() {
@@ -204,8 +217,13 @@
                     const isCartEmpty = cart.length === 0;
                     const customerSelected = $('#customer-select').val();
 
-                    // Enable or disable the checkout button
-                    const isValid = startDate && endDate && !isCartEmpty && customerSelected;
+                    // Enable button based on category
+                    let isValid = customerSelected && !isCartEmpty;
+
+                    if (category === 'daily') {
+                        isValid = isValid && startDate && endDate;
+                    }
+
                     $('#checkout-btn').prop('disabled', !isValid);
 
                     // Update button text and color based on payment status
@@ -256,7 +274,7 @@
                     validateCheckoutButton();
                 });
 
-                // Trigger calculations when deposit changes
+                // Trigger calculations when deposit or discount changes
                 $('#total-discount, #deposit').on('input', function() {
                     calculateTotalAmount();
                 });
@@ -289,7 +307,7 @@
                 function calculateTotalAmount() {
                     const days = parseInt($('#rental-days').val()) || 1;
                     const totalDiscount = parseFloat($('#total-discount').val()) || 0;
-                    const deposit = parseFloat($('#deposit').val()) || 0; // Get deposit value
+                    const deposit = parseFloat($('#deposit').val()) || 0;
 
                     let total = cart.reduce((sum, item) => {
                         if (item.type === 'fixed') {
@@ -300,7 +318,7 @@
                     }, 0);
 
                     const discountAmount = (total * totalDiscount) / 100;
-                    const grandTotal = total - discountAmount - deposit; // Subtract deposit
+                    const grandTotal = total - discountAmount - deposit;
 
                     $('#total-amount').val(grandTotal.toFixed(2));
                 }
@@ -325,8 +343,8 @@
                                             <div class="col">
                                                 <label>Price</label>
                                                 <input type="text" class="form-control form-control-sm price" value="${item.type === 'fixed'
-                                                    ? (item.price * item.quantity).toFixed(2)
-                                                    : (item.price * item.quantity * ($('#rental-days').val() || 1)).toFixed(2)}" readonly />
+                                ? (item.price * item.quantity).toFixed(2)
+                                : (item.price * item.quantity * ($('#rental-days').val() || 1)).toFixed(2)}" readonly />
                                             </div>
                                         </div>
                                     </div>
@@ -367,7 +385,7 @@
 
                     const startDateWithTime = $('#rental-start-date').val();
                     const endDateWithTime = $('#rental-end-date').val();
-                    const deposit = $('#deposit').val(); // Get deposit value
+                    const deposit = $('#deposit').val();
 
                     $.ajax({
                         url: '{{ route('pos.checkout') }}',
@@ -377,28 +395,28 @@
                             cart: cart,
                             customer_id: selectedCustomer,
                             total_discount: $('#total-discount').val(),
-                            deposit: deposit, // Pass deposit to backend
+                            deposit: deposit,
                             status: paymentStatus,
                             payment_method: paymentMethod,
                             rental_days: $('#rental-days').val(),
                             rental_start_date: startDateWithTime,
                             rental_end_date: endDateWithTime,
                             total_amount: $('#total-amount').val(),
-                            note: $('#note').val()
+                            note: $('#note').val(),
                         },
                         success: function(response) {
-                            window.location.href = '{{ route('invoices.show', ':id') }}'.replace(':id', response.invoice_id);
+                            window.location.href = '{{ route('invoices.show', ':id') }}'.replace(
+                                ':id', response.invoice_id);
                         },
                         error: function() {
                             alert('Error processing checkout.');
-                        }
+                        },
                     });
                 });
 
                 validateCheckoutButton();
             });
         </script>
-
     @endpush
 
 @endsection

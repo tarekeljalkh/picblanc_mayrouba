@@ -52,20 +52,18 @@ class Invoice extends Model
         return $this->hasMany(InvoiceItem::class);
     }
 
+
     public function additionalItems()
     {
         return $this->hasMany(AdditionalItem::class, 'invoice_id');
     }
 
+
     public function returnDetails()
     {
-        return $this->hasManyThrough(
-            ReturnDetail::class,
-            InvoiceItem::class,
-            'invoice_id',     // Foreign key on InvoiceItem
-            'invoice_item_id' // Foreign key on ReturnDetail
-        );
+        return $this->hasMany(ReturnDetail::class, 'invoice_id');
     }
+
 
     // Accessors and Calculations
 
@@ -145,55 +143,57 @@ class Invoice extends Model
 
     public function calculateTotals()
     {
-        // Subtotal for main items (standard and fixed)
-        $subtotal = $this->items->sum(function ($item) {
-            $type = $item->product->type instanceof \App\Enums\ProductType
-                ? $item->product->type->value
-                : $item->product->type;
+        $isSeasonal = $this->category->name === 'season';
 
-            return $type === 'fixed'
-                ? $item->price * $item->quantity // Fixed: price * quantity
-                : $item->price * $item->quantity * $item->days; // Standard: price * quantity * days
+        // Subtotal for original items (excluding returned quantities)
+        $subtotal = $this->items->sum(function ($item) use ($isSeasonal) {
+            $remainingQuantity = $item->quantity - $item->returned_quantity;
+            return $isSeasonal
+                ? $item->price * $remainingQuantity
+                : $item->price * $remainingQuantity * ($item->days ?? 1);
         });
 
-        // Additional costs for additional items
-        $additionalCost = $this->additionalItems->sum(function ($item) {
-            $type = $item->product->type instanceof \App\Enums\ProductType
-                ? $item->product->type->value
-                : $item->product->type;
-
-            return $type === 'fixed'
-                ? $item->price * $item->quantity // Fixed: price * quantity
-                : $item->price * $item->quantity * $item->days; // Standard: price * quantity * days
+        // Additional costs for additional items (excluding returned quantities)
+        $additionalCost = $this->additionalItems->sum(function ($item) use ($isSeasonal) {
+            $remainingQuantity = $item->quantity - $item->returned_quantity;
+            return $isSeasonal
+                ? $item->price * $remainingQuantity
+                : $item->price * $remainingQuantity * ($item->days ?? 1);
         });
 
-        // Costs for returned items
-        $returnedCost = $this->returnDetails->sum(function ($return) {
-            return $return->returned_quantity * $return->invoiceItem->price * $return->days_used;
+        // Costs for used days (based on returned items)
+        $costForUsedDays = $this->returnDetails->sum(function ($return) {
+            $price = $return->invoiceItem
+                ? $return->invoiceItem->price
+                : ($return->additionalItem ? $return->additionalItem->price : 0);
+
+            return $return->days_used * $return->returned_quantity * $price;
         });
+
+        // Refund for unused days
+        $refundForUnusedDays = $this->returnDetails->sum('cost');
 
         // Total before discount
-        $totalBeforeDiscount = $subtotal + $additionalCost - $returnedCost;
+        $totalBeforeDiscount = $subtotal + $additionalCost;
 
-        // Discount amount
-        $discountAmount = ($totalBeforeDiscount * ($this->total_discount ?? 0) / 100);
+        // Adjust for returned items: add used costs and subtract refund
+        $totalAfterAdjustments = $totalBeforeDiscount + $costForUsedDays - $refundForUnusedDays;
 
-        // Get deposit amount (ensure it's numeric and non-negative)
-        $deposit = max(0, (float)($this->deposit ?? 0));
+        // Discount calculation
+        $discountAmount = ($totalAfterAdjustments * ($this->total_discount ?? 0)) / 100;
 
-        // Final total after discount and deposit (ensure non-negative total)
-        $total = max(0, $totalBeforeDiscount - $discountAmount - $deposit);
+        // Final total
+        $total = $totalAfterAdjustments - $discountAmount;
 
         return [
             'subtotal' => round($subtotal, 2),
             'additionalCost' => round($additionalCost, 2),
-            'returnedCost' => round($returnedCost, 2),
+            'costForUsedDays' => round($costForUsedDays, 2),
+            'refundForUnusedDays' => round($refundForUnusedDays, 2),
             'discountAmount' => round($discountAmount, 2),
-            'deposit' => round($deposit, 2), // Include deposit in the returned data
             'total' => round($total, 2),
         ];
     }
-
 
     // public function calculateTotals()
     // {

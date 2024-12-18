@@ -24,6 +24,7 @@ return new class extends Migration
             $table->integer('returned_quantity')->default(0);
             $table->integer('added_quantity')->default(0);
             $table->enum('status', ['draft', 'active', 'returned', 'overdue'])->default('active'); // Rental status
+            $table->boolean('is_additional')->default(false);
             $table->text('details')->nullable();
             $table->timestamps();
             $table->softDeletes(); // Add this line to enable soft deletes
