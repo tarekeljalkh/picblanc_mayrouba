@@ -108,7 +108,8 @@
                         <td>{{ $item->product->name }}</td>
                         <td>${{ number_format($item->price, 2) }}</td>
                         <td>{{ $item->quantity }}</td>
-                        <td>${{ number_format($item->price * $item->quantity * ($invoice->category->name === 'daily' ? $item->days : 1), 2) }}</td>
+                        <td>${{ number_format($item->price * $item->quantity * ($invoice->category->name === 'daily' ? $item->days : 1), 2) }}
+                        </td>
                     </tr>
                 @endforeach
             </tbody>
@@ -157,13 +158,15 @@
                 <tbody>
                     @foreach ($invoice->returnDetails as $return)
                         @php
-                            $unitPrice = $return->invoiceItem?->price ?? $return->additionalItem?->price ?? 0;
-                            $cost = $invoice->category->name === 'daily'
-                                ? $unitPrice * $return->days_used * $return->returned_quantity
-                                : $unitPrice * $return->returned_quantity;
+                            $unitPrice = $return->invoiceItem?->price ?? ($return->additionalItem?->price ?? 0);
+                            $cost =
+                                $invoice->category->name === 'daily'
+                                    ? $unitPrice * $return->days_used * $return->returned_quantity
+                                    : $unitPrice * $return->returned_quantity;
                         @endphp
                         <tr>
-                            <td>{{ $return->invoiceItem->product->name ?? $return->additionalItem->product->name }}</td>
+                            <td>{{ $return->invoiceItem->product->name ?? $return->additionalItem->product->name }}
+                            </td>
                             <td>{{ $return->returned_quantity }}</td>
                             @if ($invoice->category->name === 'daily')
                                 <td>{{ $return->days_used }}</td>
@@ -190,12 +193,12 @@
                 </tr>
             @endif
             @if (isset($totals['returnedCost']) && $totals['returnedCost'] > 0)
+                <tr>
+                    <td><strong>Returned Costs:</strong></td>
+                    <td class="text-end text-danger">- ${{ number_format($totals['returnedCost'], 2) }}</td>
+                </tr>
+            @endif
             <tr>
-                <td><strong>Returned Costs:</strong></td>
-                <td class="text-end text-danger">- ${{ number_format($totals['returnedCost'], 2) }}</td>
-            </tr>
-        @endif
-                    <tr>
                 <td><strong>Discount:</strong></td>
                 <td class="text-end text-danger">- ${{ number_format($totals['discountAmount'] ?? 0, 2) }}</td>
             </tr>
@@ -213,7 +216,15 @@
 
         <!-- Salesperson -->
         <p><strong>Salesperson:</strong> {{ $invoice->user->name ?? 'N/A' }}</p>
-        <span>{{ $invoice->paid ? 'Payment: Paid' : 'Payment: Not Paid' }}</span>
+        <span>
+            @if ($invoice->items->every(fn($item) => $item->paid))
+                Payment: Fully Paid
+            @elseif ($invoice->items->contains(fn($item) => $item->paid))
+                Payment: Partially Paid
+            @else
+                Payment: Not Paid
+            @endif
+        </span>
 
         <hr />
 

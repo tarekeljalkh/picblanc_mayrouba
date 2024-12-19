@@ -254,4 +254,23 @@ class Invoice extends Model
             $this->save();
         }
     }
+
+    public function getPaymentStatusAttribute()
+    {
+        $allItemsPaid = $this->items()->where('paid', false)->doesntExist() &&
+            $this->additionalItems()->where('paid', false)->doesntExist();
+
+        $anyItemsPaid = $this->items()->where('paid', true)->exists() ||
+            $this->additionalItems()->where('paid', true)->exists();
+
+        if ($allItemsPaid) {
+            return 'fully_paid';
+        }
+
+        if ($anyItemsPaid) {
+            return 'partially_paid';
+        }
+
+        return 'unpaid';
+    }
 }

@@ -19,7 +19,6 @@ return new class extends Migration
             $table->decimal('total_discount', 5, 2)->default(0); // Discount percentage
             $table->decimal('deposit', 10, 2)->default(0); // Deposit amount
             $table->decimal('total_amount', 10, 2); // Total amount of the invoice
-            $table->boolean('paid')->default(false); // Paid status
             $table->enum('payment_method', ['cash', 'credit_card']);
             $table->enum('status', ['draft', 'active', 'returned', 'overdue'])->default('active'); // Rental status
             $table->datetime('rental_start_date')->nullable(); // Start of the rental period

@@ -29,6 +29,9 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
+        // Set default category to 'daily' in the session
+        session(['category' => 'daily']);
+
         return redirect()->intended(RouteServiceProvider::HOME);
     }
 

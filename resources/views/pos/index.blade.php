@@ -279,29 +279,57 @@
                     calculateTotalAmount();
                 });
 
-                // Calculate rental days
                 function calculateDays() {
                     const startDate = new Date($('#rental-start-date').val());
                     const endDate = new Date($('#rental-end-date').val());
                     let days = 0;
 
                     if (!isNaN(startDate) && !isNaN(endDate) && startDate <= endDate) {
-                        const diffTime = endDate - startDate;
-                        const totalHours = diffTime / (1000 * 60 * 60);
-                        const fullDays = Math.floor(totalHours / 24);
-                        const endHour = endDate.getHours();
-                        const endMinutes = endDate.getMinutes();
+                        // Normalize to start and end of days
+                        const startOfDay = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+                        const endOfDay = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
 
-                        days = fullDays + 1;
-                        if (endHour < 12 || (endHour === 12 && endMinutes === 0)) {
-                            days--;
+                        // Calculate difference in days
+                        let diffDays = Math.floor((endOfDay - startOfDay) / (1000 * 60 * 60 * 24)) + 1;
+
+                        // Check start time (if rental starts after 5 PM, exclude the first day)
+                        const startHour = startDate.getHours();
+                        if (startHour >= 13) { // 5 PM or later
+                            diffDays -= 1;
                         }
-                        days = Math.max(1, days);
+
+                        // Ensure at least 1 day is counted
+                        days = Math.max(1, diffDays);
                     }
 
                     $('#rental-days').val(days);
                     calculateTotalAmount();
                 }
+
+
+                // // Calculate rental days
+                // function calculateDays() {
+                //     const startDate = new Date($('#rental-start-date').val());
+                //     const endDate = new Date($('#rental-end-date').val());
+                //     let days = 0;
+
+                //     if (!isNaN(startDate) && !isNaN(endDate) && startDate <= endDate) {
+                //         const diffTime = endDate - startDate;
+                //         const totalHours = diffTime / (1000 * 60 * 60);
+                //         const fullDays = Math.floor(totalHours / 24);
+                //         const endHour = endDate.getHours();
+                //         const endMinutes = endDate.getMinutes();
+
+                //         days = fullDays + 1;
+                //         if (endHour < 12 || (endHour === 12 && endMinutes === 0)) {
+                //             days--;
+                //         }
+                //         days = Math.max(1, days);
+                //     }
+
+                //     $('#rental-days').val(days);
+                //     calculateTotalAmount();
+                // }
 
                 // Calculate total amount
                 function calculateTotalAmount() {

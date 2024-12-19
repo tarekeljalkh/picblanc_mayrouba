@@ -49,6 +49,7 @@ class POSController extends Controller
             'status' => 'required|boolean',
             'payment_method' => 'required|in:cash,credit_card',
             'rental_days' => 'nullable|integer|min:1', // Optional if provided manually
+            'note' => 'nullable',
         ];
 
         // Add date validation only for "daily" category
@@ -69,13 +70,23 @@ class POSController extends Controller
                 throw new \Exception('Customer selection is required.');
             }
 
-            // Calculate rental days (default to 1 for "season" or when dates are not required)
-            $rentalDays = 1;
-            if ($categoryName === 'daily') {
-                $rentalStartDate = Carbon::parse($request->rental_start_date);
-                $rentalEndDate = Carbon::parse($request->rental_end_date);
-                $rentalDays = max($rentalStartDate->diffInDays($rentalEndDate), 1); // Ensure at least 1 day
-            }
+            // // Calculate rental days (default to 1 for "season" or when dates are not required)
+            // $rentalDays = 1;
+            // if ($categoryName === 'daily') {
+            //     $rentalStartDate = Carbon::parse($request->rental_start_date);
+            //     $rentalEndDate = Carbon::parse($request->rental_end_date);
+
+            //     // Check if the rental starts after 5 PM
+            //     if ($rentalStartDate->hour >= 13) {
+            //         $rentalStartDate->addDay(); // Shift the start date to the next day
+            //     }
+
+            //     // Calculate the rental days and ensure at least 1 day
+            //     $rentalDays = max($rentalStartDate->diffInDays($rentalEndDate) + 1, 1);
+            // }
+
+                    // Use rental days directly from the frontend
+        $rentalDays = $request->rental_days ?? 1;
 
             $subtotal = 0;
             $invoiceItems = [];
@@ -99,6 +110,7 @@ class POSController extends Controller
                     'rental_start_date' => $categoryName === 'daily' ? $request->rental_start_date : null,
                     'rental_end_date' => $categoryName === 'daily' ? $request->rental_end_date : null,
                     'days' => $categoryName === 'daily' ? $rentalDays : 1,
+                    'paid' => $request->status,
                     'returned_quantity' => 0,
                     'added_quantity' => 0,
                 ]);
@@ -118,10 +130,10 @@ class POSController extends Controller
                 'total_discount' => $request->total_discount,
                 'deposit' => $request->deposit ?? 0, // Save the deposit separately
                 'total_amount' => $totalAmount, // Keep total as the full amount after discount
-                'paid' => $request->status,
                 'payment_method' => $request->payment_method,
                 'status' => $request->status ? 'active' : 'draft',
                 'days' => $rentalDays,
+                'note' => $request->note,
             ]);
 
             $invoice->save();

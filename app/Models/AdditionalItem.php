@@ -15,6 +15,7 @@ class AdditionalItem extends Model
         'quantity',        // Quantity of the added item
         'price',           // Price per unit
         'days',
+        'paid',
         'total_price',     // Total price for the added items
         'rental_start_date', // Rental start date
         'rental_end_date',   // Rental end date

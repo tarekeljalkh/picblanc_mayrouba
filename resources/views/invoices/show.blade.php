@@ -232,8 +232,26 @@
                                         <span>{{ $invoice->user->name ?? 'N/A' }}</span>
                                     </p>
                                     <p class="mb-1">
-                                        {{ $invoice->paid ? 'Payment: Paid' : 'Payment: Not Paid' }}
+                                        @php
+                                            $allItemsPaid = $invoice->items->every(fn($item) => $item->paid);
+                                            $anyItemsPaid = $invoice->items->contains(fn($item) => $item->paid);
+                                        @endphp
+
+                                        <span>
+                                            @if ($allItemsPaid)
+                                                Payment: Fully Paid
+                                            @elseif ($anyItemsPaid)
+                                                Payment: Partially Paid
+                                            @else
+                                                Payment: Not Paid
+                                            @endif
+                                        </span>
                                     </p>
+                                    @if ($invoice->note)
+                                        <span class="h6">NOTE:</span>
+                                        <span>{{ $invoice->note }}</span>
+                                    @endif
+
                                 </td>
                                 <td class="px-0 py-3 w-px-150">
                                     <p class="mb-2">Subtotal:</p>
@@ -282,12 +300,6 @@
                 <div class="card-body p-0">
                     <div class="row">
                         <div class="col-12">
-                            @if ($invoice->note)
-                                <span class="fw-medium text-heading">NOTE:</span>
-                                <span>{{ $invoice->note }}</span>
-                                <br>
-                                <br>
-                            @endif
 
                             <span class="fw-medium text-heading">CONDITION:</span>
                             <span>I declare having received the merchandise mentioned above in good condition and I agree to

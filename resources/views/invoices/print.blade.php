@@ -158,7 +158,19 @@
                             <tr>
                                 <td>
                                     <strong>Salesperson:</strong> {{ $invoice->user->name ?? 'N/A' }}<br>
-                                    <span>{{ $invoice->paid ? 'Payment: Paid' : 'Payment: Not Paid' }}</span>
+                                    <span>
+                                        @if ($invoice->items->every(fn($item) => $item->paid))
+                                            Payment: Fully Paid
+                                        @elseif ($invoice->items->contains(fn($item) => $item->paid))
+                                            Payment: Partially Paid
+                                        @else
+                                            Payment: Not Paid
+                                        @endif
+                                    </span><br>
+                                                                        @if ($invoice->note)
+                                    <strong>NOTE:</strong> {{ $invoice->note }}
+                                @endif
+
                                 </td>
                                 <td class="text-end">
                                     @php
@@ -188,9 +200,6 @@
                 </div>
                 <hr>
                 <div>
-                    @if ($invoice->note)
-                        <p><strong>NOTE:</strong> {{ $invoice->note }}</p>
-                    @endif
                     <p><strong>CONDITION:</strong> I declare having received the merchandise mentioned above in good
                         condition and agree to return it on time.</p>
                     <hr>

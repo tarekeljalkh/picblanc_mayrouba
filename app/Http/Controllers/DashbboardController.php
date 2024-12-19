@@ -98,19 +98,11 @@ class DashbboardController extends Controller
             ->whereBetween('created_at', [$from, $to])
             ->sum('total_amount');
 
-        $totalUnpaidCreditCard = Invoice::where('category_id', $category->id)
-            ->where('paid', false)
-            ->where('payment_method', '=', 'credit_card')
-            ->whereBetween('created_at', [$from, $to])
-            ->sum('total_amount');
-
-
         // Combine all data for the table
         $trialBalanceData = [
             ['description' => 'Total Paid Invoices', 'amount' => $totalPaid],
             ['description' => 'Total Unpaid Invoices', 'amount' => $totalUnpaid],
             ['description' => 'Total Paid by Credit Card', 'amount' => $totalPaidCreditCard],
-            ['description' => 'Total UnPaid by Credit Card', 'amount' => $totalUnpaidCreditCard],
         ];
 
         return view('trial-balance.index', compact(

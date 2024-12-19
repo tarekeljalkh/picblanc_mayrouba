@@ -22,6 +22,7 @@ return new class extends Migration
             $table->decimal('total_price', 10, 2);
             $table->datetime('rental_start_date')->nullable();
             $table->datetime('rental_end_date')->nullable();
+            $table->boolean('paid')->default(false); // Paid status
             $table->enum('status', ['draft', 'active', 'returned', 'overdue'])->default('active'); // Rental status
             $table->timestamps();
         });

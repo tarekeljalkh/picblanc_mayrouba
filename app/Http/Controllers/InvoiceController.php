@@ -115,7 +115,7 @@ class InvoiceController extends Controller
         if ($categoryName === 'daily') {
             $rules['rental_start_date'] = 'required|date';
             $rules['rental_end_date'] = 'required|date|after_or_equal:rental_start_date';
-            $rules['days'] = 'required|integer';
+            $rules['days'] = 'required|integer|min:1';
         }
 
         $request->validate($rules);
@@ -146,9 +146,7 @@ class InvoiceController extends Controller
                 $price = $request->prices[$index];
 
                 if ($categoryName === 'daily') {
-                    $rentalStartDate = Carbon::parse($request->rental_start_date);
-                    $rentalEndDate = Carbon::parse($request->rental_end_date);
-                    $rentalDays = $rentalStartDate->diffInDays($rentalEndDate) + 1; // Ensure at least 1 day
+                    $rentalDays = $request->days; // Use the days value directly from the request
 
                     $totalPrice = $quantity * $price * $rentalDays;
                     $invoiceItems[] = new InvoiceItem([
@@ -159,6 +157,7 @@ class InvoiceController extends Controller
                         'rental_start_date' => $request->rental_start_date,
                         'rental_end_date' => $request->rental_end_date,
                         'days' => $rentalDays,
+                        'paid' => $request->paid,
                         'returned_quantity' => 0,
                         'added_quantity' => 0,
                     ]);
@@ -170,6 +169,7 @@ class InvoiceController extends Controller
                         'quantity' => $quantity,
                         'price' => $price,
                         'total_price' => $totalPrice,
+                        'paid' => $request->paid,
                         'returned_quantity' => 0,
                         'added_quantity' => 0,
                     ]);
@@ -200,7 +200,6 @@ class InvoiceController extends Controller
                 'total_discount' => $totalDiscount,
                 'deposit' => $deposit,
                 'total_amount' => $totalAmount,
-                'paid' => $request->paid,
                 'payment_method' => $request->payment_method,
                 'status' => $status,
                 'note' => $request->note,
@@ -209,7 +208,7 @@ class InvoiceController extends Controller
             if ($categoryName === 'daily') {
                 $invoiceData['rental_start_date'] = $request->rental_start_date;
                 $invoiceData['rental_end_date'] = $request->rental_end_date;
-                $invoiceData['days'] = max(1, $rentalDays);
+                $invoiceData['days'] = $request->days; // Use days directly
             }
 
             $invoice = Invoice::create($invoiceData);
@@ -231,6 +230,7 @@ class InvoiceController extends Controller
             return redirect()->back()->with('error', 'An error occurred while creating the invoice.');
         }
     }
+
 
 
     /**

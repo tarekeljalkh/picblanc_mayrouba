@@ -47,7 +47,6 @@ class InvoiceSeeder extends Seeder
             'days' => $days1,
             'total_discount' => 5,
             'total_amount' => (100 * $days1) * 1.1 * 0.95,
-            'paid' => false,
             'status' => 'draft'
         ]);
 
@@ -61,7 +60,6 @@ class InvoiceSeeder extends Seeder
             'days' => $days2,
             'total_discount' => 3,
             'total_amount' => (150 * $days2) * 1.08 * 0.97,
-            'paid' => true,
             'status' => 'returned'
         ]);
     }

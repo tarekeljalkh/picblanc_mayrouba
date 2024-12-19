@@ -19,6 +19,7 @@ class InvoiceItem extends Model
         'rental_start_date',
         'rental_end_date',
         'days',
+        'paid',
         'returned_quantity',
         'added_quantity',
     ];

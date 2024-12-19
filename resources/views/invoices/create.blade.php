@@ -299,13 +299,26 @@
 
             if (category === 'daily') {
                 // Calculate the rental duration in days
-                let startDate = new Date($('#rental_start_date').val());
-                let endDate = new Date($('#rental_end_date').val());
-                let totalHours = (endDate - startDate) / (1000 * 60 * 60); // Total rental duration in hours
-                let days = Math.floor(totalHours / 24); // Full days
-                if (totalHours % 24 > 12) days++; // Count as additional day if more than 12 hours
-                days = Math.max(1, days); // Ensure at least 1 day
+                const startDate = new Date($('#rental_start_date').val());
+                const endDate = new Date($('#rental_end_date').val());
+                let days = 0;
+
+                if (!isNaN(startDate) && !isNaN(endDate) && startDate <= endDate) {
+                    const startOfDay = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+                    const endOfDay = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+
+                    let diffDays = Math.floor((endOfDay - startOfDay) / (1000 * 60 * 60 * 24)) + 1;
+
+                    const startHour = startDate.getHours();
+                    if (startHour >= 13) { // If rental starts after 5 PM
+                        diffDays -= 1;
+                    }
+
+                    days = Math.max(1, diffDays); // Ensure at least 1 day
+                }
+
                 $('#days').val(days);
+
 
                 // Final total for daily
                 totalAmount = (subtotal - discountAmount) * days + fixedTotal - deposit;
