@@ -14,7 +14,11 @@
     <div class="col-md">
         <div class="card">
             <div class="card-header">
-                <h5 class="m-0">Trial Balance for {{ \Carbon\Carbon::parse($fromDate)->format('F j, Y') }} to {{ \Carbon\Carbon::parse($toDate)->format('F j, Y') }}</h5>
+                <h5 class="m-0">Trial Balance for
+                    {{ \Carbon\Carbon::parse($fromDate)->format('F j, Y') }}
+                    to
+                    {{ \Carbon\Carbon::parse($toDate)->format('F j, Y') }}
+                </h5>
             </div>
             <div class="card-body">
 
@@ -32,30 +36,54 @@
                                    value="{{ request('to_date', $toDate ?? \Carbon\Carbon::today()->toDateString()) }}">
                         </div>
                         <div class="col-md-4 d-flex align-items-end">
-                            <button type="submit" class="btn btn-primary w-100">Filter</button>
+                            <button type="submit" class="btn btn-primary w-100 me-2">Filter</button>
+                            <a href="{{ route('trialbalance.index') }}" class="btn btn-secondary w-100">Reset</a>
                         </div>
                     </div>
                 </form>
 
                 <!-- Trial Balance Table -->
-                <table class="table table-striped">
-                    <thead>
-                        <tr>
-                            <th>Description</th>
-                            <th>Amount (USD)</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach ($trialBalanceData as $data)
+                @if (count($trialBalanceData) > 0)
+                    <table class="table table-striped">
+                        <thead>
                             <tr>
-                                <td>{{ $data['description'] }}</td>
-                                <td>${{ number_format($data['amount'], 2) }}</td>
+                                <th>Description</th>
+                                <th>Amount (USD)</th>
                             </tr>
-                        @endforeach
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            @foreach ($trialBalanceData as $data)
+                                <tr>
+                                    <td>{{ $data['description'] }}</td>
+                                    <td>${{ number_format($data['amount'], 2) }}</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                        <tfoot class="table-secondary">
+                            <tr>
+                                <td><strong>Total</strong></td>
+                                <td><strong>${{ number_format(collect($trialBalanceData)->sum('amount'), 2) }}</strong></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                @else
+                    <div class="alert alert-warning">
+                        <i class="bx bx-info-circle"></i> No data available for the selected date range.
+                    </div>
+                @endif
             </div>
         </div>
     </div>
 
 @endsection
+
+@push('scripts')
+    <script>
+        flatpickr('#from_date', {
+            dateFormat: "Y-m-d"
+        });
+        flatpickr('#to_date', {
+            dateFormat: "Y-m-d"
+        });
+    </script>
+@endpush

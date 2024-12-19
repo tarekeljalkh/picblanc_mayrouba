@@ -38,8 +38,10 @@
                             <label for="status" class="form-label">Status</label>
                             <select id="status" name="status" class="form-select">
                                 <option value="">All</option>
-                                <option value="active" {{ request('status') === 'active' ? 'selected' : '' }}>Active</option>
-                                <option value="returned" {{ request('status') === 'returned' ? 'selected' : '' }}>Returned</option>
+                                <option value="active" {{ request('status') === 'active' ? 'selected' : '' }}>Active
+                                </option>
+                                <option value="returned" {{ request('status') === 'returned' ? 'selected' : '' }}>Returned
+                                </option>
                                 <option value="draft" {{ request('status') === 'draft' ? 'selected' : '' }}>Draft</option>
                             </select>
                         </div>
@@ -49,8 +51,13 @@
                             <label for="payment_status" class="form-label">Payment Status</label>
                             <select id="payment_status" name="payment_status" class="form-select">
                                 <option value="">All</option>
-                                <option value="paid" {{ request('payment_status') === 'paid' ? 'selected' : '' }}>Paid</option>
-                                <option value="unpaid" {{ request('payment_status') === 'unpaid' ? 'selected' : '' }}>Unpaid</option>
+                                <option value="paid" {{ request('payment_status') === 'paid' ? 'selected' : '' }}>Paid
+                                </option>
+                                <option value="unpaid" {{ request('payment_status') === 'unpaid' ? 'selected' : '' }}>
+                                    Unpaid</option>
+                                <option value="partially_paid"
+                                    {{ request('payment_status') === 'partially_paid' ? 'selected' : '' }}>Partially Paid
+                                </option>
                             </select>
                         </div>
 
@@ -68,11 +75,10 @@
                         <tr>
                             <th>Customer</th>
                             <th>Total</th>
-                            <th>Status</th>
                             <th>Paid</th>
                             @if (session('category') === 'daily')
-                            <th>From</th>
-                            <th>To</th>
+                                <th>From</th>
+                                <th>To</th>
                             @endif
                             <th>Action</th>
                         </tr>
@@ -83,36 +89,42 @@
                                 <td>{{ $invoice->customer->name }}</td>
                                 <td>${{ number_format($invoice->total_amount, 2) }}</td>
                                 <td>
-                                    <span class="badge bg-{{ $invoice->status === 'returned' ? 'info' : ($invoice->status === 'active' ? 'success' : 'secondary') }}">
-                                        {{ ucfirst($invoice->status) }}
-                                    </span>
-                                </td>
-                                <td>
-                                    <span class="badge bg-{{ $invoice->paid ? 'success' : 'danger' }}">
-                                        {{ $invoice->paid ? 'Paid' : 'Unpaid' }}
-                                    </span>
+                                    @if ($invoice->paid_amount >= $invoice->total_amount)
+                                        <span class="badge bg-success">Paid</span>
+                                    @elseif ($invoice->paid_amount > 0)
+                                        <span class="badge bg-warning">Partially Paid</span>
+                                    @else
+                                        <span class="badge bg-danger">Unpaid</span>
+                                    @endif
                                 </td>
                                 @if (session('category') === 'daily')
-                                <td>{{ $invoice->rental_start_date->format('d/m/Y h:i A') }}</td>
-                                <td>{{ $invoice->rental_end_date->format('d/m/Y h:i A') }}</td>
+                                    <td>{{ optional($invoice->rental_start_date)->format('d/m/Y h:i A') }}</td>
+                                    <td>{{ optional($invoice->rental_end_date)->format('d/m/Y h:i A') }}</td>
                                 @endif
                                 <td>
-                                    <a href="{{ route('invoices.edit', $invoice->id) }}" class="btn btn-warning btn-sm">Edit</a>
-                                    <a href="{{ route('invoices.show', $invoice->id) }}" class="btn btn-info btn-sm">Show</a>
-                                    <a href="{{ route('invoices.print', $invoice->id) }}" class="btn btn-primary btn-sm">Print</a>
+                                    <a href="{{ route('invoices.edit', $invoice->id) }}"
+                                        class="btn btn-warning btn-sm">Edit</a>
+                                    <a href="{{ route('invoices.show', $invoice->id) }}"
+                                        class="btn btn-info btn-sm">Show</a>
+                                    <a href="{{ route('invoices.print', $invoice->id) }}"
+                                        class="btn btn-primary btn-sm">Print</a>
                                     @if (auth()->user()->role === 'admin')
-                                    <a href="{{ route('invoices.destroy', $invoice->id) }}"
-                                        class="btn btn-danger btn-sm delete-item">Delete</a>
-                                 @endif
+                                        <a href="{{ route('invoices.destroy', $invoice->id) }}"
+                                            class="btn btn-danger btn-sm delete-item">Delete</a>
+                                    @endif
                                 </td>
                             </tr>
                         @endforeach
                     </tbody>
                 </table>
 
-                <!-- Pagination Links -->
                 <div class="mt-3">
-                    {{ $invoices->withQueryString()->links() }}
+                    <!-- Custom Pagination Styling -->
+                    <nav>
+                        <ul class="pagination justify-content-center">
+                            {{ $invoices->onEachSide(1)->links('pagination::bootstrap-4') }}
+                        </ul>
+                    </nav>
                 </div>
             </div>
         </div>

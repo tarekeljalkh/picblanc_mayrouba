@@ -14,7 +14,11 @@
     <div class="col-md">
         <div class="card">
             <div class="card-header">
-                <h5 class="m-0">Trial Balance by Products for {{ \Carbon\Carbon::parse($fromDate)->format('F j, Y') }} to {{ \Carbon\Carbon::parse($toDate)->format('F j, Y') }}</h5>
+                <h5 class="m-0">Trial Balance by Products for
+                    {{ \Carbon\Carbon::parse($fromDate)->format('F j, Y') }}
+                    to
+                    {{ \Carbon\Carbon::parse($toDate)->format('F j, Y') }}
+                </h5>
             </div>
             <div class="card-body">
 
@@ -32,39 +36,44 @@
                                    value="{{ request('to_date', $toDate ?? \Carbon\Carbon::today()->toDateString()) }}">
                         </div>
                         <div class="col-md-4 d-flex align-items-end">
-                            <button type="submit" class="btn btn-primary w-100">Filter</button>
+                            <button type="submit" class="btn btn-primary w-100 me-2">Filter</button>
+                            <a href="{{ route('trialbalance.products') }}" class="btn btn-secondary w-100">Reset</a>
                         </div>
                     </div>
                 </form>
 
                 <!-- Trial Balance Table -->
                 @if (count($productBalances) > 0)
-                    <table class="table table-striped">
-                        <thead>
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th>Quantity Rented</th>
+                            <th>Price per Unit (USD)</th>
+                            <th>Total Income (USD)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($productBalances as $balance)
                             <tr>
-                                <th>Product</th>
-                                <th>Quantity Sold</th>
-                                <th>Price per Unit (USD)</th>
-                                <th>Total Income (USD)</th>
+                                <td>{{ $balance['product'] }}</td>
+                                <td>{{ $balance['quantity'] }}</td>
+                                <td>${{ number_format($balance['price_per_unit'], 2) }}</td>
+                                <td>${{ number_format($balance['total'], 2) }}</td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            @foreach ($productBalances as $balance)
-                                <tr>
-                                    <td>{{ $balance['product'] }}</td>
-                                    <td>{{ $balance['quantity'] }}</td>
-                                    <td>${{ number_format($balance['price_per_unit'], 2) }}</td>
-                                    <td>${{ number_format($balance['total'], 2) }}</td>
-                                </tr>
-                            @endforeach
-                            <tr>
-                                <td colspan="3"><strong>Total Income</strong></td>
-                                <td><strong>${{ number_format($totalIncome, 2) }}</strong></td>
-                            </tr>
-                        </tbody>
-                    </table>
+                        @endforeach
+                        <tr class="table-secondary">
+                            <td colspan="3"><strong>Total Income</strong></td>
+                            <td><strong>${{ number_format($totalIncome, 2) }}</strong></td>
+                        </tr>
+                    </tbody>
+                </table>
+
                 @else
-                    <p>No product sales found for the selected date range.</p>
+                    <div class="alert alert-warning">
+                        <i class="bx bx-info-circle"></i>
+                        No product sales found for the selected date range.
+                    </div>
                 @endif
             </div>
         </div>

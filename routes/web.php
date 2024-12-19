@@ -47,7 +47,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/invoices/{id}/print', [InvoiceController::class, 'print'])->name('invoices.print');
     Route::get('/invoices/{id}/download', [InvoiceController::class, 'download'])->name('invoices.download');
     Route::post('/invoices/customer/store', [InvoiceController::class, 'customer_store'])->name('invoices.customer.store');
-    Route::patch('/invoices/{id}/update-payment-status', [InvoiceController::class, 'updatePaymentStatus'])->name('invoices.updatePaymentStatus');
+    Route::post('/invoices/{id}/add-payment', [InvoiceController::class, 'addPayment'])->name('invoices.addPayment');
     Route::patch('/invoices/{id}/update-invoice-status', [InvoiceController::class, 'updateInvoiceStatus'])->name('invoices.updateInvoiceStatus');
 
     // Manage returns

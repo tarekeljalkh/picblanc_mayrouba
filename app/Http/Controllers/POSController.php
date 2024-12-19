@@ -46,9 +46,9 @@ class POSController extends Controller
             'cart.*.quantity' => 'required|integer|min:1',
             'total_discount' => 'nullable|numeric|min:0',
             'deposit' => 'nullable|numeric|min:0', // Validate deposit
-            'status' => 'required|boolean',
             'payment_method' => 'required|in:cash,credit_card',
-            'rental_days' => 'nullable|integer|min:1', // Optional if provided manually
+            'payment_amount' => 'nullable|numeric|min:0', // New validation for payment amount
+            'rental_days' => 'nullable|integer|min:1',
             'note' => 'nullable',
         ];
 
@@ -70,24 +70,10 @@ class POSController extends Controller
                 throw new \Exception('Customer selection is required.');
             }
 
-            // // Calculate rental days (default to 1 for "season" or when dates are not required)
-            // $rentalDays = 1;
-            // if ($categoryName === 'daily') {
-            //     $rentalStartDate = Carbon::parse($request->rental_start_date);
-            //     $rentalEndDate = Carbon::parse($request->rental_end_date);
+            // Use rental days directly from the frontend
+            $rentalDays = $request->rental_days ?? 1;
 
-            //     // Check if the rental starts after 5 PM
-            //     if ($rentalStartDate->hour >= 13) {
-            //         $rentalStartDate->addDay(); // Shift the start date to the next day
-            //     }
-
-            //     // Calculate the rental days and ensure at least 1 day
-            //     $rentalDays = max($rentalStartDate->diffInDays($rentalEndDate) + 1, 1);
-            // }
-
-                    // Use rental days directly from the frontend
-        $rentalDays = $request->rental_days ?? 1;
-
+            // Calculate subtotal and invoice items
             $subtotal = 0;
             $invoiceItems = [];
             foreach ($request->cart as $item) {
@@ -95,7 +81,6 @@ class POSController extends Controller
                 $quantity = $item['quantity'];
                 $price = $product->price;
 
-                // Adjust calculation for "fixed" or "per-day" products
                 $totalPrice = $product->type === 'fixed'
                     ? $price * $quantity
                     : $price * $quantity * $rentalDays;
@@ -110,15 +95,21 @@ class POSController extends Controller
                     'rental_start_date' => $categoryName === 'daily' ? $request->rental_start_date : null,
                     'rental_end_date' => $categoryName === 'daily' ? $request->rental_end_date : null,
                     'days' => $categoryName === 'daily' ? $rentalDays : 1,
-                    'paid' => $request->status,
                     'returned_quantity' => 0,
                     'added_quantity' => 0,
                 ]);
             }
 
-            // Calculate discount and final total
+            // Calculate discount and total
             $discountAmount = ($subtotal * ($request->total_discount ?? 0)) / 100;
             $totalAmount = $subtotal - $discountAmount;
+
+            // Apply deposit
+            $totalAmount -= $request->deposit ?? 0;
+
+            // Apply payment amount
+            $paymentAmount = $request->payment_amount ?? 0;
+            $remainingBalance = $totalAmount - $paymentAmount;
 
             // Create the invoice
             $invoice = new Invoice([
@@ -128,10 +119,10 @@ class POSController extends Controller
                 'rental_start_date' => $categoryName === 'daily' ? $request->rental_start_date : null,
                 'rental_end_date' => $categoryName === 'daily' ? $request->rental_end_date : null,
                 'total_discount' => $request->total_discount,
-                'deposit' => $request->deposit ?? 0, // Save the deposit separately
-                'total_amount' => $totalAmount, // Keep total as the full amount after discount
+                'deposit' => $request->deposit ?? 0,
+                'total_amount' => $totalAmount, // Full amount after discount and deposit
+                'paid_amount' => $paymentAmount, // Payment received
                 'payment_method' => $request->payment_method,
-                'status' => $request->status ? 'active' : 'draft',
                 'days' => $rentalDays,
                 'note' => $request->note,
             ]);

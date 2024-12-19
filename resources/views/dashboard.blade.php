@@ -45,7 +45,7 @@
 
                         <!-- Paid Invoices Card -->
                         <div class="col-sm-6 col-lg-3">
-                            <a href="{{ route('invoices.index') }}"
+                            <a href="{{ route('invoices.index', ['payment_status' => 'paid']) }}"
                                 class="d-flex justify-content-between align-items-center card-widget-3 border-end pb-4 pb-sm-0">
                                 <div>
                                     <h4 class="mb-0">{{ $totalPaid }}</h4>
@@ -61,7 +61,7 @@
 
                         <!-- Unpaid Invoices Card -->
                         <div class="col-sm-6 col-lg-3">
-                            <a href="{{ route('drafts.index') }}"
+                            <a href="{{ route('invoices.index', ['payment_status' => 'unpaid']) }}"
                                 class="d-flex justify-content-between align-items-center card-widget-3 border-end pb-4 pb-sm-0">
                                 <div>
                                     <h4 class="mb-0">{{ $totalUnpaid }}</h4>
@@ -74,6 +74,7 @@
                                 </div>
                             </a>
                         </div>
+
 
                         <!-- Active Invoices Card -->
                         <div class="col-sm-6 col-lg-3">
@@ -111,7 +112,6 @@
                 </div>
             </div>
         </div>
-
         <!-- Invoice List Table -->
         <div class="card">
             <div class="card-datatable table-responsive">
@@ -123,8 +123,8 @@
                             <th>Invoice Status</th>
                             <th>Payment Status</th>
                             @if (session('category') === 'daily')
-                            <th>From</th>
-                            <th>To</th>
+                                <th>From</th>
+                                <th>To</th>
                             @endif
                             <th class="cell-fit">Action</th>
                         </tr>
@@ -149,13 +149,27 @@
                                     </span>
                                 </td>
                                 <td>
-                                    <span class="badge {{ $invoice->paid ? 'bg-success' : 'bg-danger' }}">
-                                        {{ $invoice->paid ? 'Paid' : 'Unpaid' }}
+                                    @php
+                                        // Determine payment status dynamically
+                                        $paymentStatus = 'Unpaid';
+                                        $paymentClass = 'bg-danger';
+
+                                        if ($invoice->paid_amount >= $invoice->total_amount) {
+                                            $paymentStatus = 'Fully Paid';
+                                            $paymentClass = 'bg-success';
+                                        } elseif ($invoice->paid_amount > 0) {
+                                            $paymentStatus = 'Partially Paid';
+                                            $paymentClass = 'bg-warning';
+                                        }
+                                    @endphp
+
+                                    <span class="badge {{ $paymentClass }}">
+                                        {{ $paymentStatus }}
                                     </span>
                                 </td>
                                 @if (session('category') === 'daily')
-                                <td>{{ $invoice->rental_start_date->format('d/m/Y h:i A') }}</td>
-                                <td>{{ $invoice->rental_end_date->format('d/m/Y h:i A') }}</td>
+                                    <td>{{ optional($invoice->rental_start_date)->format('d/m/Y h:i A') }}</td>
+                                    <td>{{ optional($invoice->rental_end_date)->format('d/m/Y h:i A') }}</td>
                                 @endif
                                 <td>
                                     <a href="{{ route('invoices.show', $invoice->id) }}" class="btn btn-info">View</a>
@@ -175,5 +189,6 @@
             </div>
         </div>
         <!-- End Invoice List Table -->
+
     </div>
 @endsection

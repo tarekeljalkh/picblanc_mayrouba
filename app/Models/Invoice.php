@@ -15,7 +15,7 @@ class Invoice extends Model
         'total_discount',
         'total_amount',
         'deposit',
-        'paid',
+        'paid_amount',
         'payment_method',
         'status',
         'rental_start_date',
@@ -115,9 +115,30 @@ class Invoice extends Model
     // Update and save invoice totals
     public function recalculateTotals()
     {
-        $this->total_amount = $this->total_price; // Dynamically calculate total price
+        $itemSubtotal = $this->items->sum(function ($item) {
+            return $item->price * $item->quantity * ($item->days ?? 1);
+        });
+
+        $additionalItemSubtotal = $this->additionalItems->sum(function ($item) {
+            return $item->price * $item->quantity * ($item->days ?? 1);
+        });
+
+        $subtotal = $itemSubtotal + $additionalItemSubtotal;
+
+        $discountAmount = ($subtotal * ($this->total_discount ?? 0)) / 100;
+
+        $this->total_amount = $subtotal - $discountAmount;
+
         $this->save();
     }
+
+    // public function recalculateTotals()
+    // {
+    //     $totals = $this->calculateTotals();
+
+    //     $this->total_amount = $totals['total'];
+    //     $this->save();
+    // }
 
     // Query Scopes for Filtering
     public function scopePaid($query)
@@ -140,12 +161,11 @@ class Invoice extends Model
         return $this->total_amount - $this->deposit;
     }
 
-
     public function calculateTotals()
     {
         $isSeasonal = $this->category->name === 'season';
 
-        // Subtotal for original items (excluding returned quantities)
+        // Calculate subtotal for original items
         $subtotal = $this->items->sum(function ($item) use ($isSeasonal) {
             $remainingQuantity = $item->quantity - $item->returned_quantity;
             return $isSeasonal
@@ -153,7 +173,7 @@ class Invoice extends Model
                 : $item->price * $remainingQuantity * ($item->days ?? 1);
         });
 
-        // Additional costs for additional items (excluding returned quantities)
+        // Calculate additional costs
         $additionalCost = $this->additionalItems->sum(function ($item) use ($isSeasonal) {
             $remainingQuantity = $item->quantity - $item->returned_quantity;
             return $isSeasonal
@@ -161,7 +181,7 @@ class Invoice extends Model
                 : $item->price * $remainingQuantity * ($item->days ?? 1);
         });
 
-        // Costs for used days (based on returned items)
+        // Calculate costs for used days in returned items
         $costForUsedDays = $this->returnDetails->sum(function ($return) {
             $price = $return->invoiceItem
                 ? $return->invoiceItem->price
@@ -170,20 +190,22 @@ class Invoice extends Model
             return $return->days_used * $return->returned_quantity * $price;
         });
 
-        // Refund for unused days
-        $refundForUnusedDays = $this->returnDetails->sum('cost');
+        // Calculate refunds for unused days
+        $refundForUnusedDays = $this->returnDetails->sum(function ($return) {
+            $remainingDays = ($return->invoiceItem ? $return->invoiceItem->days : $return->additionalItem->days ?? 1) - $return->days_used;
+            $price = $return->invoiceItem
+                ? $return->invoiceItem->price
+                : ($return->additionalItem ? $return->additionalItem->price : 0);
 
-        // Total before discount
-        $totalBeforeDiscount = $subtotal + $additionalCost;
+            return max(0, $remainingDays) * $return->returned_quantity * $price;
+        });
 
-        // Adjust for returned items: add used costs and subtract refund
-        $totalAfterAdjustments = $totalBeforeDiscount + $costForUsedDays - $refundForUnusedDays;
-
-        // Discount calculation
-        $discountAmount = ($totalAfterAdjustments * ($this->total_discount ?? 0)) / 100;
+        // Adjust for discount
+        $totalBeforeDiscount = $subtotal + $additionalCost + $costForUsedDays - $refundForUnusedDays;
+        $discountAmount = ($totalBeforeDiscount * ($this->total_discount ?? 0)) / 100;
 
         // Final total
-        $total = $totalAfterAdjustments - $discountAmount - ($this->deposit ?? 0);
+        $total = $totalBeforeDiscount - $discountAmount;
 
         return [
             'subtotal' => round($subtotal, 2),
@@ -194,6 +216,7 @@ class Invoice extends Model
             'total' => round($total, 2),
         ];
     }
+
 
     // public function calculateTotals()
     // {
@@ -245,32 +268,41 @@ class Invoice extends Model
 
     public function checkAndUpdateStatus()
     {
-        // Check if all items are returned
-        $allReturned = $this->items()->where('status', '!=', 'returned')->doesntExist();
+        $totalAmount = $this->total_amount + $this->additionalItems->sum('total_price');
+        $paidAmount = $this->paid_amount;
 
-        // Update the invoice status if all items are returned
-        if ($allReturned) {
-            $this->status = 'returned';
-            $this->save();
+        if ($totalAmount <= $paidAmount) {
+            $this->status = 'active';
+        } elseif ($this->rental_end_date && $this->rental_end_date < now() && $paidAmount < $totalAmount) {
+            $this->status = 'overdue';
+        } else {
+            $this->status = 'draft';
         }
+
+        $this->save();
     }
+
 
     public function getPaymentStatusAttribute()
     {
-        $allItemsPaid = $this->items()->where('paid', false)->doesntExist() &&
-            $this->additionalItems()->where('paid', false)->doesntExist();
+        // Dynamically calculate the total including additional items
+        $totalAmount = $this->total_amount + $this->additionalItems->sum('total_price');
+        $paidAmount = $this->paid_amount;
 
-        $anyItemsPaid = $this->items()->where('paid', true)->exists() ||
-            $this->additionalItems()->where('paid', true)->exists();
-
-        if ($allItemsPaid) {
+        // Determine the payment status
+        if ($paidAmount >= $totalAmount) {
             return 'fully_paid';
         }
 
-        if ($anyItemsPaid) {
+        if ($paidAmount > 0) {
             return 'partially_paid';
         }
 
         return 'unpaid';
+    }
+
+    public function getTotalWithAdditionalAttribute()
+    {
+        return $this->total_amount + $this->additionalItems->sum('total_price');
     }
 }

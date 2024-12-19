@@ -80,7 +80,7 @@
 
                     <div class="mb-3">
                         <label for="rental-days" class="form-label">Days</label>
-                        <input type="number" class="form-control" id="rental-days" readonly>
+                        <input type="number" class="form-control" id="rental-days">
                     </div>
                 @endif
                 <!-- Discount, and Total Amount -->
@@ -95,18 +95,13 @@
                     <input type="number" class="form-control" id="deposit" value="0" min="0">
                 </div>
 
+                <!-- Payment Amount -->
 
-                <!-- Payment Status -->
-                <div class="mb-4">
-                    <label class="form-label">Payment Status</label><br>
-                    <input class="form-check-input" type="radio" name="payment_status" id="paid-radio" value="1"
-                        checked>
-                    <label class="form-check-label" for="paid-radio">Paid</label>
-
-                    <input class="form-check-input ms-2" type="radio" name="payment_status" id="unpaid-radio"
-                        value="0">
-                    <label class="form-check-label" for="unpaid-radio">Unpaid</label>
+                <div class="mb-3">
+                    <label for="payment-amount" class="form-label">Payment Amount ($)</label>
+                    <input type="number" class="form-control" id="payment-amount" value="0" min="0">
                 </div>
+
 
                 <!-- Payment Method -->
                 <div class="mb-4">
@@ -212,35 +207,40 @@
 
                 // Validate checkout button
                 function validateCheckoutButton() {
-                    const startDate = $('#rental-start-date').val();
-                    const endDate = $('#rental-end-date').val();
-                    const isCartEmpty = cart.length === 0;
-                    const customerSelected = $('#customer-select').val();
+                    const isCartEmpty = cart.length === 0; // Check if cart is empty
+                    const customerSelected = $('#customer-select').val(); // Check if customer is selected
+                    const remainingBalance = parseFloat($('#remaining_balance').text()) || 0; // Get remaining balance
+                    const rentalStartDate = $('#rental-start-date').val(); // Check rental start date
+                    const rentalEndDate = $('#rental-end-date').val(); // Check rental end date
 
-                    // Enable button based on category
                     let isValid = customerSelected && !isCartEmpty;
 
-                    if (category === 'daily') {
-                        isValid = isValid && startDate && endDate;
+                    // Additional validation: rental dates must be selected if category is daily
+                    if (category === 'daily' && (!rentalStartDate || !rentalEndDate)) {
+                        isValid = false;
+                        $('#checkout-btn').hide(); // Hide the button if dates are missing
+                        return; // Stop further validation
                     }
 
+                    $('#checkout-btn').show(); // Ensure the button is visible if all conditions are met
+
+                    // Additional validation for remaining balance
+                    if (isValid && remainingBalance < 0) {
+                        isValid = false;
+                        alert('Payment amount exceeds the total. Please adjust the payment.');
+                    }
+
+                    // Enable or disable the button based on validity
                     $('#checkout-btn').prop('disabled', !isValid);
 
-                    // Update button text and color based on payment status
-                    const paymentStatus = $('input[name="payment_status"]:checked').val();
+                    // Update button text and styling
                     const checkoutBtn = $('#checkout-btn');
-
-                    if (paymentStatus === '1') {
+                    if (isValid) {
                         checkoutBtn.removeClass('btn-danger').addClass('btn-success').text('Checkout');
-                    } else if (paymentStatus === '0') {
-                        checkoutBtn.removeClass('btn-success').addClass('btn-danger').text('Save as Draft');
+                    } else {
+                        checkoutBtn.removeClass('btn-success').addClass('btn-danger').text('Invalid or Incomplete');
                     }
                 }
-
-                // Listen for payment status change
-                $('input[name="payment_status"]').on('change', function() {
-                    validateCheckoutButton();
-                });
 
                 // Real-time product search
                 $('#search-product').on('input', function() {
@@ -274,82 +274,73 @@
                     validateCheckoutButton();
                 });
 
-                // Trigger calculations when deposit or discount changes
-                $('#total-discount, #deposit').on('input', function() {
+                // Trigger recalculations when discount, deposit, payment amount, or days change
+                $('#total-discount, #deposit, #payment-amount, #rental-days').on('input', function() {
                     calculateTotalAmount();
+                    validateCheckoutButton();
                 });
 
+                // Function to calculate rental days
                 function calculateDays() {
                     const startDate = new Date($('#rental-start-date').val());
                     const endDate = new Date($('#rental-end-date').val());
                     let days = 0;
 
                     if (!isNaN(startDate) && !isNaN(endDate) && startDate <= endDate) {
-                        // Normalize to start and end of days
-                        const startOfDay = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
-                        const endOfDay = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
-
-                        // Calculate difference in days
-                        let diffDays = Math.floor((endOfDay - startOfDay) / (1000 * 60 * 60 * 24)) + 1;
-
-                        // Check start time (if rental starts after 5 PM, exclude the first day)
-                        const startHour = startDate.getHours();
-                        if (startHour >= 13) { // 5 PM or later
-                            diffDays -= 1;
-                        }
-
-                        // Ensure at least 1 day is counted
-                        days = Math.max(1, diffDays);
+                        const diffTime = endDate - startDate;
+                        const totalHours = diffTime / (1000 * 60 * 60);
+                        days = Math.ceil(totalHours / 24); // Round up to ensure partial days count
+                        days = Math.max(1, days); // Ensure at least 1 day
                     }
 
-                    $('#rental-days').val(days);
+                    $('#rental-days').val(days); // Update the days input field
                     calculateTotalAmount();
                 }
 
-
-                // // Calculate rental days
-                // function calculateDays() {
-                //     const startDate = new Date($('#rental-start-date').val());
-                //     const endDate = new Date($('#rental-end-date').val());
-                //     let days = 0;
-
-                //     if (!isNaN(startDate) && !isNaN(endDate) && startDate <= endDate) {
-                //         const diffTime = endDate - startDate;
-                //         const totalHours = diffTime / (1000 * 60 * 60);
-                //         const fullDays = Math.floor(totalHours / 24);
-                //         const endHour = endDate.getHours();
-                //         const endMinutes = endDate.getMinutes();
-
-                //         days = fullDays + 1;
-                //         if (endHour < 12 || (endHour === 12 && endMinutes === 0)) {
-                //             days--;
-                //         }
-                //         days = Math.max(1, days);
-                //     }
-
-                //     $('#rental-days').val(days);
-                //     calculateTotalAmount();
-                // }
-
-                // Calculate total amount
+                // Function to calculate total amount and remaining balance
                 function calculateTotalAmount() {
-                    const days = parseInt($('#rental-days').val()) || 1;
-                    const totalDiscount = parseFloat($('#total-discount').val()) || 0;
-                    const deposit = parseFloat($('#deposit').val()) || 0;
+                    const days = parseInt($('#rental-days').val()) || 1; // Rental days
+                    const totalDiscount = parseFloat($('#total-discount').val()) || 0; // Discount %
+                    const deposit = parseFloat($('#deposit').val()) || 0; // Deposit amount
+                    const paymentAmount = parseFloat($('#payment-amount').val()) || 0; // Payment amount
 
+                    // Calculate subtotal from cart items
                     let total = cart.reduce((sum, item) => {
                         if (item.type === 'fixed') {
-                            return sum + (item.price * item.quantity);
+                            return sum + (item.price * item.quantity); // Fixed products
                         } else {
-                            return sum + (item.price * item.quantity * days);
+                            return sum + (item.price * item.quantity * days); // Per-day products
                         }
                     }, 0);
 
+                    // Apply discount
                     const discountAmount = (total * totalDiscount) / 100;
-                    const grandTotal = total - discountAmount - deposit;
 
+                    // Calculate grand total (subtotal - discount - deposit)
+                    let grandTotal = total - discountAmount - deposit;
+
+                    // Subtract payment amount from grand total
+                    grandTotal -= paymentAmount;
+
+                    // Ensure grand total is not negative
+                    grandTotal = Math.max(0, grandTotal);
+
+                    // Update Total Amount in the input field
                     $('#total-amount').val(grandTotal.toFixed(2));
+
+                    // Update Remaining Balance display dynamically
+                    if ($('#remaining_balance').length === 0) {
+                        $('#payment-amount').after(`
+            <div class="mt-2">
+                <label class="form-label">Remaining Balance ($)</label>
+                <span id="remaining_balance" class="form-control" readonly>0.00</span>
+            </div>
+        `);
+                    }
+
+                    $('#remaining_balance').text(grandTotal.toFixed(2)); // Update remaining balance display
                 }
+
 
                 // Render the cart dynamically
                 function renderCart() {
@@ -388,7 +379,6 @@
                     calculateTotalAmount();
                 }
 
-                // Attach listeners to cart inputs and buttons
                 function attachCartListeners() {
                     $('.quantity').on('input', function() {
                         const index = $(this).data('index');
@@ -408,12 +398,10 @@
                 // Checkout button click handler
                 $('#checkout-btn').on('click', function() {
                     const selectedCustomer = $('#customer-select').val();
-                    const paymentStatus = $('input[name="payment_status"]:checked').val();
                     const paymentMethod = $('input[name="payment_method"]:checked').val();
 
                     const startDateWithTime = $('#rental-start-date').val();
                     const endDateWithTime = $('#rental-end-date').val();
-                    const deposit = $('#deposit').val();
 
                     $.ajax({
                         url: '{{ route('pos.checkout') }}',
@@ -423,14 +411,14 @@
                             cart: cart,
                             customer_id: selectedCustomer,
                             total_discount: $('#total-discount').val(),
-                            deposit: deposit,
-                            status: paymentStatus,
+                            deposit: $('#deposit').val(),
                             payment_method: paymentMethod,
                             rental_days: $('#rental-days').val(),
                             rental_start_date: startDateWithTime,
                             rental_end_date: endDateWithTime,
                             total_amount: $('#total-amount').val(),
                             note: $('#note').val(),
+                            payment_amount: $('#payment-amount').val(),
                         },
                         success: function(response) {
                             window.location.href = '{{ route('invoices.show', ':id') }}'.replace(

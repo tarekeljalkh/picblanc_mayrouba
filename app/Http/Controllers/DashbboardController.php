@@ -8,6 +8,7 @@ use App\Models\Invoice;
 use App\Models\Product;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class DashbboardController extends Controller
 {
@@ -24,17 +25,40 @@ class DashbboardController extends Controller
             abort(404, 'Category not found.');
         }
 
-        // Fetch total counts for customers, invoices, and invoice statuses for the selected category
+        // Fetch total counts for customers, invoices, and statuses for the selected category
         $customersCount = Customer::count();
         $invoicesCount = Invoice::where('category_id', $category->id)->count();
-        $totalPaid = Invoice::where('category_id', $category->id)->where('paid', true)->count();
-        $totalUnpaid = Invoice::where('category_id', $category->id)->where('paid', false)->count();
-        $notReturnedCount = Invoice::where('category_id', $category->id)->where('status', 'active')->count();
-        $returnedCount = Invoice::where('category_id', $category->id)->where('status', 'returned')->count();
+
+        // Use paid_amount and total_amount to determine statuses
+        $totalPaid = Invoice::where('category_id', $category->id)
+            ->whereColumn('paid_amount', '>=', 'total_amount') // Fully paid invoices
+            ->count();
+
+        $totalUnpaid = Invoice::where('category_id', $category->id)
+            ->where('paid_amount', 0) // Unpaid invoices
+            ->count();
+
+        $notReturnedCount = Invoice::where('category_id', $category->id)
+            ->where('status', 'active')
+            ->count();
+
+        $returnedCount = Invoice::where('category_id', $category->id)
+            ->where('status', 'returned')
+            ->count();
+
         $overdueCount = Invoice::where('category_id', $category->id)
             ->where('rental_end_date', '<', now())
-            ->where('paid', false)
+            ->whereColumn('paid_amount', '<', 'total_amount') // Not fully paid
             ->count();
+
+        // Calculate revenue-related metrics
+        $totalRevenue = Invoice::where('category_id', $category->id)
+            ->sum('paid_amount'); // Total payments received
+
+        $overdueRevenue = Invoice::where('category_id', $category->id)
+            ->where('rental_end_date', '<', now())
+            ->whereColumn('paid_amount', '<', 'total_amount') // Not fully paid
+            ->sum(DB::raw('total_amount - paid_amount')); // Outstanding amount
 
         // Fetch latest invoices for the selected category
         $invoices = Invoice::with('customer')
@@ -52,6 +76,8 @@ class DashbboardController extends Controller
             'notReturnedCount',
             'returnedCount',
             'overdueCount',
+            'totalRevenue',
+            'overdueRevenue',
             'invoices',
             'categoryName'
         ));
@@ -59,15 +85,12 @@ class DashbboardController extends Controller
 
     public function trialBalance(Request $request)
     {
-        // Set default "from" and "to" dates to today if not provided
         $fromDate = $request->input('from_date', Carbon::today()->toDateString());
         $toDate = $request->input('to_date', Carbon::today()->toDateString());
 
-        // Parse the dates using Carbon
         $from = Carbon::parse($fromDate)->startOfDay();
         $to = Carbon::parse($toDate)->endOfDay();
 
-        // Fetch the selected category from the session
         $categoryName = session('category', 'daily');
         $category = Category::where('name', $categoryName)->first();
 
@@ -75,93 +98,34 @@ class DashbboardController extends Controller
             return redirect()->back()->withErrors('Invalid category selected.');
         }
 
-        // Fetch total paid invoices (including additional items)
-        $totalPaid = Invoice::where('category_id', $category->id)
-            ->where('paid', true)
+        $invoices = Invoice::where('category_id', $category->id)
             ->whereBetween('created_at', [$from, $to])
-            ->with('additionalItems')
-            ->get()
-            ->sum('total_amount');
+            ->with('additionalItems') // Include additional items
+            ->get();
 
-        // Fetch total unpaid invoices (including additional items)
-        $totalUnpaid = Invoice::where('category_id', $category->id)
-            ->where('paid', false)
-            ->whereBetween('created_at', [$from, $to])
-            ->with('additionalItems')
-            ->get()
-            ->sum('total_amount');
+        $totalPaid = $invoices->sum('paid_amount');
+        $totalUnpaid = $invoices->sum(function ($invoice) {
+            return $invoice->total_amount - $invoice->paid_amount;
+        });
 
-        // Fetch total returned invoices (optional adjustment if required)
-        $totalPaidCreditCard = Invoice::where('category_id', $category->id)
-            ->where('paid', true)
-            ->where('payment_method', '=', 'credit_card')
-            ->whereBetween('created_at', [$from, $to])
-            ->sum('total_amount');
+        // Include payments from additional items
+        $totalPaidCreditCard = $invoices
+            ->where('payment_method', 'credit_card')
+            ->sum(function ($invoice) {
+                return $invoice->paid_amount;
+            });
 
-        // Combine all data for the table
+        $totalBalance = $totalPaid + $totalUnpaid;
+
         $trialBalanceData = [
             ['description' => 'Total Paid Invoices', 'amount' => $totalPaid],
             ['description' => 'Total Unpaid Invoices', 'amount' => $totalUnpaid],
             ['description' => 'Total Paid by Credit Card', 'amount' => $totalPaidCreditCard],
         ];
 
-        return view('trial-balance.index', compact(
-            'trialBalanceData',
-            'fromDate',
-            'toDate'
-        ));
+        return view('trial-balance.index', compact('trialBalanceData', 'fromDate', 'toDate'));
     }
 
-
-    // public function trialBalance(Request $request)
-    // {
-    //     // Set default "from" and "to" dates to today if not provided
-    //     $fromDate = $request->input('from_date', Carbon::today()->toDateString());
-    //     $toDate = $request->input('to_date', Carbon::today()->toDateString());
-
-    //     // Parse the dates using Carbon
-    //     $from = Carbon::parse($fromDate)->startOfDay();
-    //     $to = Carbon::parse($toDate)->endOfDay();
-
-    //     // Fetch the selected category from the session
-    //     $categoryName = session('category', 'daily');
-    //     $category = Category::where('name', $categoryName)->first();
-
-    //     if (!$category) {
-    //         return redirect()->back()->withErrors('Invalid category selected.');
-    //     }
-
-    //     // Fetch total income (paid invoices + returned invoices) within the date range and category
-    //     $totalPaid = Invoice::where('category_id', $category->id)
-    //         ->where('paid', true)
-    //         ->whereBetween('created_at', [$from, $to])
-    //         ->sum('total_amount');
-
-    //     // Fetch total unpaid amount (unpaid invoices) within the date range and category
-    //     $totalUnpaid = Invoice::where('category_id', $category->id)
-    //         ->where('paid', false)
-    //         ->whereBetween('created_at', [$from, $to])
-    //         ->sum('total_amount');
-
-    //     // Fetch total returned invoices
-    //     $totalReturnedInvoices = Invoice::where('category_id', $category->id)
-    //         ->where('status', 'returned')
-    //         ->whereBetween('created_at', [$from, $to])
-    //         ->sum('total_amount');
-
-    //     // Combine all data for the table
-    //     $trialBalanceData = [
-    //         ['description' => 'Total Paid Invoices', 'amount' => $totalPaid],
-    //         ['description' => 'Total Unpaid Invoices', 'amount' => $totalUnpaid],
-    //         ['description' => 'Total Returned Invoices', 'amount' => $totalReturnedInvoices],
-    //     ];
-
-    //     return view('trial-balance.index', compact(
-    //         'trialBalanceData',
-    //         'fromDate',
-    //         'toDate'
-    //     ));
-    // }
 
     public function trialBalanceByProducts(Request $request)
     {
@@ -182,7 +146,7 @@ class DashbboardController extends Controller
         }
 
         // Fetch all products with invoice items and additional items
-        $productSales = Product::with([
+        $products = Product::with([
             'invoiceItems' => function ($query) use ($from, $to, $category) {
                 $query->whereBetween('created_at', [$from, $to])
                     ->whereHas('invoice', function ($invoiceQuery) use ($category) {
@@ -197,42 +161,47 @@ class DashbboardController extends Controller
             }
         ])->get();
 
-        // Calculate total income and other data from items
         $totalIncome = 0;
         $productBalances = [];
 
-        foreach ($productSales as $product) {
+        foreach ($products as $product) {
             $totalQuantity = 0;
             $totalIncomeForProduct = 0;
 
             // Calculate totals for original invoice items
             foreach ($product->invoiceItems as $item) {
-                $days = $item->days ?? 1; // Use 1 day if 'days' is null
-                $totalQuantity += $item->quantity;
-                $totalIncomeForProduct += $item->price * $item->quantity * $days;
+                $remainingQuantity = $item->quantity - $item->returned_quantity;
+
+                // Only factor in days for daily rentals
+                $effectiveQuantity = session('category') === 'daily' ? $remainingQuantity * ($item->days ?? 1) : $remainingQuantity;
+
+                $totalQuantity += $remainingQuantity;
+                $totalIncomeForProduct += $item->price * $remainingQuantity;
             }
 
             // Calculate totals for additional items
             foreach ($product->additionalItems as $item) {
-                $days = $item->days ?? 1; // Use 1 day if 'days' is null
-                $totalQuantity += $item->quantity;
-                $totalIncomeForProduct += $item->price * $item->quantity * $days;
-            }
+                $remainingQuantity = $item->quantity - $item->returned_quantity;
 
-            $averagePrice = $totalQuantity > 0 ? $totalIncomeForProduct / $totalQuantity : 0;
+                // Only factor in days for daily rentals
+                $effectiveQuantity = session('category') === 'daily' ? $remainingQuantity * ($item->days ?? 1) : $remainingQuantity;
+
+                $totalQuantity += $remainingQuantity;
+                $totalIncomeForProduct += $item->price * $remainingQuantity;
+            }
 
             if ($totalQuantity > 0) {
                 $productBalances[] = [
                     'product' => $product->name,
                     'quantity' => $totalQuantity,
-                    'price_per_unit' => round($averagePrice, 2),
-                    'total' => round($totalIncomeForProduct, 2),
+                    'price_per_unit' => $totalIncomeForProduct / $totalQuantity,
+                    'total' => $totalIncomeForProduct,
                 ];
                 $totalIncome += $totalIncomeForProduct;
             }
         }
 
-        // Pass totals and product balances to the view
+        // Return the view with the corrected data
         return view('trial-balance.products', compact('productBalances', 'totalIncome', 'fromDate', 'toDate'));
     }
 

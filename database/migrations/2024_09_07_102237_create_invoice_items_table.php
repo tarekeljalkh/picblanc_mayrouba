@@ -21,7 +21,6 @@ return new class extends Migration
             $table->datetime('rental_start_date')->nullable(); // Start of the rental period for this item
             $table->datetime('rental_end_date')->nullable(); // End of the rental period for this item
             $table->integer('days')->nullable();
-            $table->boolean('paid')->default(false); // Paid status
             $table->integer('returned_quantity')->default(0);
             $table->integer('added_quantity')->default(0);
             $table->enum('status', ['draft', 'active', 'returned', 'overdue'])->default('active'); // Rental status

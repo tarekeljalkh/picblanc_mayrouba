@@ -153,10 +153,20 @@
                                 <label for="days" class="col-md-2 col-form-label">Days</label>
                                 <div class="col-md-10">
                                     <input type="text" class="form-control" id="days" name="days"
-                                        value="0" readonly />
+                                        value="0" />
                                 </div>
                             </div>
                         @endif
+
+
+                        {{-- Payment Amount --}}
+                        <div class="mb-4 row">
+                            <label for="payment_amount" class="col-md-2 col-form-label">Payment Amount</label>
+                            <div class="col-md-10">
+                                <input type="number" class="form-control" id="payment_amount" name="payment_amount"
+                                    value="0" min="0" />
+                            </div>
+                        </div>
 
                         <div class="mb-4 row">
                             <label for="total_amount" class="col-md-2 col-form-label">Total Amount</label>
@@ -166,22 +176,14 @@
                             </div>
                         </div>
 
-                        {{-- Payment Status --}}
                         <div class="mb-4 row">
-                            <label class="col-md-2 col-form-label">Payment Status</label>
+                            <label class="col-md-2 col-form-label">Remaining Balance</label>
                             <div class="col-md-10">
-                                <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="radio" name="paid" id="paid"
-                                        value="1" checked>
-                                    <label class="form-check-label" for="paid">Paid</label>
-                                </div>
-                                <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="radio" name="paid" id="unpaid"
-                                        value="0">
-                                    <label class="form-check-label" for="unpaid">Unpaid</label>
-                                </div>
+                                <p id="remaining_balance" class="form-control-static">0.00</p>
                             </div>
                         </div>
+
+
 
                         {{-- Payment Method --}}
                         <div class="mb-4 row">
@@ -228,7 +230,6 @@
     <script src="{{ asset('assets/vendor/libs/flatpickr/flatpickr.js') }}"></script>
     <script src="{{ asset('assets/vendor/libs/select2/select2.js') }}"></script>
     <script src="{{ asset('assets/js/forms-selects.js') }}"></script>
-
     <script>
         const category = "{{ session('category', 'daily') }}";
 
@@ -240,125 +241,131 @@
                 altInput: true,
                 altFormat: "F j, Y h:i K",
                 allowInput: true,
-                onChange: function() {
+                onChange: function () {
+                    updateDaysFromDates();
                     calculateInvoiceTotal();
                 }
             });
         }
 
+        // Initialize Select2 for customer selection
         $('#select_customer').select2({
             placeholder: 'Select Existing Customer',
             allowClear: true
         });
 
-        $('#select_customer').on('change', function() {
-            let selectedCustomer = $('#select_customer option:selected');
+        // Handle customer selection changes
+        $('#select_customer').on('change', function () {
+            const selectedCustomer = $('#select_customer option:selected');
             $('#customer_name').val(selectedCustomer.data('name') || '');
             $('#customer_phone').val(selectedCustomer.data('phone') || '');
             $('#customer_address').val(selectedCustomer.data('address') || '');
             checkFormValidity();
         });
 
-        $('#clear_customer_form').on('click', function() {
+        // Clear customer form
+        $('#clear_customer_form').on('click', function () {
             $('#select_customer').val(null).trigger('change');
             $('#customer_name, #customer_phone, #customer_address').val('');
             checkFormValidity();
         });
 
+        // Update days field based on rental start and end dates
+        function updateDaysFromDates() {
+            const startDate = new Date($('#rental_start_date').val());
+            const endDate = new Date($('#rental_end_date').val());
+
+            if (!isNaN(startDate) && !isNaN(endDate) && startDate <= endDate) {
+                const diffTime = Math.abs(endDate - startDate);
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                $('#days').val(diffDays);
+            }
+        }
+
+        // Calculate total for individual rows
         function calculateRowTotal(row) {
-            let quantity = parseFloat(row.find('.quantity').val()) || 0;
-            let price = parseFloat(row.find('.price').val()) || 0;
+            const quantity = parseFloat(row.find('.quantity').val()) || 0;
+            const price = parseFloat(row.find('.price').val()) || 0;
             row.find('.total-price').val((quantity * price).toFixed(2));
             calculateInvoiceTotal();
         }
 
+        // Calculate the overall invoice total
         function calculateInvoiceTotal() {
             let subtotal = 0; // For per-day products
             let fixedTotal = 0; // For fixed products
 
-            // Iterate through each product row to calculate totals
-            $('#invoice-items-table tbody tr').each(function() {
-                let row = $(this);
-                let productType = row.find('.product-select option:selected').data('type'); // Get product type
-                let quantity = parseFloat(row.find('.quantity').val()) || 0;
-                let price = parseFloat(row.find('.price').val()) || 0;
+            // Calculate subtotal and fixed total
+            $('#invoice-items-table tbody tr').each(function () {
+                const row = $(this);
+                const productType = row.find('.product-select option:selected').data('type');
+                const quantity = parseFloat(row.find('.quantity').val()) || 0;
+                const price = parseFloat(row.find('.price').val()) || 0;
 
                 if (productType === 'fixed') {
-                    fixedTotal += quantity * price; // Add directly to fixed total
+                    fixedTotal += quantity * price;
                 } else {
-                    subtotal += quantity * price; // Add to subtotal for per-day products
+                    subtotal += quantity * price;
                 }
             });
 
-            // Calculate total
-            let discount = parseFloat($('#total_discount').val()) || 0;
-            let discountAmount = (subtotal * discount) / 100;
-            let deposit = parseFloat($('#deposit').val()) || 0;
+            // Fetch input values
+            const discount = parseFloat($('#total_discount').val()) || 0;
+            const discountAmount = (subtotal * discount) / 100;
+            const deposit = parseFloat($('#deposit').val()) || 0; // Subtracted as it's a pre-payment
+            const days = Math.max(parseInt($('#days').val()) || 1, 1);
 
-            let totalAmount;
-
-            if (category === 'daily') {
-                // Calculate the rental duration in days
-                const startDate = new Date($('#rental_start_date').val());
-                const endDate = new Date($('#rental_end_date').val());
-                let days = 0;
-
-                if (!isNaN(startDate) && !isNaN(endDate) && startDate <= endDate) {
-                    const startOfDay = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
-                    const endOfDay = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
-
-                    let diffDays = Math.floor((endOfDay - startOfDay) / (1000 * 60 * 60 * 24)) + 1;
-
-                    const startHour = startDate.getHours();
-                    if (startHour >= 13) { // If rental starts after 5 PM
-                        diffDays -= 1;
-                    }
-
-                    days = Math.max(1, diffDays); // Ensure at least 1 day
-                }
-
-                $('#days').val(days);
-
-
-                // Final total for daily
-                totalAmount = (subtotal - discountAmount) * days + fixedTotal - deposit;
-            } else {
-                // Final total for season (no date calculation)
-                totalAmount = subtotal - discountAmount + fixedTotal - deposit;
-            }
-
+            // Calculate total amount
+            const totalAmount = (subtotal - discountAmount) * days + fixedTotal - deposit;
             $('#total_amount').val(totalAmount.toFixed(2));
+
+            // Calculate remaining balance
+            const paymentAmount = parseFloat($('#payment_amount').val()) || 0;
+            const balance = totalAmount - paymentAmount;
+
+            // Update balance display
+            $('#remaining_balance').text(balance.toFixed(2));
             checkFormValidity();
         }
 
+        // Validate the form
         function checkFormValidity() {
-            let hasCustomer = $('#select_customer').val() || ($('#customer_name').val() && $('#customer_phone').val() && $(
-                '#customer_address').val());
+            const hasCustomer = $('#select_customer').val() || ($('#customer_name').val() && $('#customer_phone').val() && $('#customer_address').val());
             let hasProducts = false;
 
-            $('#invoice-items-table .product-select').each(function() {
+            // Check if there are products in the table
+            $('#invoice-items-table .product-select').each(function () {
                 if ($(this).val() && parseFloat($(this).closest('tr').find('.quantity').val()) > 0) {
                     hasProducts = true;
-                    return false;
+                    return false; // Break loop
                 }
             });
 
-            $('#create-invoice-button').prop('disabled', !(hasCustomer && hasProducts));
+            const totalAmount = parseFloat($('#total_amount').val()) || 0;
+            const paymentAmount = parseFloat($('#payment_amount').val()) || 0;
+
+            // Ensure payment doesn't exceed total amount
+            const isValidPayment = paymentAmount <= totalAmount;
+
+            // Enable/disable form submission
+            $('#create-invoice-button').prop('disabled', !(hasCustomer && hasProducts && isValidPayment));
         }
 
-        $(document).on('change', '.product-select', function() {
-            let row = $(this).closest('tr');
-            let price = parseFloat($(this).find('option:selected').data('price')) || 0;
+        // Event handlers for product and quantity changes
+        $(document).on('change', '.product-select', function () {
+            const row = $(this).closest('tr');
+            const price = parseFloat($(this).find('option:selected').data('price')) || 0;
             row.find('.price').val(price.toFixed(2));
             calculateRowTotal(row);
         });
 
-        $(document).on('input', '.quantity', function() {
+        $(document).on('input', '.quantity', function () {
             calculateRowTotal($(this).closest('tr'));
         });
 
-        $('#add-item').on('click', function() {
-            let newRow = `
+        // Add a new item row
+        $('#add-item').on('click', function () {
+            const newRow = `
                 <tr>
                     <td>
                         <select class="form-select product-select" name="products[]">
@@ -377,33 +384,15 @@
             checkFormValidity();
         });
 
-        $(document).on('click', '.remove-item', function() {
+        // Remove an item row
+        $(document).on('click', '.remove-item', function () {
             $(this).closest('tr').remove();
             calculateInvoiceTotal();
         });
 
-        $('#total_discount').on('input', calculateInvoiceTotal);
-        $('#deposit').on('input', calculateInvoiceTotal); // Listen for deposit input changes
-
-        $('input[name="paid"]').on('change', function() {
-            const paymentStatus = $('input[name="paid"]:checked').val();
-            const createButton = $('#create-invoice-button');
-
-            if (paymentStatus === "1") {
-                createButton.text('Save Invoice').removeClass('btn-danger').addClass('btn-primary');
-            } else {
-                createButton.text('Save as Draft').removeClass('btn-primary').addClass('btn-danger');
-            }
-        });
-
-        $(document).ready(function() {
-            $('input[name="paid"]:checked').trigger('change');
-            if (category !== 'daily') {
-                $('#rental_start_date, #rental_end_date').closest('.mb-4.row').hide();
-                $('#days').closest('.mb-4.row').hide();
-            }
-        });
+        // Trigger recalculations on input changes
+        $('#total_discount, #deposit, #payment_amount').on('input', calculateInvoiceTotal);
+        $('#days').on('input', calculateInvoiceTotal);
     </script>
-
 
 @endsection

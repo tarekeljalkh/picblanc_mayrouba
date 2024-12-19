@@ -232,15 +232,10 @@
                                         <span>{{ $invoice->user->name ?? 'N/A' }}</span>
                                     </p>
                                     <p class="mb-1">
-                                        @php
-                                            $allItemsPaid = $invoice->items->every(fn($item) => $item->paid);
-                                            $anyItemsPaid = $invoice->items->contains(fn($item) => $item->paid);
-                                        @endphp
-
                                         <span>
-                                            @if ($allItemsPaid)
+                                            @if ($invoice->paid_amount >= $invoice->total_amount)
                                                 Payment: Fully Paid
-                                            @elseif ($anyItemsPaid)
+                                            @elseif ($invoice->paid_amount > 0)
                                                 Payment: Partially Paid
                                             @else
                                                 Payment: Not Paid

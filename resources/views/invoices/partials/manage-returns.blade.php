@@ -15,7 +15,6 @@
             </tr>
         </thead>
         <tbody>
-            <!-- Original Invoice Items -->
             @foreach ($invoice->items as $item)
                 @if ($item->quantity - $item->returned_quantity > 0)
                     <tr>
@@ -28,8 +27,7 @@
                         <td>{{ $item->quantity }}</td>
                         <td>{{ $item->quantity - $item->returned_quantity }}</td>
                         <td>
-                            <input type="number"
-                                class="form-control return-quantity"
+                            <input type="number" class="form-control return-quantity"
                                 name="returns[original][{{ $item->id }}][quantity]"
                                 max="{{ $item->quantity - $item->returned_quantity }}"
                                 value="{{ old("returns.original.{$item->id}.quantity") }}"
@@ -37,24 +35,23 @@
                         </td>
                         @if (session('category') === 'daily')
                             <td>
-                                <input type="datetime-local"
-                                    class="form-control return-date"
+                                <input type="datetime-local" class="form-control return-date"
                                     name="returns[original][{{ $item->id }}][return_date]"
                                     data-start-date="{{ $item->rental_start_date }}"
-                                    data-end-date="{{ $item->rental_end_date }}"
                                     value="{{ old("returns.original.{$item->id}.return_date") }}"
                                     {{ old("returns.original.{$item->id}.selected") ? '' : 'disabled' }}>
                             </td>
                             <td>
-                                <input type="text" class="form-control days-of-use"
-                                    name="returns[original][{{ $item->id }}][days_of_use]" value="" readonly>
+                                <input type="number" class="form-control days-of-use"
+                                    name="returns[original][{{ $item->id }}][days_of_use]"
+                                    value="{{ old("returns.original.{$item->id}.days_of_use") }}"
+                                    {{ old("returns.original.{$item->id}.selected") ? '' : 'disabled' }}>
                             </td>
                         @endif
                     </tr>
                 @endif
             @endforeach
 
-            <!-- Additional Items -->
             @foreach ($invoice->additionalItems as $addedItem)
                 @if ($addedItem->quantity - $addedItem->returned_quantity > 0)
                     <tr>
@@ -67,8 +64,7 @@
                         <td>{{ $addedItem->quantity }}</td>
                         <td>{{ $addedItem->quantity - $addedItem->returned_quantity }}</td>
                         <td>
-                            <input type="number"
-                                class="form-control return-quantity"
+                            <input type="number" class="form-control return-quantity"
                                 name="returns[additional][{{ $addedItem->id }}][quantity]"
                                 max="{{ $addedItem->quantity - $addedItem->returned_quantity }}"
                                 value="{{ old("returns.additional.{$addedItem->id}.quantity") }}"
@@ -76,17 +72,17 @@
                         </td>
                         @if (session('category') === 'daily')
                             <td>
-                                <input type="datetime-local"
-                                    class="form-control return-date"
+                                <input type="datetime-local" class="form-control return-date"
                                     name="returns[additional][{{ $addedItem->id }}][return_date]"
                                     data-start-date="{{ $addedItem->rental_start_date }}"
-                                    data-end-date="{{ $addedItem->rental_end_date }}"
                                     value="{{ old("returns.additional.{$addedItem->id}.return_date") }}"
                                     {{ old("returns.additional.{$addedItem->id}.selected") ? '' : 'disabled' }}>
                             </td>
                             <td>
-                                <input type="text" class="form-control days-of-use"
-                                    name="returns[additional][{{ $addedItem->id }}][days_of_use]" value="" readonly>
+                                <input type="number" class="form-control days-of-use"
+                                    name="returns[additional][{{ $addedItem->id }}][days_of_use]"
+                                    value="{{ old("returns.additional.{$addedItem->id}.days_of_use") }}"
+                                    {{ old("returns.additional.{$addedItem->id}.selected") ? '' : 'disabled' }}>
                             </td>
                         @endif
                     </tr>
@@ -106,13 +102,11 @@
         function initializeFlatpickr() {
             document.querySelectorAll('.return-date').forEach(input => {
                 const startDate = input.getAttribute('data-start-date');
-                const endDate = input.getAttribute('data-end-date');
 
                 flatpickr(input, {
                     enableTime: true,
                     dateFormat: 'Y-m-d H:i',
                     minDate: startDate,
-                    maxDate: endDate,
                     onChange: function () {
                         calculateDaysOfUse(input);
                     },
@@ -131,12 +125,13 @@
 
                 const enableInputs = this.checked;
                 quantityInput.disabled = !enableInputs;
-                if (dateInput) dateInput.disabled = !enableInputs;
+                dateInput.disabled = !enableInputs;
+                daysOfUseInput.disabled = !enableInputs;
 
                 if (!enableInputs) {
                     quantityInput.value = '';
-                    if (dateInput) dateInput.value = '';
-                    if (daysOfUseInput) daysOfUseInput.value = '';
+                    dateInput.value = '';
+                    daysOfUseInput.value = '';
                 }
             });
         });
@@ -151,8 +146,6 @@
                 const diffTime = returnDate - rentalStartDate;
                 const daysUsed = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
                 daysOfUseInput.value = Math.max(1, daysUsed);
-            } else {
-                daysOfUseInput.value = '';
             }
         }
     });

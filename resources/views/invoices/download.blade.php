@@ -217,9 +217,9 @@
         <!-- Salesperson -->
         <p><strong>Salesperson:</strong> {{ $invoice->user->name ?? 'N/A' }}</p>
         <span>
-            @if ($invoice->items->every(fn($item) => $item->paid))
+            @if ($invoice->paid_amount >= $invoice->total_amount)
                 Payment: Fully Paid
-            @elseif ($invoice->items->contains(fn($item) => $item->paid))
+            @elseif ($invoice->paid_amount > 0)
                 Payment: Partially Paid
             @else
                 Payment: Not Paid

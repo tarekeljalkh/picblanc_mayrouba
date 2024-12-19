@@ -20,9 +20,11 @@
                         </div>
                         <div>
                             <h5 class="mb-3">Rental Agreement #{{ $invoice->id }}</h5>
-                            <p class="mb-1"><strong>Date Created:</strong> {{ $invoice->created_at->format('M d, Y') }}</p>
+                            <p class="mb-1"><strong>Date Created:</strong> {{ $invoice->created_at->format('M d, Y') }}
+                            </p>
                             @if ($invoice->category->name === 'daily')
-                                <p class="mb-1"><strong>Rental Start:</strong> {{ $invoice->rental_start_date->format('d/m/Y h:i A') }}</p>
+                                <p class="mb-1"><strong>Rental Start:</strong>
+                                    {{ $invoice->rental_start_date->format('d/m/Y h:i A') }}</p>
                                 <p><strong>Rental End:</strong> {{ $invoice->rental_end_date->format('d/m/Y h:i A') }}</p>
                                 <p><strong>Rental Days:</strong> {{ $invoice->days }} day(s)</p>
                             @endif
@@ -61,7 +63,8 @@
                                     <td>{{ $item->product->name }}</td>
                                     <td>${{ number_format($item->price, 2) }}</td>
                                     <td>{{ $item->quantity }}</td>
-                                    <td>${{ number_format($item->price * $item->quantity * ($invoice->category->name === 'daily' ? $item->days : 1), 2) }}</td>
+                                    <td>${{ number_format($item->price * $item->quantity * ($invoice->category->name === 'daily' ? $item->days : 1), 2) }}
+                                    </td>
                                     @if ($invoice->category->name === 'daily')
                                         <td>{{ optional($item->rental_start_date)->format('d/m/Y h:i A') }}</td>
                                         <td>{{ optional($item->rental_end_date)->format('d/m/Y h:i A') }}</td>
@@ -129,14 +132,16 @@
                                 @foreach ($invoice->returnDetails as $return)
                                     @php
                                         // Calculate the cost for returned items
-                                        $unitPrice = $return->invoiceItem?->price ?? $return->additionalItem?->price ?? 0;
-                                        $cost = $invoice->category->name === 'daily'
-                                            ? $unitPrice * $return->days_used * $return->returned_quantity
-                                            : $unitPrice * $return->returned_quantity;
+                                        $unitPrice =
+                                            $return->invoiceItem?->price ?? ($return->additionalItem?->price ?? 0);
+                                        $cost =
+                                            $invoice->category->name === 'daily'
+                                                ? $unitPrice * $return->days_used * $return->returned_quantity
+                                                : $unitPrice * $return->returned_quantity;
                                     @endphp
                                     <tr>
                                         <td>
-                                            {{ $return->invoiceItem->product->name ?? $return->additionalItem->product->name ?? 'N/A' }}
+                                            {{ $return->invoiceItem->product->name ?? ($return->additionalItem->product->name ?? 'N/A') }}
                                         </td>
                                         <td>{{ $return->returned_quantity }}</td>
                                         @if ($invoice->category->name === 'daily')
@@ -159,17 +164,17 @@
                                 <td>
                                     <strong>Salesperson:</strong> {{ $invoice->user->name ?? 'N/A' }}<br>
                                     <span>
-                                        @if ($invoice->items->every(fn($item) => $item->paid))
+                                        @if ($invoice->paid_amount >= $invoice->total_amount)
                                             Payment: Fully Paid
-                                        @elseif ($invoice->items->contains(fn($item) => $item->paid))
+                                        @elseif ($invoice->paid_amount > 0)
                                             Payment: Partially Paid
                                         @else
                                             Payment: Not Paid
                                         @endif
                                     </span><br>
-                                                                        @if ($invoice->note)
-                                    <strong>NOTE:</strong> {{ $invoice->note }}
-                                @endif
+                                    @if ($invoice->note)
+                                        <strong>NOTE:</strong> {{ $invoice->note }}
+                                    @endif
 
                                 </td>
                                 <td class="text-end">
@@ -188,7 +193,8 @@
                                     @if ($returnedCost > 0)
                                         <p class="text-danger">Returned Costs: - ${{ number_format($returnedCost, 2) }}</p>
                                     @endif
-                                    <p>Discount ({{ $invoice->total_discount }}%): - ${{ number_format($discountAmount, 2) }}</p>
+                                    <p>Discount ({{ $invoice->total_discount }}%): -
+                                        ${{ number_format($discountAmount, 2) }}</p>
                                     @if ($deposit > 0)
                                         <p>Deposit: - ${{ number_format($deposit, 2) }}</p>
                                     @endif

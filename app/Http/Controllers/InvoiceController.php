@@ -60,19 +60,23 @@ class InvoiceController extends Controller
                 $query->where('status', $status);
             })
             ->when($paymentStatus === 'paid', function ($query) {
-                // Filter for paid invoices
-                $query->where('paid', true);
+                // Filter for fully paid invoices
+                $query->whereColumn('paid_amount', '>=', 'total_amount');
             })
             ->when($paymentStatus === 'unpaid', function ($query) {
                 // Filter for unpaid invoices
-                $query->where('paid', false);
+                $query->where('paid_amount', 0);
+            })
+            ->when($paymentStatus === 'partially_paid', function ($query) {
+                // Filter for partially paid invoices
+                $query->where('paid_amount', '>', 0)
+                    ->whereColumn('paid_amount', '<', 'total_amount');
             })
             ->paginate(10); // Paginate results for better performance
 
         // Pass the selected category, status, and payment status to the view
         return view('invoices.index', compact('invoices', 'selectedCategory', 'status', 'paymentStatus'));
     }
-
 
 
     /**
@@ -107,7 +111,7 @@ class InvoiceController extends Controller
             'prices.*' => 'numeric|min:0',
             'total_discount' => 'nullable|numeric|min:0|max:100',
             'deposit' => 'nullable|numeric|min:0',
-            'paid' => 'required|in:0,1',
+            'payment_amount' => 'nullable|numeric|min:0',
             'payment_method' => 'required|in:cash,credit_card',
             'note' => 'nullable',
         ];
@@ -146,7 +150,7 @@ class InvoiceController extends Controller
                 $price = $request->prices[$index];
 
                 if ($categoryName === 'daily') {
-                    $rentalDays = $request->days; // Use the days value directly from the request
+                    $rentalDays = $request->days;
 
                     $totalPrice = $quantity * $price * $rentalDays;
                     $invoiceItems[] = new InvoiceItem([
@@ -157,19 +161,16 @@ class InvoiceController extends Controller
                         'rental_start_date' => $request->rental_start_date,
                         'rental_end_date' => $request->rental_end_date,
                         'days' => $rentalDays,
-                        'paid' => $request->paid,
                         'returned_quantity' => 0,
                         'added_quantity' => 0,
                     ]);
                 } else {
-                    // For season: total price is just quantity * price
                     $totalPrice = $quantity * $price;
                     $invoiceItems[] = new InvoiceItem([
                         'product_id' => $product_id,
                         'quantity' => $quantity,
                         'price' => $price,
                         'total_price' => $totalPrice,
-                        'paid' => $request->paid,
                         'returned_quantity' => 0,
                         'added_quantity' => 0,
                     ]);
@@ -185,12 +186,12 @@ class InvoiceController extends Controller
             // Calculate the total amount after applying the discount
             $totalAmount = $subtotal - $discountAmount;
 
-            // Add deposit to total amount if applicable
+            // Subtract deposit from total amount as it's pre-paid
             $deposit = $request->deposit ?? 0;
             $totalAmount -= $deposit;
 
-            // Determine the invoice status based on the payment status
-            $status = $request->paid ? 'active' : 'draft';
+            // Calculate paid amount (including deposit)
+            $paidAmount = $deposit + ($request->payment_amount ?? 0);
 
             // Create the Invoice
             $invoiceData = [
@@ -200,15 +201,15 @@ class InvoiceController extends Controller
                 'total_discount' => $totalDiscount,
                 'deposit' => $deposit,
                 'total_amount' => $totalAmount,
+                'paid_amount' => $paidAmount,
                 'payment_method' => $request->payment_method,
-                'status' => $status,
                 'note' => $request->note,
             ];
 
             if ($categoryName === 'daily') {
                 $invoiceData['rental_start_date'] = $request->rental_start_date;
                 $invoiceData['rental_end_date'] = $request->rental_end_date;
-                $invoiceData['days'] = $request->days; // Use days directly
+                $invoiceData['days'] = $request->days;
             }
 
             $invoice = Invoice::create($invoiceData);
@@ -377,26 +378,28 @@ class InvoiceController extends Controller
 
         $messages = [
             'returns.required' => 'You must provide at least one return item.',
-            'returns.*.*.quantity.required_with' => 'The quantity is required when an item is selected.',
+            'returns.*.*.quantity.required_if' => 'The quantity is required when an item is selected.',
             'returns.*.*.quantity.integer' => 'The quantity must be a whole number.',
             'returns.*.*.quantity.min' => 'The quantity must be at least 1.',
-            'returns.*.*.return_date.required_with' => 'The return date is required when an item is selected.',
+            'returns.*.*.days_of_use.required_if' => 'The days of use is required when an item is selected.',
+            'returns.*.*.days_of_use.integer' => 'The days of use must be a whole number.',
+            'returns.*.*.return_date.required_if' => 'The return date is required when an item is selected.',
             'returns.*.*.return_date.date' => 'The return date must be a valid date.',
         ];
 
         $attributes = [
             'returns.*.*.selected' => 'item selection',
             'returns.*.*.quantity' => 'returned quantity',
+            'returns.*.*.days_of_use' => 'days of use',
             'returns.*.*.return_date' => 'return date',
         ];
 
         $rules = [
             'returns' => 'required|array',
             'returns.*.*.selected' => 'sometimes|required|boolean',
-            'returns.*.*.quantity' => 'required_with:returns.*.*.selected|integer|min:1',
-            'returns.*.*.return_date' => $isSeasonal
-                ? 'nullable|date'
-                : 'required_with:returns.*.*.selected|date',
+            'returns.*.*.quantity' => 'required_if:returns.*.*.selected,1|integer|min:1',
+            'returns.*.*.days_of_use' => 'required_if:returns.*.*.selected,1|integer|min:1',
+            'returns.*.*.return_date' => $isSeasonal ? 'nullable|date' : 'required_if:returns.*.*.selected,1|date',
         ];
 
         $validated = $request->validate($rules, $messages, $attributes);
@@ -417,14 +420,11 @@ class InvoiceController extends Controller
                         : AdditionalItem::findOrFail($id);
 
                     $returnedQuantity = $item['quantity'];
-                    $returnDate = $isSeasonal
-                        ? Carbon::parse($model->rental_start_date)
-                        : Carbon::parse($item['return_date']);
+                    $daysUsed = $item['days_of_use']; // Directly use days_of_use from the request
 
-                    $rentalStartDate = Carbon::parse($model->rental_start_date);
-                    $daysUsed = !$isSeasonal
-                        ? max(1, ceil($rentalStartDate->diffInHours($returnDate) / 24))
-                        : 1;
+                    if ($returnedQuantity > $model->quantity - $model->returned_quantity) {
+                        throw new \Exception('Returned quantity exceeds available quantity.');
+                    }
 
                     $refundAmount = 0;
                     if ($daysUsed < $model->days) {
@@ -432,7 +432,6 @@ class InvoiceController extends Controller
                         $refundAmount = $unusedDays * $model->price * $returnedQuantity;
                     }
 
-                    // Create return detail
                     ReturnDetail::create([
                         'invoice_id' => $invoice->id,
                         'invoice_item_id' => $type === 'original' ? $model->id : null,
@@ -441,10 +440,9 @@ class InvoiceController extends Controller
                         'returned_quantity' => $returnedQuantity,
                         'days_used' => $daysUsed,
                         'cost' => $refundAmount,
-                        'return_date' => $returnDate,
+                        'return_date' => Carbon::parse($item['return_date']),
                     ]);
 
-                    // Update returned quantity and status
                     $model->returned_quantity += $returnedQuantity;
                     if ($model->returned_quantity >= $model->quantity) {
                         $model->status = 'returned';
@@ -585,7 +583,6 @@ class InvoiceController extends Controller
     //     }
     // }
 
-
     public function addItems(Request $request, $invoiceId)
     {
         $invoice = Invoice::findOrFail($invoiceId);
@@ -598,6 +595,7 @@ class InvoiceController extends Controller
             'products.*.days' => 'nullable|integer|min:1',
             'products.*.rental_start_date' => 'nullable|date',
             'products.*.rental_end_date' => 'nullable|date',
+            'amount_paid' => 'nullable|numeric|min:0', // Include validation for amount paid
         ]);
 
         DB::beginTransaction();
@@ -620,6 +618,12 @@ class InvoiceController extends Controller
 
             // Recalculate total_amount
             $invoice->total_amount = $this->calculateInvoiceTotal($invoice);
+
+            // Update the paid amount if provided
+            if (isset($validated['amount_paid'])) {
+                $invoice->paid_amount += $validated['amount_paid'];
+            }
+
             $invoice->save();
 
             DB::commit();
@@ -797,4 +801,27 @@ class InvoiceController extends Controller
         // Pass the selected category to the view
         return view('invoices.overdue', compact('invoices', 'selectedCategory'));
     }
+
+    public function addPayment(Request $request, $invoiceId)
+    {
+        $invoice = Invoice::findOrFail($invoiceId);
+
+        $validated = $request->validate([
+            'new_payment' => 'required|numeric|min:0|max:' . ($invoice->total_amount - $invoice->paid_amount),
+        ]);
+
+        // Update the paid amount
+        $invoice->paid_amount += $validated['new_payment'];
+
+        // Determine if the invoice is fully paid
+        if ($invoice->paid_amount >= $invoice->total_amount) {
+            $invoice->paid_amount = $invoice->total_amount; // Cap paid amount at total
+        }
+
+        $invoice->save();
+
+        return redirect()->route('invoices.show', $invoice->id)
+            ->with('success', 'Payment added successfully.');
+    }
+
 }

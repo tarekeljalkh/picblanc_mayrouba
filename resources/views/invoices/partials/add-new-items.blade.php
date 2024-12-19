@@ -23,7 +23,7 @@
                     <select name="products[0][product_id]" class="form-select product-select" required>
                         <option value="">Select Product</option>
                         @foreach ($products as $product)
-                            <option value="{{ $product->id }}" data-price="{{ $product->price }}" data-type="{{ $product->type }}">
+                            <option value="{{ $product->id }}" data-price="{{ $product->price }}">
                                 {{ $product->name }}
                             </option>
                         @endforeach
@@ -37,13 +37,13 @@
                 </td>
                 @if (session('category') === 'daily')
                     <td>
-                        <input type="number" name="products[0][days]" class="form-control days-input" value="1" readonly>
+                        <input type="number" name="products[0][days]" class="form-control days-input" value="1" min="1" data-manual="false">
                     </td>
                     <td>
-                        <input type="datetime-local" name="products[0][rental_start_date]" class="form-control rental-start-date" required>
+                        <input type="datetime-local" name="products[0][rental_start_date]" class="form-control rental-start-date">
                     </td>
                     <td>
-                        <input type="datetime-local" name="products[0][rental_end_date]" class="form-control rental-end-date" required>
+                        <input type="datetime-local" name="products[0][rental_end_date]" class="form-control rental-end-date">
                     </td>
                 @else
                     <td>
@@ -60,11 +60,11 @@
         </tbody>
         <tfoot>
             <tr>
-                <td colspan="4" class="text-end"><strong>Grand Total:</strong></td>
+                <td colspan="5" class="text-end"><strong>Grand Total:</strong></td>
                 <td>
                     <input type="text" id="grandTotal" class="form-control" value="0.00" readonly>
                 </td>
-                <td colspan="3"></td>
+                <td colspan="2"></td>
             </tr>
         </tfoot>
     </table>
@@ -92,7 +92,7 @@
                         <select name="products[${rowIndex}][product_id]" class="form-select product-select" required>
                             <option value="">Select Product</option>
                             @foreach ($products as $product)
-                                <option value="{{ $product->id }}" data-price="{{ $product->price }}" data-type="{{ $product->type }}">
+                                <option value="{{ $product->id }}" data-price="{{ $product->price }}">
                                     {{ $product->name }}
                                 </option>
                             @endforeach
@@ -104,29 +104,46 @@
                     <td>
                         <input type="text" name="products[${rowIndex}][price]" class="form-control price-input" value="0.00" readonly>
                     </td>`;
-
             if (isSeasonal) {
                 newRow += `<td><input type="text" value="Seasonal Rental" class="form-control" readonly></td>`;
             } else {
                 newRow += `
-                    <td><input type="number" name="products[${rowIndex}][days]" class="form-control days-input" value="1" readonly></td>
-                    <td><input type="datetime-local" name="products[${rowIndex}][rental_start_date]" class="form-control rental-start-date" required></td>
-                    <td><input type="datetime-local" name="products[${rowIndex}][rental_end_date]" class="form-control rental-end-date" required></td>`;
+                    <td><input type="number" name="products[${rowIndex}][days]" class="form-control days-input" value="1" min="1" data-manual="false"></td>
+                    <td><input type="datetime-local" name="products[${rowIndex}][rental_start_date]" class="form-control rental-start-date"></td>
+                    <td><input type="datetime-local" name="products[${rowIndex}][rental_end_date]" class="form-control rental-end-date"></td>`;
             }
 
             newRow += `
                     <td><input type="text" class="form-control total-price" value="0.00" readonly></td>
                     <td><button type="button" class="btn btn-danger remove-row">Remove</button></td>
                 </tr>`;
-
             tableBody.insertAdjacentHTML('beforeend', newRow);
             initializeFlatpickr();
             rowIndex++;
         });
 
-        // Update price and total dynamically
+        // Listen for input changes
         document.getElementById('itemsTable').addEventListener('input', function (e) {
             const row = e.target.closest('tr');
+            const isDaysField = e.target.classList.contains('days-input');
+            const isStartEndField = e.target.classList.contains('rental-start-date') || e.target.classList.contains('rental-end-date');
+
+            if (isDaysField) {
+                // Mark the days field as manually adjusted
+                e.target.setAttribute('data-manual', 'true');
+            } else if (isStartEndField) {
+                // Reset manual override when start/end dates are adjusted
+                const daysInput = row.querySelector('.days-input');
+                daysInput.setAttribute('data-manual', 'false');
+                calculateDays(row); // Recalculate days
+            }
+
+            updateRowTotals(row);
+            calculateGrandTotal();
+        });
+
+        // Update totals for a row
+        function updateRowTotals(row) {
             const productSelect = row.querySelector('.product-select');
             const quantityInput = row.querySelector('.quantity-input');
             const priceInput = row.querySelector('.price-input');
@@ -136,21 +153,30 @@
             const selectedOption = productSelect.options[productSelect.selectedIndex];
             const price = parseFloat(selectedOption?.getAttribute('data-price')) || 0;
             const quantity = parseFloat(quantityInput.value) || 1;
+            const days = parseFloat(daysInput?.value) || 1;
 
-            let days = 1;
-            if (!isSeasonal) {
-                const start = row.querySelector('.rental-start-date').value;
-                const end = row.querySelector('.rental-end-date').value;
-                days = calculateDays(new Date(start), new Date(end));
-                daysInput.value = days;
-            }
-
-            const total = price * quantity * (isSeasonal ? 1 : days);
+            const total = price * quantity * days;
             priceInput.value = price.toFixed(2);
             totalPriceInput.value = total.toFixed(2);
+        }
 
-            calculateGrandTotal();
-        });
+        // Calculate days for daily rentals
+        function calculateDays(row) {
+            const startInput = row.querySelector('.rental-start-date');
+            const endInput = row.querySelector('.rental-end-date');
+            const daysInput = row.querySelector('.days-input');
+
+            // Skip calculation if manually adjusted
+            if (daysInput.getAttribute('data-manual') === 'true') return;
+
+            const startDate = new Date(startInput?.value);
+            const endDate = new Date(endInput?.value);
+
+            if (!isNaN(startDate) && !isNaN(endDate) && startDate <= endDate) {
+                const diffDays = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
+                daysInput.value = Math.max(1, diffDays); // At least 1 day
+            }
+        }
 
         // Calculate grand total
         function calculateGrandTotal() {
@@ -168,12 +194,6 @@
                     dateFormat: "Y-m-d H:i",
                 });
             }
-        }
-
-        function calculateDays(start, end) {
-            if (isNaN(start) || isNaN(end) || start > end) return 1;
-            const diff = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
-            return Math.max(1, diff);
         }
     });
 </script>
