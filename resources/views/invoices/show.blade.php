@@ -73,6 +73,7 @@
                                 @if ($invoice->category->name === 'daily')
                                     <th>From Date</th>
                                     <th>To Date</th>
+                                    <th>Total Days</th>
                                 @endif
                             </tr>
                         </thead>
@@ -94,6 +95,7 @@
                                         </td>
                                         <td>{{ $item->rental_end_date ? \Carbon\Carbon::parse($item->rental_end_date)->format('d/m/Y h:i A') : 'N/A' }}
                                         </td>
+                                        <td>{{ $item->days }}</td>
                                     @endif
                                 </tr>
                             @endforeach
@@ -115,6 +117,7 @@
                                     @if ($invoice->category->name === 'daily')
                                         <th>From Date</th>
                                         <th>To Date</th>
+                                        <th>Total Days</th>
                                     @endif
                                 </tr>
                             </thead>
@@ -135,6 +138,8 @@
                                             <td>{{ optional($addedItem->rental_start_date)->format('d/m/Y h:i A') }}</td>
                                             <td>{{ optional($addedItem->rental_end_date)->format('d/m/Y h:i A') }}</td>
                                         @endif
+                                        <td>{{ $addedItem->days }}</td>
+
                                     </tr>
                                 @endforeach
                             </tbody>
@@ -151,14 +156,14 @@
                                 <tr>
                                     <th>Item</th>
                                     <th>Qty</th>
-                                    @if ($invoice->category->name === 'daily')
-                                        <th>Days Used</th>
-                                    @endif
                                     <th>Cost</th>
                                     @if ($invoice->category->name === 'daily')
                                         <th>From Date</th>
                                     @endif
                                     <th>Return Date</th>
+                                    @if ($invoice->category->name === 'daily')
+                                        <th>Total Days Used</th>
+                                    @endif
                                 </tr>
                             </thead>
                             <tbody>
@@ -190,10 +195,6 @@
                                         <!-- Quantity -->
                                         <td>{{ $return->returned_quantity }}</td>
 
-                                        <!-- Days Used (only for daily mode) -->
-                                        @if ($invoice->category->name === 'daily')
-                                            <td>{{ $return->days_used }}</td>
-                                        @endif
 
                                         <!-- Cost -->
                                         <td>${{ number_format($cost, 2) }}</td>
@@ -213,6 +214,11 @@
 
                                         <!-- Return Date -->
                                         <td>{{ optional($return->return_date)->format('d/m/Y h:i A') }}</td>
+                                        <!-- Days Used (only for daily mode) -->
+                                        @if ($invoice->category->name === 'daily')
+                                            <td>{{ $return->days_used }}</td>
+                                        @endif
+
                                     </tr>
                                 @endforeach
                             </tbody>
@@ -231,64 +237,45 @@
                                         <span class="me-2 h6">Salesperson:</span>
                                         <span>{{ $invoice->user->name ?? 'N/A' }}</span>
                                     </p>
-                                    <p class="mb-1">
-                                        <span>
-                                            @if ($invoice->paid_amount >= $invoice->total_amount)
-                                                Payment: Fully Paid
-                                            @elseif ($invoice->paid_amount > 0)
-                                                Payment: Partially Paid
-                                            @else
-                                                Payment: Not Paid
-                                            @endif
-                                        </span>
-                                    </p>
-                                    @if ($invoice->note)
-                                        <span class="h6">NOTE:</span>
-                                        <span>{{ $invoice->note }}</span>
-                                    @endif
+                                    <div class="mb-3">
+                                        @php
+                                            $totalPaid = $invoice->paid_amount + $invoice->deposit;
+                                            if ($totalPaid >= $totals['finalTotal']) {
+                                                $paymentStatus = 'Fully Paid';
+                                                $badgeClass = 'bg-success';
+                                            } elseif ($totalPaid > 0) {
+                                                $paymentStatus = 'Partially Paid';
+                                                $badgeClass = 'bg-warning';
+                                            } else {
+                                                $paymentStatus = 'Not Paid';
+                                                $badgeClass = 'bg-danger';
+                                            }
+                                        @endphp
+
+                                        <span class="badge {{ $badgeClass }}">{{ $paymentStatus }}</span>
+                                    </div>
 
                                 </td>
                                 <td class="px-0 py-3 w-px-150">
                                     <p class="mb-2">Subtotal:</p>
-                                    <p class="mb-2">Additional Costs:</p>
-                                    <p class="mb-2 text-danger">Cost for Used Days:</p>
-                                    <p class="mb-2 text-success">Refund for Unused Days:</p>
-                                    <p class="mb-2">Discount ({{ $invoice->total_discount }}%):</p>
-                                    @if ($invoice->deposit > 0)
-                                        <p class="mb-2">Deposit:</p>
-                                    @endif
-                                    <p class="mb-0">Total:</p>
+                                    <p class="mb-2">Returned Items Cost:</p>
+                                    <p class="mb-2">Refund for Unused Days:</p>
+                                    <p class="mb-2">Final Total:</p>
+                                    <p class="mb-2 text-danger fw-bold">Balance Due:</p>
                                 </td>
                                 <td class="text-end px-0 py-6 w-px-100 fw-medium text-heading">
-                                    @php
-                                        $subtotal = $totals['subtotal'];
-                                        $addedCost = $totals['additionalCost'];
-                                        $costForUsedDays = $totals['costForUsedDays'] ?? 0; // Default to 0 if not present
-                                        $refundForUnusedDays = $totals['refundForUnusedDays'] ?? 0; // Default to 0 if not present
-                                        $discountAmount = $totals['discountAmount'];
-                                        $deposit = $invoice->deposit ?? 0;
-                                        $total = $totals['total'];
-                                    @endphp
-                                    <p class="fw-medium mb-2">${{ number_format($subtotal, 2) }}</p>
-                                    <p class="fw-medium mb-2">${{ number_format($addedCost, 2) }}</p>
-                                    <p class="fw-medium mb-2 text-danger">
-                                        ${{ number_format($costForUsedDays, 2) }}
-                                    </p>
-                                    <p class="fw-medium mb-2 text-success">
-                                        ${{ number_format($refundForUnusedDays, 2) }}
-                                    </p>
-                                    <p class="fw-medium mb-2">- ${{ number_format($discountAmount, 2) }}</p>
-                                    @if ($deposit > 0)
-                                        <p class="fw-medium mb-2">- ${{ number_format($deposit, 2) }}</p>
-                                    @endif
-                                    <p class="fw-medium mb-0">
-                                        ${{ number_format($total, 2) }}
+                                    <p class="fw-medium mb-2">${{ number_format($totals['subtotal'], 2) }}</p>
+                                    <p class="fw-medium mb-2">${{ number_format($totals['returnedItemsCost'], 2) }}</p>
+                                    <p class="fw-medium mb-2">- ${{ number_format($totals['refundForUnusedDays'], 2) }}</p>
+                                    <p class="fw-medium mb-2">${{ number_format($totals['finalTotal'], 2) }}</p>
+                                    <p class="fw-medium mb-0 text-danger">${{ number_format($totals['balanceDue'], 2) }}
                                     </p>
                                 </td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
+
 
 
                 <hr class="mt-0 mb-6">

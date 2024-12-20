@@ -94,10 +94,9 @@ class InvoiceController extends Controller
      */
     public function store(Request $request)
     {
-        // Retrieve the selected category from the session
         $categoryName = session('category', 'daily');
 
-        // Dynamic validation rules based on the category
+        // Validation rules
         $rules = [
             'customer_id' => 'nullable|exists:customers,id',
             'customer_name' => 'nullable|string|max:255|required_without:customer_id',
@@ -149,49 +148,38 @@ class InvoiceController extends Controller
                 $quantity = $request->quantities[$index];
                 $price = $request->prices[$index];
 
-                if ($categoryName === 'daily') {
-                    $rentalDays = $request->days;
+                $totalPrice = ($categoryName === 'daily')
+                    ? $quantity * $price * $request->days
+                    : $quantity * $price;
 
-                    $totalPrice = $quantity * $price * $rentalDays;
-                    $invoiceItems[] = new InvoiceItem([
-                        'product_id' => $product_id,
-                        'quantity' => $quantity,
-                        'price' => $price,
-                        'total_price' => $totalPrice,
-                        'rental_start_date' => $request->rental_start_date,
-                        'rental_end_date' => $request->rental_end_date,
-                        'days' => $rentalDays,
-                        'returned_quantity' => 0,
-                        'added_quantity' => 0,
-                    ]);
-                } else {
-                    $totalPrice = $quantity * $price;
-                    $invoiceItems[] = new InvoiceItem([
-                        'product_id' => $product_id,
-                        'quantity' => $quantity,
-                        'price' => $price,
-                        'total_price' => $totalPrice,
-                        'returned_quantity' => 0,
-                        'added_quantity' => 0,
-                    ]);
-                }
+                $invoiceItems[] = new InvoiceItem([
+                    'product_id' => $product_id,
+                    'quantity' => $quantity,
+                    'price' => $price,
+                    'total_price' => $totalPrice,
+                    'rental_start_date' => $categoryName === 'daily' ? $request->rental_start_date : null,
+                    'rental_end_date' => $categoryName === 'daily' ? $request->rental_end_date : null,
+                    'days' => $categoryName === 'daily' ? $request->days : null,
+                    'returned_quantity' => 0,
+                    'added_quantity' => 0,
+                ]);
 
                 $subtotal += $totalPrice;
             }
 
-            // Apply discount
+            // Discount calculations
             $totalDiscount = $request->total_discount ?? 0;
             $discountAmount = ($subtotal * $totalDiscount) / 100;
 
-            // Calculate the total amount after applying the discount
+            // Calculate the full total amount (before deposit)
             $totalAmount = $subtotal - $discountAmount;
 
-            // Subtract deposit from total amount as it's pre-paid
+            // Track deposit and payment
             $deposit = $request->deposit ?? 0;
-            $totalAmount -= $deposit;
+            $paymentAmount = $request->payment_amount ?? 0;
 
-            // Calculate paid amount (including deposit)
-            $paidAmount = $deposit + ($request->payment_amount ?? 0);
+            // Paid amount includes only additional payments beyond the deposit
+            $paidAmount = $paymentAmount;
 
             // Create the Invoice
             $invoiceData = [
@@ -200,8 +188,8 @@ class InvoiceController extends Controller
                 'category_id' => $category->id,
                 'total_discount' => $totalDiscount,
                 'deposit' => $deposit,
-                'total_amount' => $totalAmount,
-                'paid_amount' => $paidAmount,
+                'total_amount' => $totalAmount, // Full amount before subtracting deposit
+                'paid_amount' => $paidAmount, // Additional payments beyond deposit
                 'payment_method' => $request->payment_method,
                 'note' => $request->note,
             ];
@@ -232,8 +220,6 @@ class InvoiceController extends Controller
         }
     }
 
-
-
     /**
      * Show the specified resource.
      */
@@ -242,8 +228,8 @@ class InvoiceController extends Controller
         $invoice = Invoice::with([
             'items.product',
             'additionalItems',
-            'returnDetails.invoiceItem.product', // Load product for invoiceItem
-            'returnDetails.additionalItem.product' // Load product for additionalItem
+            'returnDetails.invoiceItem.product',
+            'returnDetails.additionalItem.product',
         ])->findOrFail($id);
 
         $totals = $invoice->calculateTotals();
@@ -258,15 +244,17 @@ class InvoiceController extends Controller
      */
     public function edit($id)
     {
-        $invoice = Invoice::with('items')->findOrFail($id);
+        $invoice = Invoice::with(['items', 'additionalItems', 'returnDetails'])->findOrFail($id);
         $customers = Customer::all();
         $products = Product::all();
 
         // Determine if the mode is seasonal
         $isSeasonal = session('category') === 'season'; // Replace 'category' logic as per your app rules
 
+        // Calculate totals
+        $totals = $invoice->calculateTotals();
 
-        return view('invoices.edit', compact('invoice', 'customers', 'products', 'isSeasonal'));
+        return view('invoices.edit', compact('invoice', 'customers', 'products', 'isSeasonal', 'totals'));
     }
 
     /**
@@ -350,13 +338,13 @@ class InvoiceController extends Controller
 
     public function print($id)
     {
-        $invoice = Invoice::with('items.product', 'additionalItems', 'returnDetails')->findOrFail($id);
+        $invoice = Invoice::with(['items.product', 'additionalItems', 'returnDetails.invoiceItem.product'])->findOrFail($id);
 
+        // Ensure totals are calculated using the revised logic
         $totals = $invoice->calculateTotals();
 
         return view('invoices.print', compact('invoice', 'totals'));
     }
-
 
     /**
      * Download the invoice as PDF.
@@ -398,7 +386,9 @@ class InvoiceController extends Controller
             'returns' => 'required|array',
             'returns.*.*.selected' => 'sometimes|required|boolean',
             'returns.*.*.quantity' => 'required_if:returns.*.*.selected,1|integer|min:1',
-            'returns.*.*.days_of_use' => 'required_if:returns.*.*.selected,1|integer|min:1',
+            'returns.*.*.days_of_use' => $isSeasonal
+                ? 'nullable|integer|min:1' // Optional for seasonal, defaults to 1 later
+                : 'required_if:returns.*.*.selected,1|integer|min:1',
             'returns.*.*.return_date' => $isSeasonal ? 'nullable|date' : 'required_if:returns.*.*.selected,1|date',
         ];
 
@@ -420,14 +410,14 @@ class InvoiceController extends Controller
                         : AdditionalItem::findOrFail($id);
 
                     $returnedQuantity = $item['quantity'];
-                    $daysUsed = $item['days_of_use']; // Directly use days_of_use from the request
+                    $daysUsed = $isSeasonal ? 1 : ($item['days_of_use'] ?? 1); // Default days to 1 for seasonal
 
                     if ($returnedQuantity > $model->quantity - $model->returned_quantity) {
                         throw new \Exception('Returned quantity exceeds available quantity.');
                     }
 
                     $refundAmount = 0;
-                    if ($daysUsed < $model->days) {
+                    if (!$isSeasonal && $daysUsed < $model->days) { // Only calculate unused days for non-seasonal
                         $unusedDays = $model->days - $daysUsed;
                         $refundAmount = $unusedDays * $model->price * $returnedQuantity;
                     }
@@ -440,7 +430,7 @@ class InvoiceController extends Controller
                         'returned_quantity' => $returnedQuantity,
                         'days_used' => $daysUsed,
                         'cost' => $refundAmount,
-                        'return_date' => Carbon::parse($item['return_date']),
+                        'return_date' => $isSeasonal ? now() : Carbon::parse($item['return_date']), // Use current date for seasonal
                     ]);
 
                     $model->returned_quantity += $returnedQuantity;

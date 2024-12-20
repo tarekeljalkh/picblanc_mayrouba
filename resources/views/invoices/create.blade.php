@@ -241,7 +241,7 @@
                 altInput: true,
                 altFormat: "F j, Y h:i K",
                 allowInput: true,
-                onChange: function () {
+                onChange: function() {
                     updateDaysFromDates();
                     calculateInvoiceTotal();
                 }
@@ -255,7 +255,7 @@
         });
 
         // Handle customer selection changes
-        $('#select_customer').on('change', function () {
+        $('#select_customer').on('change', function() {
             const selectedCustomer = $('#select_customer option:selected');
             $('#customer_name').val(selectedCustomer.data('name') || '');
             $('#customer_phone').val(selectedCustomer.data('phone') || '');
@@ -264,7 +264,7 @@
         });
 
         // Clear customer form
-        $('#clear_customer_form').on('click', function () {
+        $('#clear_customer_form').on('click', function() {
             $('#select_customer').val(null).trigger('change');
             $('#customer_name, #customer_phone, #customer_address').val('');
             checkFormValidity();
@@ -292,49 +292,56 @@
 
         // Calculate the overall invoice total
         function calculateInvoiceTotal() {
-            let subtotal = 0; // For per-day products
-            let fixedTotal = 0; // For fixed products
+    let subtotal = 0; // For per-day products
+    let fixedTotal = 0; // For fixed products
 
-            // Calculate subtotal and fixed total
-            $('#invoice-items-table tbody tr').each(function () {
-                const row = $(this);
-                const productType = row.find('.product-select option:selected').data('type');
-                const quantity = parseFloat(row.find('.quantity').val()) || 0;
-                const price = parseFloat(row.find('.price').val()) || 0;
+    // Calculate subtotal and fixed total
+    $('#invoice-items-table tbody tr').each(function () {
+        const row = $(this);
+        const productType = row.find('.product-select option:selected').data('type');
+        const quantity = parseFloat(row.find('.quantity').val()) || 0;
+        const price = parseFloat(row.find('.price').val()) || 0;
 
-                if (productType === 'fixed') {
-                    fixedTotal += quantity * price;
-                } else {
-                    subtotal += quantity * price;
-                }
-            });
-
-            // Fetch input values
-            const discount = parseFloat($('#total_discount').val()) || 0;
-            const discountAmount = (subtotal * discount) / 100;
-            const deposit = parseFloat($('#deposit').val()) || 0; // Subtracted as it's a pre-payment
-            const days = Math.max(parseInt($('#days').val()) || 1, 1);
-
-            // Calculate total amount
-            const totalAmount = (subtotal - discountAmount) * days + fixedTotal - deposit;
-            $('#total_amount').val(totalAmount.toFixed(2));
-
-            // Calculate remaining balance
-            const paymentAmount = parseFloat($('#payment_amount').val()) || 0;
-            const balance = totalAmount - paymentAmount;
-
-            // Update balance display
-            $('#remaining_balance').text(balance.toFixed(2));
-            checkFormValidity();
+        if (productType === 'fixed') {
+            fixedTotal += quantity * price;
+        } else {
+            subtotal += quantity * price;
         }
+    });
+
+    // Fetch input values
+    const discount = parseFloat($('#total_discount').val()) || 0;
+    const discountAmount = (subtotal * discount) / 100;
+    const deposit = parseFloat($('#deposit').val()) || 0; // Subtracted as it's a pre-payment
+    const days = Math.max(parseInt($('#days').val()) || 1, 1);
+    const paymentAmount = parseFloat($('#payment_amount').val()) || 0;
+
+    // Calculate total before payment
+    const totalBeforePayment = (subtotal - discountAmount) * days + fixedTotal - deposit;
+
+    // Deduct payment amount from total
+    const totalAfterPayment = totalBeforePayment - paymentAmount;
+
+    // Ensure totalAfterPayment is not negative
+    const finalTotal = totalAfterPayment > 0 ? totalAfterPayment : 0;
+
+    // Update fields
+    $('#total_amount').val(finalTotal.toFixed(2)); // Total amount reflects after payment
+    $('#remaining_balance').text(finalTotal.toFixed(2)); // Balance reflects the same value
+
+    // Validate form after recalculating
+    checkFormValidity();
+}
+
 
         // Validate the form
         function checkFormValidity() {
-            const hasCustomer = $('#select_customer').val() || ($('#customer_name').val() && $('#customer_phone').val() && $('#customer_address').val());
+            const hasCustomer = $('#select_customer').val() || ($('#customer_name').val() && $('#customer_phone').val() &&
+                $('#customer_address').val());
             let hasProducts = false;
 
             // Check if there are products in the table
-            $('#invoice-items-table .product-select').each(function () {
+            $('#invoice-items-table .product-select').each(function() {
                 if ($(this).val() && parseFloat($(this).closest('tr').find('.quantity').val()) > 0) {
                     hasProducts = true;
                     return false; // Break loop
@@ -352,19 +359,19 @@
         }
 
         // Event handlers for product and quantity changes
-        $(document).on('change', '.product-select', function () {
+        $(document).on('change', '.product-select', function() {
             const row = $(this).closest('tr');
             const price = parseFloat($(this).find('option:selected').data('price')) || 0;
             row.find('.price').val(price.toFixed(2));
             calculateRowTotal(row);
         });
 
-        $(document).on('input', '.quantity', function () {
+        $(document).on('input', '.quantity', function() {
             calculateRowTotal($(this).closest('tr'));
         });
 
         // Add a new item row
-        $('#add-item').on('click', function () {
+        $('#add-item').on('click', function() {
             const newRow = `
                 <tr>
                     <td>
@@ -385,7 +392,7 @@
         });
 
         // Remove an item row
-        $(document).on('click', '.remove-item', function () {
+        $(document).on('click', '.remove-item', function() {
             $(this).closest('tr').remove();
             calculateInvoiceTotal();
         });

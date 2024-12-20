@@ -59,12 +59,6 @@
                                 </tr>
                             @endforeach
                         </tbody>
-                        <tfoot class="table-secondary">
-                            <tr>
-                                <td><strong>Total</strong></td>
-                                <td><strong>${{ number_format(collect($trialBalanceData)->sum('amount'), 2) }}</strong></td>
-                            </tr>
-                        </tfoot>
                     </table>
                 @else
                     <div class="alert alert-warning">

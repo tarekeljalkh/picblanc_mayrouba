@@ -55,6 +55,10 @@
         .text-danger {
             color: red;
         }
+
+        .text-success {
+            color: green;
+        }
     </style>
 </head>
 
@@ -74,6 +78,8 @@
                     <p><strong>Rental Start:</strong> {{ $invoice->rental_start_date->format('d/m/Y h:i A') }}</p>
                     <p><strong>Rental End:</strong> {{ $invoice->rental_end_date->format('d/m/Y h:i A') }}</p>
                     <p><strong>Rental Days:</strong> {{ $invoice->days }} day(s)</p>
+                @else
+                    <p><strong>Category:</strong> Season</p>
                 @endif
             </div>
         </div>
@@ -100,6 +106,10 @@
                     <th>Unit Price</th>
                     <th>Qty</th>
                     <th>Total Price</th>
+                    @if ($invoice->category->name === 'daily')
+                        <th>From Date</th>
+                        <th>To Date</th>
+                    @endif
                 </tr>
             </thead>
             <tbody>
@@ -108,8 +118,11 @@
                         <td>{{ $item->product->name }}</td>
                         <td>${{ number_format($item->price, 2) }}</td>
                         <td>{{ $item->quantity }}</td>
-                        <td>${{ number_format($item->price * $item->quantity * ($invoice->category->name === 'daily' ? $item->days : 1), 2) }}
-                        </td>
+                        <td>${{ number_format($item->price * $item->quantity * ($invoice->category->name === 'daily' ? $item->days : 1), 2) }}</td>
+                        @if ($invoice->category->name === 'daily')
+                            <td>{{ optional($item->rental_start_date)->format('d/m/Y h:i A') }}</td>
+                            <td>{{ optional($item->rental_end_date)->format('d/m/Y h:i A') }}</td>
+                        @endif
                     </tr>
                 @endforeach
             </tbody>
@@ -140,91 +153,49 @@
             </table>
         @endif
 
-        <!-- Returned Items -->
-        @if ($invoice->returnDetails->isNotEmpty())
-            <h6>Returned Items</h6>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Item</th>
-                        <th>Qty</th>
-                        @if ($invoice->category->name === 'daily')
-                            <th>Days Used</th>
-                        @endif
-                        <th>Cost</th>
-                        <th>Return Date</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach ($invoice->returnDetails as $return)
-                        @php
-                            $unitPrice = $return->invoiceItem?->price ?? ($return->additionalItem?->price ?? 0);
-                            $cost =
-                                $invoice->category->name === 'daily'
-                                    ? $unitPrice * $return->days_used * $return->returned_quantity
-                                    : $unitPrice * $return->returned_quantity;
-                        @endphp
-                        <tr>
-                            <td>{{ $return->invoiceItem->product->name ?? $return->additionalItem->product->name }}
-                            </td>
-                            <td>{{ $return->returned_quantity }}</td>
-                            @if ($invoice->category->name === 'daily')
-                                <td>{{ $return->days_used }}</td>
-                            @endif
-                            <td>${{ number_format($cost, 2) }}</td>
-                            <td>{{ optional($return->return_date)->format('d/m/Y h:i A') }}</td>
-                        </tr>
-                    @endforeach
-                </tbody>
-            </table>
-        @endif
-
         <!-- Invoice Summary -->
         <h6>Invoice Summary</h6>
         <table>
+            @php
+                $subtotal = $totals['subtotal'];
+                $returnedItemsCost = $totals['returnedItemsCost'];
+                $refundForUnusedDays = $totals['refundForUnusedDays'];
+                $finalTotal = $totals['finalTotal'];
+                $balanceDue = $totals['balanceDue'];
+            @endphp
             <tr>
                 <td><strong>Subtotal:</strong></td>
-                <td class="text-end">${{ number_format($totals['subtotal'] ?? 0, 2) }}</td>
+                <td class="text-end">${{ number_format($subtotal, 2) }}</td>
             </tr>
-            @if ($totals['additionalCost'] > 0)
-                <tr>
-                    <td><strong>Additional Costs:</strong></td>
-                    <td class="text-end">${{ number_format($totals['additionalCost'], 2) }}</td>
-                </tr>
-            @endif
-            @if (isset($totals['returnedCost']) && $totals['returnedCost'] > 0)
-                <tr>
-                    <td><strong>Returned Costs:</strong></td>
-                    <td class="text-end text-danger">- ${{ number_format($totals['returnedCost'], 2) }}</td>
-                </tr>
-            @endif
             <tr>
-                <td><strong>Discount:</strong></td>
-                <td class="text-end text-danger">- ${{ number_format($totals['discountAmount'] ?? 0, 2) }}</td>
+                <td><strong>Returned Items Cost:</strong></td>
+                <td class="text-end text-danger">- ${{ number_format($returnedItemsCost, 2) }}</td>
             </tr>
-            @if (($totals['deposit'] ?? 0) > 0)
-                <tr>
-                    <td><strong>Deposit:</strong></td>
-                    <td class="text-end text-danger">- ${{ number_format($totals['deposit'], 2) }}</td>
-                </tr>
-            @endif
             <tr>
-                <td><strong>Total:</strong></td>
-                <td class="text-end"><strong>${{ number_format($totals['total'], 2) }}</strong></td>
+                <td><strong>Refund for Unused Days:</strong></td>
+                <td class="text-end text-success">- ${{ number_format($refundForUnusedDays, 2) }}</td>
+            </tr>
+            <tr>
+                <td><strong>Final Total:</strong></td>
+                <td class="text-end">${{ number_format($finalTotal, 2) }}</td>
+            </tr>
+            <tr>
+                <td class="text-danger"><strong>Balance Due:</strong></td>
+                <td class="text-end text-danger">${{ number_format($balanceDue, 2) }}</td>
             </tr>
         </table>
 
         <!-- Salesperson -->
         <p><strong>Salesperson:</strong> {{ $invoice->user->name ?? 'N/A' }}</p>
-        <span>
-            @if ($invoice->paid_amount >= $invoice->total_amount)
+        <p>
+            @if ($balanceDue <= 0)
                 Payment: Fully Paid
             @elseif ($invoice->paid_amount > 0)
                 Payment: Partially Paid
             @else
                 Payment: Not Paid
             @endif
-        </span>
+        </p>
 
         <hr />
 

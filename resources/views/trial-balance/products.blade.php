@@ -49,8 +49,6 @@
                         <tr>
                             <th>Product</th>
                             <th>Quantity Rented</th>
-                            <th>Price per Unit (USD)</th>
-                            <th>Total Income (USD)</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -58,14 +56,8 @@
                             <tr>
                                 <td>{{ $balance['product'] }}</td>
                                 <td>{{ $balance['quantity'] }}</td>
-                                <td>${{ number_format($balance['price_per_unit'], 2) }}</td>
-                                <td>${{ number_format($balance['total'], 2) }}</td>
                             </tr>
                         @endforeach
-                        <tr class="table-secondary">
-                            <td colspan="3"><strong>Total Income</strong></td>
-                            <td><strong>${{ number_format($totalIncome, 2) }}</strong></td>
-                        </tr>
                     </tbody>
                 </table>
 

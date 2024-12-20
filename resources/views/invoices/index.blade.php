@@ -75,6 +75,7 @@
                         <tr>
                             <th>Customer</th>
                             <th>Total</th>
+                            <th>Paid Amount</th> <!-- New column -->
                             <th>Paid</th>
                             @if (session('category') === 'daily')
                                 <th>From</th>
@@ -85,13 +86,17 @@
                     </thead>
                     <tbody>
                         @foreach ($invoices as $invoice)
+                            @php
+                                $totalPaid = $invoice->paid_amount + $invoice->deposit; // Calculate total paid amount
+                            @endphp
                             <tr>
                                 <td>{{ $invoice->customer->name }}</td>
                                 <td>${{ number_format($invoice->total_amount, 2) }}</td>
+                                <td>${{ number_format($totalPaid, 2) }}</td> <!-- Display total paid amount -->
                                 <td>
-                                    @if ($invoice->paid_amount >= $invoice->total_amount)
-                                        <span class="badge bg-success">Paid</span>
-                                    @elseif ($invoice->paid_amount > 0)
+                                    @if ($totalPaid >= $invoice->total_amount)
+                                        <span class="badge bg-success">Fully Paid</span>
+                                    @elseif ($totalPaid > 0)
                                         <span class="badge bg-warning">Partially Paid</span>
                                     @else
                                         <span class="badge bg-danger">Unpaid</span>
@@ -102,20 +107,18 @@
                                     <td>{{ optional($invoice->rental_end_date)->format('d/m/Y h:i A') }}</td>
                                 @endif
                                 <td>
-                                    <a href="{{ route('invoices.edit', $invoice->id) }}"
-                                        class="btn btn-warning btn-sm">Edit</a>
-                                    <a href="{{ route('invoices.show', $invoice->id) }}"
-                                        class="btn btn-info btn-sm">Show</a>
-                                    <a href="{{ route('invoices.print', $invoice->id) }}"
-                                        class="btn btn-primary btn-sm">Print</a>
+                                    <a href="{{ route('invoices.edit', $invoice->id) }}" class="btn btn-warning btn-sm">Edit</a>
+                                    <a href="{{ route('invoices.show', $invoice->id) }}" class="btn btn-info btn-sm">Show</a>
+                                    <a href="{{ route('invoices.print', $invoice->id) }}" class="btn btn-primary btn-sm">Print</a>
                                     @if (auth()->user()->role === 'admin')
-                                        <a href="{{ route('invoices.destroy', $invoice->id) }}"
-                                            class="btn btn-danger btn-sm delete-item">Delete</a>
+                                        <a href="{{ route('invoices.destroy', $invoice->id) }}" class="btn btn-danger btn-sm delete-item">Delete</a>
                                     @endif
                                 </td>
                             </tr>
                         @endforeach
                     </tbody>
+
+
                 </table>
 
                 <div class="mt-3">

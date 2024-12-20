@@ -85,12 +85,15 @@ class DashbboardController extends Controller
 
     public function trialBalance(Request $request)
     {
+        // Retrieve date range from the request or default to today's date
         $fromDate = $request->input('from_date', Carbon::today()->toDateString());
         $toDate = $request->input('to_date', Carbon::today()->toDateString());
 
+        // Parse the date range
         $from = Carbon::parse($fromDate)->startOfDay();
         $to = Carbon::parse($toDate)->endOfDay();
 
+        // Get the selected category
         $categoryName = session('category', 'daily');
         $category = Category::where('name', $categoryName)->first();
 
@@ -98,29 +101,33 @@ class DashbboardController extends Controller
             return redirect()->back()->withErrors('Invalid category selected.');
         }
 
+        // Fetch invoices for the specified category and date range
         $invoices = Invoice::where('category_id', $category->id)
             ->whereBetween('created_at', [$from, $to])
-            ->with('additionalItems') // Include additional items
             ->get();
 
-        $totalPaid = $invoices->sum('paid_amount');
-        $totalUnpaid = $invoices->sum(function ($invoice) {
-            return $invoice->total_amount - $invoice->paid_amount;
-        });
+        // Initialize totals
+        $totalPaidInvoices = 0;
+        $totalUnpaidInvoices = 0;
+        $totalPaidByCreditCard = 0;
 
-        // Include payments from additional items
-        $totalPaidCreditCard = $invoices
-            ->where('payment_method', 'credit_card')
-            ->sum(function ($invoice) {
-                return $invoice->paid_amount;
-            });
+        foreach ($invoices as $invoice) {
+            $paid = $invoice->deposit + $invoice->paid_amount; // Total amount paid (deposit + actual payments)
+            $unpaid = max(0, $invoice->total_amount - $paid);  // Remaining balance
 
-        $totalBalance = $totalPaid + $totalUnpaid;
+            $totalPaidInvoices += $paid;
+            $totalUnpaidInvoices += $unpaid;
 
+            if ($invoice->payment_method === 'credit_card') {
+                $totalPaidByCreditCard += $paid;
+            }
+        }
+
+        // Prepare trial balance data
         $trialBalanceData = [
-            ['description' => 'Total Paid Invoices', 'amount' => $totalPaid],
-            ['description' => 'Total Unpaid Invoices', 'amount' => $totalUnpaid],
-            ['description' => 'Total Paid by Credit Card', 'amount' => $totalPaidCreditCard],
+            ['description' => 'Total Paid Invoices', 'amount' => $totalPaidInvoices],
+            ['description' => 'Total Unpaid Invoices', 'amount' => $totalUnpaidInvoices],
+            ['description' => 'Total Paid by Credit Card', 'amount' => $totalPaidByCreditCard],
         ];
 
         return view('trial-balance.index', compact('trialBalanceData', 'fromDate', 'toDate'));
@@ -197,7 +204,6 @@ class DashbboardController extends Controller
                     'price_per_unit' => $totalIncomeForProduct / $totalQuantity,
                     'total' => $totalIncomeForProduct,
                 ];
-                $totalIncome += $totalIncomeForProduct;
             }
         }
 

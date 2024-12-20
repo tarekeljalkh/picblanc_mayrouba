@@ -26,6 +26,7 @@
                                 data-type="{{ $product->type }}">
                                 <div class="card-body text-center">
                                     <h5 class="card-title">{{ $product->name }}</h5>
+                                    <p class="card-text">{{ $product->description }}</p>
                                     <p class="card-text">${{ number_format($product->price, 2) }}</p>
                                 </div>
                             </div>
