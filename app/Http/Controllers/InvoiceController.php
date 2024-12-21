@@ -140,7 +140,7 @@ class InvoiceController extends Controller
             // Retrieve the selected category
             $category = Category::where('name', $categoryName)->firstOrFail();
 
-            // Calculate totals
+            // Calculate the base subtotal (raw total without adjustments)
             $subtotal = 0;
             $invoiceItems = [];
 
@@ -167,29 +167,15 @@ class InvoiceController extends Controller
                 $subtotal += $totalPrice;
             }
 
-            // Discount calculations
-            $totalDiscount = $request->total_discount ?? 0;
-            $discountAmount = ($subtotal * $totalDiscount) / 100;
-
-            // Calculate the full total amount (before deposit)
-            $totalAmount = $subtotal - $discountAmount;
-
-            // Track deposit and payment
-            $deposit = $request->deposit ?? 0;
-            $paymentAmount = $request->payment_amount ?? 0;
-
-            // Paid amount includes only additional payments beyond the deposit
-            $paidAmount = $paymentAmount;
-
-            // Create the Invoice
+            // Create the Invoice (store base subtotal as total_amount)
             $invoiceData = [
                 'customer_id' => $customer->id,
                 'user_id' => auth()->user()->id,
                 'category_id' => $category->id,
-                'total_discount' => $totalDiscount,
-                'deposit' => $deposit,
-                'total_amount' => $totalAmount, // Full amount before subtracting deposit
-                'paid_amount' => $paidAmount, // Additional payments beyond deposit
+                'total_discount' => $request->total_discount ?? 0, // Discount stored but not applied
+                'deposit' => $request->deposit ?? 0, // Deposit stored but not applied
+                'total_amount' => $subtotal, // Store subtotal as the base amount
+                'paid_amount' => $request->payment_amount ?? 0,
                 'payment_method' => $request->payment_method,
                 'note' => $request->note,
             ];
@@ -219,6 +205,7 @@ class InvoiceController extends Controller
             return redirect()->back()->with('error', 'An error occurred while creating the invoice.');
         }
     }
+
 
     /**
      * Show the specified resource.
@@ -387,7 +374,7 @@ class InvoiceController extends Controller
             'returns.*.*.selected' => 'sometimes|required|boolean',
             'returns.*.*.quantity' => 'required_if:returns.*.*.selected,1|integer|min:1',
             'returns.*.*.days_of_use' => $isSeasonal
-                ? 'nullable|integer|min:1' // Optional for seasonal, defaults to 1 later
+                ? 'nullable|integer|min:1'
                 : 'required_if:returns.*.*.selected,1|integer|min:1',
             'returns.*.*.return_date' => $isSeasonal ? 'nullable|date' : 'required_if:returns.*.*.selected,1|date',
         ];
@@ -399,6 +386,8 @@ class InvoiceController extends Controller
         DB::beginTransaction();
 
         try {
+            $totalRefund = 0;
+
             foreach ($validated['returns'] as $type => $items) {
                 foreach ($items as $id => $item) {
                     if (!isset($item['selected']) || !$item['selected']) {
@@ -410,17 +399,19 @@ class InvoiceController extends Controller
                         : AdditionalItem::findOrFail($id);
 
                     $returnedQuantity = $item['quantity'];
-                    $daysUsed = $isSeasonal ? 1 : ($item['days_of_use'] ?? 1); // Default days to 1 for seasonal
+                    $daysUsed = $isSeasonal ? 1 : ($item['days_of_use'] ?? 1);
 
                     if ($returnedQuantity > $model->quantity - $model->returned_quantity) {
                         throw new \Exception('Returned quantity exceeds available quantity.');
                     }
 
                     $refundAmount = 0;
-                    if (!$isSeasonal && $daysUsed < $model->days) { // Only calculate unused days for non-seasonal
+                    if (!$isSeasonal && $daysUsed < $model->days) {
                         $unusedDays = $model->days - $daysUsed;
                         $refundAmount = $unusedDays * $model->price * $returnedQuantity;
                     }
+
+                    $totalRefund += $refundAmount;
 
                     ReturnDetail::create([
                         'invoice_id' => $invoice->id,
@@ -430,7 +421,7 @@ class InvoiceController extends Controller
                         'returned_quantity' => $returnedQuantity,
                         'days_used' => $daysUsed,
                         'cost' => $refundAmount,
-                        'return_date' => $isSeasonal ? now() : Carbon::parse($item['return_date']), // Use current date for seasonal
+                        'return_date' => $isSeasonal ? now() : Carbon::parse($item['return_date']),
                     ]);
 
                     $model->returned_quantity += $returnedQuantity;
@@ -441,137 +432,23 @@ class InvoiceController extends Controller
                 }
             }
 
-            // Check if all items and additional items are fully returned
             $allOriginalItemsReturned = $invoice->items()->whereColumn('returned_quantity', '<', 'quantity')->doesntExist();
             $allAdditionalItemsReturned = $invoice->additionalItems()->whereColumn('returned_quantity', '<', 'quantity')->doesntExist();
 
-            if ($allOriginalItemsReturned && $allAdditionalItemsReturned) {
-                $invoice->status = 'returned';
-            } else {
-                $invoice->status = 'active';
-            }
-
+            $invoice->status = ($allOriginalItemsReturned && $allAdditionalItemsReturned) ? 'returned' : 'active';
             $invoice->save();
 
             DB::commit();
 
             return redirect()->route('invoices.show', $invoice->id)
-                ->with('success', 'Returns processed successfully.');
+                ->with('success', 'Returns processed successfully. Total refund: $' . number_format($totalRefund, 2));
         } catch (\Exception $e) {
             DB::rollBack();
             return redirect()->back()->with('error', 'Failed to process returns: ' . $e->getMessage());
         }
     }
 
-    /**
-     * Helper method to recalculate the total amount of the invoice.
-     */
-    private function calculateInvoiceTotal($invoice)
-    {
-        $isSeasonal = $invoice->category->name === 'season';
 
-        // Recalculate original items
-        $originalTotal = $invoice->items->sum(function ($item) use ($isSeasonal) {
-            $remainingQuantity = $item->quantity - $item->returned_quantity;
-            return $isSeasonal
-                ? $item->price * $remainingQuantity
-                : $item->price * $remainingQuantity * ($item->days ?? 1);
-        });
-
-        // Recalculate additional items
-        $additionalTotal = $invoice->additionalItems->sum(function ($item) use ($isSeasonal) {
-            $remainingQuantity = $item->quantity - $item->returned_quantity;
-            return $isSeasonal
-                ? $item->price * $remainingQuantity
-                : $item->price * $remainingQuantity * ($item->days ?? 1);
-        });
-
-        return $originalTotal + $additionalTotal;
-    }
-
-
-    // public function processReturns(Request $request, $invoiceId)
-    // {
-    //     $isSeasonal = session('category') === 'season';
-
-    //     $validated = $request->validate([
-    //         'returns' => 'required|array',
-    //         'returns.*.*.selected' => 'sometimes|required|boolean',
-    //         'returns.*.*.quantity' => 'required_with:returns.*.*.selected|integer|min:1',
-    //         'returns.*.*.return_date' => $isSeasonal
-    //             ? 'nullable|date'
-    //             : 'required_with:returns.*.*.selected|date',
-    //     ]);
-
-    //     $invoice = Invoice::findOrFail($invoiceId);
-
-    //     DB::beginTransaction();
-
-    //     try {
-    //         foreach ($validated['returns'] as $type => $items) {
-    //             foreach ($items as $id => $item) {
-    //                 if (!isset($item['selected']) || !$item['selected']) {
-    //                     continue;
-    //                 }
-
-    //                 $model = $type === 'original'
-    //                     ? InvoiceItem::findOrFail($id)
-    //                     : AdditionalItem::findOrFail($id);
-
-    //                 $returnedQuantity = $item['quantity'];
-
-    //                 $returnDate = $isSeasonal
-    //                     ? Carbon::parse($model->rental_start_date)
-    //                     : Carbon::parse($item['return_date']);
-
-    //                 $rentalStartDate = Carbon::parse($model->rental_start_date);
-    //                 $plannedEndDate = Carbon::parse($model->rental_end_date);
-
-    //                 // Planned and actual days
-    //                 $plannedDays = $rentalStartDate->diffInDays($plannedEndDate);
-    //                 $daysUsed = $rentalStartDate->diffInDays($returnDate);
-
-    //                 // Calculate unused days
-    //                 $unusedDays = max(0, $plannedDays - $daysUsed);
-
-    //                 // Daily rate
-    //                 $dailyRate = $model->price;
-
-    //                 // Calculate cost for days used
-    //                 $cost = $daysUsed * $dailyRate * $returnedQuantity;
-
-    //                 // Calculate refund for unused days
-    //                 $refund = $unusedDays * $dailyRate * $returnedQuantity;
-
-    //                 // Record return details
-    //                 ReturnDetail::create([
-    //                     'invoice_id' => $invoice->id,
-    //                     'invoice_item_id' => $type === 'original' ? $model->id : null,
-    //                     'additional_item_id' => $type === 'additional' ? $model->id : null,
-    //                     'product_id' => $model->product_id,
-    //                     'returned_quantity' => $returnedQuantity,
-    //                     'days_used' => $daysUsed,
-    //                     'cost' => $cost,   // Cost for days used
-    //                     'refund' => $refund, // Refund for unused days
-    //                     'return_date' => $returnDate,
-    //                 ]);
-
-
-    //                 // Update returned quantity
-    //                 $model->returned_quantity += $returnedQuantity;
-    //                 $model->save();
-    //             }
-    //         }
-
-    //         DB::commit();
-
-    //         return redirect()->route('invoices.show', $invoice->id)
-    //             ->with('success', 'Returns processed successfully.');
-    //     } catch (\Exception $e) {
-    //         DB::rollBack();
-    //         return redirect()->back()->with('error', 'Failed to process returns: ' . $e->getMessage());
-    //     }
-    // }
 
     public function addItems(Request $request, $invoiceId)
     {
@@ -585,13 +462,15 @@ class InvoiceController extends Controller
             'products.*.days' => 'nullable|integer|min:1',
             'products.*.rental_start_date' => 'nullable|date',
             'products.*.rental_end_date' => 'nullable|date',
-            'amount_paid' => 'nullable|numeric|min:0', // Include validation for amount paid
+            'amount_paid' => 'nullable|numeric|min:0',
         ]);
 
         DB::beginTransaction();
 
         try {
             foreach ($validated['products'] as $product) {
+                $itemSubtotal = $product['price'] * $product['quantity'] * ($product['days'] ?? 1);
+
                 AdditionalItem::create([
                     'invoice_id' => $invoice->id,
                     'product_id' => $product['product_id'],
@@ -599,17 +478,14 @@ class InvoiceController extends Controller
                     'returned_quantity' => 0,
                     'price' => $product['price'],
                     'days' => $product['days'] ?? null,
-                    'total_price' => $product['price'] * $product['quantity'] * ($product['days'] ?? 1),
+                    'total_price' => $itemSubtotal,
                     'rental_start_date' => $product['rental_start_date'] ?? null,
                     'rental_end_date' => $product['rental_end_date'] ?? null,
                     'status' => 'active',
                 ]);
             }
 
-            // Recalculate total_amount
-            $invoice->total_amount = $this->calculateInvoiceTotal($invoice);
-
-            // Update the paid amount if provided
+            // Update paid amount if provided
             if (isset($validated['amount_paid'])) {
                 $invoice->paid_amount += $validated['amount_paid'];
             }
@@ -626,46 +502,6 @@ class InvoiceController extends Controller
         }
     }
 
-
-    // public function addItems(Request $request, $invoiceId)
-    // {
-    //     $invoice = Invoice::findOrFail($invoiceId);
-
-    //     $validated = $request->validate([
-    //         'products' => 'required|array',
-    //         'products.*.product_id' => 'required|exists:products,id',
-    //         'products.*.quantity' => 'required|integer|min:1',
-    //         'products.*.price' => 'required|numeric|min:0',
-    //         'products.*.days' => 'nullable|integer|min:1',
-    //         'products.*.rental_start_date' => 'nullable|date',
-    //         'products.*.rental_end_date' => 'nullable|date|after_or_equal:products.*.rental_start_date',
-    //     ]);
-
-    //     DB::beginTransaction();
-    //     try {
-    //         foreach ($validated['products'] as $product) {
-    //             AdditionalItem::create([
-    //                 'invoice_id' => $invoice->id,
-    //                 'product_id' => $product['product_id'],
-    //                 'quantity' => $product['quantity'],
-    //                 'returned_quantity' => 0,
-    //                 'price' => $product['price'],
-    //                 'days' => $product['days'] ?? null,
-    //                 'total_price' => $product['price'] * $product['quantity'] * ($product['days'] ?? 1),
-    //                 'rental_start_date' => $product['rental_start_date'] ?? null,
-    //                 'rental_end_date' => $product['rental_end_date'] ?? null,
-    //                 'status' => 'active',
-    //             ]);
-    //         }
-    //         DB::commit();
-
-    //         return redirect()->route('invoices.show', $invoice->id)
-    //             ->with('success', 'Items added successfully.');
-    //     } catch (\Exception $e) {
-    //         DB::rollBack();
-    //         return redirect()->back()->with('error', 'Failed to add items: ' . $e->getMessage());
-    //     }
-    // }
 
 
     public function updatePaymentStatus(Request $request, $id)
@@ -796,18 +632,15 @@ class InvoiceController extends Controller
     {
         $invoice = Invoice::findOrFail($invoiceId);
 
+        // Validate the new payment amount
         $validated = $request->validate([
-            'new_payment' => 'required|numeric|min:0|max:' . ($invoice->total_amount - $invoice->paid_amount),
+            'new_payment' => 'required|numeric|min:0|max:' . ($invoice->total_price - $invoice->paid_amount - $invoice->deposit),
         ]);
 
         // Update the paid amount
         $invoice->paid_amount += $validated['new_payment'];
 
-        // Determine if the invoice is fully paid
-        if ($invoice->paid_amount >= $invoice->total_amount) {
-            $invoice->paid_amount = $invoice->total_amount; // Cap paid amount at total
-        }
-
+        // Save the invoice
         $invoice->save();
 
         return redirect()->route('invoices.show', $invoice->id)

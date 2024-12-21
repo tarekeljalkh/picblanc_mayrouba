@@ -89,16 +89,24 @@ class Invoice extends Model
     // Calculate discount amount
     public function getDiscountAmountAttribute()
     {
-        $baseAmount = $this->subtotal + $this->added_cost - $this->returned_cost;
+        $baseAmount = $this->total_amount + $this->added_cost - $this->returned_cost;
         return ($baseAmount * $this->total_discount) / 100;
-    }
+        }
 
     // Calculate the final total
-    public function getTotalPriceAttribute()
-    {
-        $baseAmount = $this->subtotal + $this->added_cost - $this->returned_cost;
-        return $baseAmount - $this->discount_amount - $this->deposit;
-    }
+// Final total dynamically calculated, including adjustments
+public function getTotalPriceAttribute()
+{
+    $baseAmount = $this->subtotal; // Base total of original items
+    $additionalItemsTotal = $this->added_cost; // Total of additional items
+    $returnedCost = $this->returned_cost; // Cost of returned items
+    $discountAmount = $this->discount_amount; // Discount applied
+
+    // Calculate Final Total
+    return $baseAmount + $additionalItemsTotal - $returnedCost - $discountAmount;
+}
+
+
 
     // Get total returned quantity
     public function getTotalReturnedQuantityAttribute()
@@ -115,21 +123,27 @@ class Invoice extends Model
     // Update and save invoice totals
     public function recalculateTotals()
     {
+        // Subtotal for original items
         $itemSubtotal = $this->items->sum(function ($item) {
             return $item->price * $item->quantity * ($item->days ?? 1);
         });
 
+        // Subtotal for additional items
         $additionalItemSubtotal = $this->additionalItems->sum(function ($item) {
             return $item->price * $item->quantity * ($item->days ?? 1);
         });
 
+        // Total adjustments
         $subtotal = $itemSubtotal + $additionalItemSubtotal;
 
         $discountAmount = ($subtotal * ($this->total_discount ?? 0)) / 100;
 
-        $this->total_amount = $subtotal - $discountAmount;
-
-        $this->save();
+        // Total amount is calculated dynamically but not saved
+        return [
+            'subtotal' => $subtotal,
+            'discountAmount' => $discountAmount,
+            'finalTotal' => $subtotal - $discountAmount,
+        ];
     }
 
     // public function recalculateTotals()
@@ -158,7 +172,11 @@ class Invoice extends Model
 
     public function getBalanceDueAttribute()
     {
-        return max(0, $this->total_amount - $this->deposit - $this->paid_amount);
+        $paidAmount = $this->paid_amount + $this->deposit; // Total paid (deposit + additional payments)
+        $totalPrice = $this->total_price; // Final total from above logic
+
+        // Calculate Balance Due
+        return max(0, $totalPrice - $paidAmount);
     }
 
 
@@ -283,11 +301,9 @@ class Invoice extends Model
 
     public function getPaymentStatusAttribute()
     {
-        // Dynamically calculate the total including additional items
-        $totalAmount = $this->total_amount + $this->additionalItems->sum('total_price');
+        $totalAmount = $this->totalWithAdditional; // Dynamic total
         $paidAmount = $this->paid_amount;
 
-        // Determine the payment status
         if ($paidAmount >= $totalAmount) {
             return 'fully_paid';
         }
@@ -299,8 +315,9 @@ class Invoice extends Model
         return 'unpaid';
     }
 
+
     public function getTotalWithAdditionalAttribute()
     {
-        return $this->total_amount + $this->additionalItems->sum('total_price');
+        return $this->total_amount + $this->added_cost - $this->returned_cost;
     }
 }
