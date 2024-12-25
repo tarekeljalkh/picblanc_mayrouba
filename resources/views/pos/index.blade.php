@@ -84,6 +84,14 @@
                         <input type="number" class="form-control" id="rental-days">
                     </div>
                 @endif
+
+                @if (session('category') === 'season')
+                    <button class="btn btn-primary w-100 mt-3" data-bs-toggle="modal" data-bs-target="#addCustomItemModal">
+                        Add Custom Product
+                    </button>
+                    <br><br>
+                @endif
+
                 <!-- Discount, and Total Amount -->
                 <div class="mb-3">
                     <label for="total-discount" class="form-label">Total Discount (%)</label>
@@ -167,6 +175,38 @@
                             <input type="file" class="form-control" id="deposit_card" name="deposit_card">
                         </div>
                         <button type="submit" class="btn btn-primary">Save Customer</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Modal for Adding Custom Item -->
+    <div class="modal fade" id="addCustomItemModal" tabindex="-1" aria-labelledby="addCustomItemModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addCustomItemModalLabel">Add Custom Item</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="customItemForm">
+                        <div class="mb-3">
+                            <label for="custom-item-name" class="form-label">Item Name</label>
+                            <input type="text" class="form-control" id="custom-item-name" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="custom-item-price" class="form-label">Price ($)</label>
+                            <input type="number" class="form-control" id="custom-item-price" step="0.01" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="custom-item-quantity" class="form-label">Quantity</label>
+                            <input type="number" class="form-control" id="custom-item-quantity" value="1"
+                                min="1" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Add to Cart</button>
                     </form>
                 </div>
             </div>
@@ -275,6 +315,26 @@
                     validateCheckoutButton();
                 });
 
+                // Add custom item to cart (Season category only)
+                $('#customItemForm').on('submit', function(e) {
+                    e.preventDefault();
+                    const name = $('#custom-item-name').val();
+                    const price = parseFloat($('#custom-item-price').val());
+                    const quantity = parseInt($('#custom-item-quantity').val());
+
+                    cart.push({
+                        id: null, // Custom items have no product ID
+                        name: name,
+                        price: price,
+                        quantity: quantity,
+                        type: 'custom' // Mark as custom
+                    });
+
+                    renderCart();
+                    calculateTotalAmount();
+                    $('#addCustomItemModal').modal('hide'); // Close the modal
+                });
+
                 // Trigger recalculations when discount, deposit, payment amount, or days change
                 $('#total-discount, #deposit, #payment-amount, #rental-days').on('input', function() {
                     calculateTotalAmount();
@@ -332,16 +392,15 @@
                     // Update Remaining Balance display dynamically
                     if ($('#remaining_balance').length === 0) {
                         $('#payment-amount').after(`
-            <div class="mt-2">
-                <label class="form-label">Remaining Balance ($)</label>
-                <span id="remaining_balance" class="form-control" readonly>0.00</span>
-            </div>
-        `);
+                        <div class="mt-2">
+                            <label class="form-label">Remaining Balance ($)</label>
+                            <span id="remaining_balance" class="form-control" readonly>0.00</span>
+                        </div>
+                    `);
                     }
 
                     $('#remaining_balance').text(grandTotal.toFixed(2)); // Update remaining balance display
                 }
-
 
                 // Render the cart dynamically
                 function renderCart() {
@@ -349,27 +408,25 @@
                     if (cart.length > 0) {
                         cart.forEach((item, index) => {
                             cartHtml += `
-                                <div class="cart-item mb-3">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <span><strong>${item.name}</strong></span>
-                                        <button class="btn btn-danger btn-sm remove-from-cart" data-index="${index}">Remove</button>
-                                    </div>
-                                    <div class="form-row mt-2">
-                                        <div class="d-flex justify-content-between">
-                                            <div class="col">
-                                                <label>Qty</label>
-                                                <input type="number" class="form-control form-control-sm quantity" data-index="${index}" value="${item.quantity}" />
-                                            </div>
-                                            <div class="col">
-                                                <label>Price</label>
-                                                <input type="text" class="form-control form-control-sm price" value="${item.type === 'fixed'
-                                ? (item.price * item.quantity).toFixed(2)
-                                : (item.price * item.quantity * ($('#rental-days').val() || 1)).toFixed(2)}" readonly />
-                                            </div>
+                            <div class="cart-item mb-3">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span><strong>${item.name}</strong></span>
+                                    <button class="btn btn-danger btn-sm remove-from-cart" data-index="${index}">Remove</button>
+                                </div>
+                                <div class="form-row mt-2">
+                                    <div class="d-flex justify-content-between">
+                                        <div class="col">
+                                            <label>Qty</label>
+                                            <input type="number" class="form-control form-control-sm quantity" data-index="${index}" value="${item.quantity}" />
+                                        </div>
+                                        <div class="col">
+                                            <label>Price</label>
+                                            <input type="text" class="form-control form-control-sm price" value="${(item.price * item.quantity).toFixed(2)}" readonly />
                                         </div>
                                     </div>
                                 </div>
-                            `;
+                            </div>
+                        `;
                         });
                     } else {
                         cartHtml = '<p>No items in the cart.</p>';
@@ -380,6 +437,7 @@
                     calculateTotalAmount();
                 }
 
+                // Attach event listeners for cart actions
                 function attachCartListeners() {
                     $('.quantity').on('input', function() {
                         const index = $(this).data('index');

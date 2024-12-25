@@ -52,6 +52,12 @@ class Invoice extends Model
         return $this->hasMany(InvoiceItem::class);
     }
 
+    public function customItems()
+    {
+        return $this->hasMany(CustomItem::class);
+    }
+
+
 
     public function additionalItems()
     {
@@ -89,22 +95,21 @@ class Invoice extends Model
     // Calculate discount amount
     public function getDiscountAmountAttribute()
     {
-        $baseAmount = $this->total_amount + $this->added_cost - $this->returned_cost;
-        return ($baseAmount * $this->total_discount) / 100;
-        }
+        return ($this->subtotal * $this->total_discount) / 100;
+    }
 
     // Calculate the final total
-// Final total dynamically calculated, including adjustments
-public function getTotalPriceAttribute()
-{
-    $baseAmount = $this->subtotal; // Base total of original items
-    $additionalItemsTotal = $this->added_cost; // Total of additional items
-    $returnedCost = $this->returned_cost; // Cost of returned items
-    $discountAmount = $this->discount_amount; // Discount applied
+    // Final total dynamically calculated, including adjustments
+    public function getTotalPriceAttribute()
+    {
+        $subtotal = $this->subtotal; // Base total of original items
+        $additionalItemsTotal = $this->added_cost; // Total of additional items
+        $returnedCost = $this->returned_cost; // Cost of returned items
+        $discountAmount = $this->discount_amount; // Discount based on subtotal
 
-    // Calculate Final Total
-    return $baseAmount + $additionalItemsTotal - $returnedCost - $discountAmount;
-}
+        // Final Total Calculation
+        return ($subtotal + $additionalItemsTotal - $returnedCost) - $discountAmount;
+    }
 
 
 
@@ -172,24 +177,34 @@ public function getTotalPriceAttribute()
 
     public function getBalanceDueAttribute()
     {
-        $paidAmount = $this->paid_amount + $this->deposit; // Total paid (deposit + additional payments)
-        $totalPrice = $this->total_price; // Final total from above logic
+        $finalTotal = $this->total_price; // Dynamically calculated final total
+        $paidAmount = $this->deposit + $this->paid_amount; // Total paid so far
 
         // Calculate Balance Due
-        return max(0, $totalPrice - $paidAmount);
+        return max(0, $finalTotal - $paidAmount);
     }
-
 
     public function calculateTotals()
     {
         $isSeasonal = $this->category->name === 'season';
 
-        // Subtotal: Original invoice total
-        $subtotal = $this->items->sum(function ($item) use ($isSeasonal) {
+        // Subtotal: Includes all items (regular items, custom items)
+        $subtotalForDiscount = $this->items->sum(function ($item) use ($isSeasonal) {
             return $isSeasonal
                 ? $item->price * $item->quantity
                 : $item->price * $item->quantity * ($item->days ?? 1);
+        }) + $this->customItems->sum(function ($customItem) {
+            return $customItem->price * $customItem->quantity;
         });
+
+        // Subtotal: Includes all items (regular items, custom items, additional items)
+        $totalSubtotal = $subtotalForDiscount + $this->additionalItems->sum(function ($additionalItem) {
+            return $additionalItem->price * $additionalItem->quantity;
+        });
+
+        // Discount: Applied only to the items eligible for discount (regular items + custom items)
+        $discountPercentage = $this->total_discount ?? 0;
+        $discountAmount = ($subtotalForDiscount * $discountPercentage) / 100;
 
         // Returned Items Cost: Cost for used days of returned items
         $returnedItemsCost = $this->returnDetails->sum(function ($return) {
@@ -215,72 +230,26 @@ public function getTotalPriceAttribute()
             return max(0, $remainingDays) * $return->returned_quantity * $pricePerDay;
         });
 
-        // Final Total
-        $finalTotal = $returnedItemsCost;
+        // Total after discount and before deductions
+        $totalAfterDiscount = $totalSubtotal - $discountAmount;
+
+        // Final Total: Subtract refunds and returned items cost
+        $finalTotal = $totalAfterDiscount - $refundForUnusedDays;
 
         // Balance Due: Amount still owed
         $totalPaid = $this->deposit + $this->paid_amount;
         $balanceDue = max(0, $finalTotal - $totalPaid);
 
         return [
-            'subtotal' => round($subtotal, 2), // Original invoice total
-            'returnedItemsCost' => round($returnedItemsCost, 2), // Cost for used days of returned items
-            'refundForUnusedDays' => round($refundForUnusedDays, 2), // Refund for unused days
-            'finalTotal' => round($finalTotal, 2), // Final total
-            'balanceDue' => round($balanceDue, 2), // Balance due
+            'subtotal' => round($totalSubtotal, 2), // All items subtotal
+            'subtotalForDiscount' => round($subtotalForDiscount, 2), // Discounted items subtotal
+            'discountAmount' => round($discountAmount, 2), // Discount amount
+            'returnedItemsCost' => round($returnedItemsCost, 2),
+            'refundForUnusedDays' => round($refundForUnusedDays, 2),
+            'finalTotal' => round($finalTotal, 2),
+            'balanceDue' => round($balanceDue, 2),
         ];
     }
-
-
-
-
-    // public function calculateTotals()
-    // {
-    //     // Subtotal for main items (standard and fixed)
-    //     $subtotal = $this->items->sum(function ($item) {
-    //         $type = $item->product->type instanceof \App\Enums\ProductType
-    //             ? $item->product->type->value
-    //             : $item->product->type;
-
-    //         return $type === 'fixed'
-    //             ? $item->price * $item->quantity // Fixed: price * quantity
-    //             : $item->price * $item->quantity * $item->days; // Standard: price * quantity * days
-    //     });
-
-    //     // Additional costs for additional items
-    //     $additionalCost = $this->additionalItems->sum(function ($item) {
-    //         $type = $item->product->type instanceof \App\Enums\ProductType
-    //             ? $item->product->type->value
-    //             : $item->product->type;
-
-    //         return $type === 'fixed'
-    //             ? $item->price * $item->quantity // Fixed: price * quantity
-    //             : $item->price * $item->quantity * $item->days; // Standard: price * quantity * days
-    //     });
-
-    //     // Costs for returned items
-    //     $returnedCost = $this->returnDetails->sum(function ($return) {
-    //         return $return->returned_quantity * $return->invoiceItem->price * $return->days_used;
-    //     });
-
-    //     // Total before discount
-    //     $totalBeforeDiscount = $subtotal + $additionalCost - $returnedCost;
-
-    //     // Discount amount
-    //     $discountAmount = ($totalBeforeDiscount * ($this->total_discount ?? 0) / 100);
-
-    //     // Final total after discount
-    //     $total = $totalBeforeDiscount - $discountAmount;
-
-    //     return [
-    //         'subtotal' => round($subtotal, 2),
-    //         'additionalCost' => round($additionalCost, 2),
-    //         'returnedCost' => round($returnedCost, 2),
-    //         'discountAmount' => round($discountAmount, 2),
-    //         'total' => round($total, 2),
-    //     ];
-    // }
-
 
     public function checkAndUpdateStatus()
     {
@@ -301,14 +270,13 @@ public function getTotalPriceAttribute()
 
     public function getPaymentStatusAttribute()
     {
-        $totalAmount = $this->totalWithAdditional; // Dynamic total
-        $paidAmount = $this->paid_amount;
+        $balanceDue = $this->balance_due;
 
-        if ($paidAmount >= $totalAmount) {
+        if ($balanceDue <= 0) {
             return 'fully_paid';
         }
 
-        if ($paidAmount > 0) {
+        if ($balanceDue > 0 && ($this->paid_amount + $this->deposit) > 0) {
             return 'partially_paid';
         }
 

@@ -133,8 +133,23 @@
                         @foreach ($invoices as $invoice)
                             <tr>
                                 <td>{{ $invoice->customer->name ?? 'N/A' }}</td>
-                                <td>${{ number_format($invoice->total_amount ?? 0, 2) }}</td>
-                                <td>
+                                <td>${{ number_format(
+                                    $invoice->items->sum(function ($item) {
+                                        return $item->price * $item->quantity;
+                                    }) +
+                                    $invoice->customItems->sum(function ($customItem) {
+                                        return $customItem->price * $customItem->quantity;
+                                    }) -
+                                    ($invoice->discount / 100) *
+                                    $invoice->items->sum(function ($item) {
+                                        return $item->price * $item->quantity;
+                                    }) +
+                                    $invoice->additionalItems->sum(function ($additionalItem) {
+                                        return $additionalItem->price * $additionalItem->quantity;
+                                    }),
+                                    2
+                                ) }}</td>
+                                                                <td>
                                     @php
                                         $statusClasses = [
                                             'draft' => 'bg-warning',

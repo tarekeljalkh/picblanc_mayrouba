@@ -51,7 +51,13 @@ class InvoiceController extends Controller
         $paymentStatus = $request->query('payment_status');
 
         // Fetch invoices based on the selected category and optional status/payment filters
-        $invoices = Invoice::with('customer')
+        $invoices = Invoice::with([
+            'customer',              // Load customer relationship
+            'items',                 // Load items relationship
+            'customItems',           // Load custom items relationship
+            'additionalItems',       // Load additional items relationship
+            'returnDetails'          // Load returned items relationship
+        ])
             ->whereHas('category', function ($query) use ($selectedCategory) {
                 $query->where('name', $selectedCategory);
             })
@@ -70,7 +76,7 @@ class InvoiceController extends Controller
             ->when($paymentStatus === 'partially_paid', function ($query) {
                 // Filter for partially paid invoices
                 $query->where('paid_amount', '>', 0)
-                    ->whereColumn('paid_amount', '<', 'total_amount');
+                      ->whereColumn('paid_amount', '<', 'total_amount');
             })
             ->paginate(10); // Paginate results for better performance
 
@@ -215,6 +221,7 @@ class InvoiceController extends Controller
         $invoice = Invoice::with([
             'items.product',
             'additionalItems',
+            'customItems', // Include custom items here
             'returnDetails.invoiceItem.product',
             'returnDetails.additionalItem.product',
         ])->findOrFail($id);
@@ -223,7 +230,6 @@ class InvoiceController extends Controller
 
         return view('invoices.show', compact('invoice', 'totals'));
     }
-
 
 
     /**
