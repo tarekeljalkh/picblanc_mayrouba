@@ -120,26 +120,14 @@ class DashbboardController extends Controller
         $totalPaidByCreditCard = 0;
 
         foreach ($invoices as $invoice) {
-            // Calculate totals for regular and custom items
-            $regularItemsTotal = $invoice->items->sum('total_price') +
-                $invoice->customItems->sum(function ($customItem) {
-                    return $customItem->price * $customItem->quantity;
-                });
-
-            $additionalItemsTotal = $invoice->additionalItems->sum(function ($additionalItem) {
-                return $additionalItem->price * $additionalItem->quantity;
-            });
-
-            // Calculate discounted total for regular items only
-            $discountAmount = ($regularItemsTotal * ($invoice->total_discount ?? 0)) / 100;
-            $totalAmount = ($regularItemsTotal - $discountAmount) + $additionalItemsTotal;
-
-            // Refunds are excluded here by simply omitting any refund-related logic
+            // Use calculateTotals to ensure consistent calculations
+            $totals = $invoice->calculateTotals();
 
             // Paid and unpaid amounts
             $paid = $invoice->deposit + $invoice->paid_amount; // Total amount paid
-            $unpaid = max(0, $totalAmount - $paid); // Remaining balance
+            $unpaid = max(0, $totals['finalTotal'] - $paid); // Remaining balance
 
+            // Accumulate totals
             $totalPaidInvoices += $paid;
             $totalUnpaidInvoices += $unpaid;
 
@@ -158,8 +146,6 @@ class DashbboardController extends Controller
 
         return view('trial-balance.index', compact('trialBalanceData', 'fromDate', 'toDate'));
     }
-
-
 
     //with returned cost
     //     public function trialBalance(Request $request)

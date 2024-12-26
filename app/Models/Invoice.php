@@ -199,7 +199,7 @@ class Invoice extends Model
 
         // Subtotal: Includes all items (regular items, custom items, additional items)
         $totalSubtotal = $subtotalForDiscount + $this->additionalItems->sum(function ($additionalItem) {
-            return $additionalItem->price * $additionalItem->quantity;
+            return $additionalItem->price * $additionalItem->quantity * ($additionalItem->days ?? 1);
         });
 
         // Discount: Applied only to the items eligible for discount (regular items + custom items)
@@ -215,26 +215,11 @@ class Invoice extends Model
             return $return->days_used * $return->returned_quantity * $pricePerDay;
         });
 
-        // Refund for Unused Days
-        $refundForUnusedDays = $this->returnDetails->sum(function ($return) {
-            $totalDays = $return->invoiceItem
-                ? ($return->invoiceItem->days ?? 1)
-                : ($return->additionalItem->days ?? 1);
-
-            $remainingDays = $totalDays - $return->days_used;
-
-            $pricePerDay = $return->invoiceItem
-                ? $return->invoiceItem->price
-                : ($return->additionalItem ? $return->additionalItem->price : 0);
-
-            return max(0, $remainingDays) * $return->returned_quantity * $pricePerDay;
-        });
-
         // Total after discount and before deductions
         $totalAfterDiscount = $totalSubtotal - $discountAmount;
 
-        // Final Total: Subtract refunds and returned items cost
-        $finalTotal = $totalAfterDiscount - $refundForUnusedDays;
+        // Final Total: Subtract returned items cost (Refund for Unused Days is excluded)
+        $finalTotal = $totalAfterDiscount - $returnedItemsCost;
 
         // Balance Due: Amount still owed
         $totalPaid = $this->deposit + $this->paid_amount;
@@ -244,12 +229,13 @@ class Invoice extends Model
             'subtotal' => round($totalSubtotal, 2), // All items subtotal
             'subtotalForDiscount' => round($subtotalForDiscount, 2), // Discounted items subtotal
             'discountAmount' => round($discountAmount, 2), // Discount amount
-            'returnedItemsCost' => round($returnedItemsCost, 2),
-            'refundForUnusedDays' => round($refundForUnusedDays, 2),
-            'finalTotal' => round($finalTotal, 2),
-            'balanceDue' => round($balanceDue, 2),
+            'returnedItemsCost' => round($returnedItemsCost, 2), // Returned items cost
+            'refundForUnusedDays' => 0, // Set refund for unused days to 0
+            'finalTotal' => round($finalTotal, 2), // Final total after adjustments
+            'balanceDue' => round($balanceDue, 2), // Remaining balance
         ];
     }
+
 
     public function checkAndUpdateStatus()
     {

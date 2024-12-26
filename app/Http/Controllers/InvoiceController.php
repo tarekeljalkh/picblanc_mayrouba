@@ -227,7 +227,6 @@ class InvoiceController extends Controller
         ])->findOrFail($id);
 
         $totals = $invoice->calculateTotals();
-
         return view('invoices.show', compact('invoice', 'totals'));
     }
 
