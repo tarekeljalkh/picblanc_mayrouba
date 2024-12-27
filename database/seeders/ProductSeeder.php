@@ -113,33 +113,5 @@ class ProductSeeder extends Seeder
             'type' => 'standard',
             'category_id' => $seasonCategory->id,
         ]);
-        Product::create([
-            'name' => 'Bus',
-            'description' => 'Bus',
-            'price' => 180.00,
-            'type' => 'fixed',
-            'category_id' => $seasonCategory->id,
-        ]);
-        Product::create([
-            'name' => 'Maintenance',
-            'description' => 'Maintenance',
-            'price' => 40.00,
-            'type' => 'fixed',
-            'category_id' => $seasonCategory->id,
-        ]);
-        Product::create([
-            'name' => 'Broken',
-            'description' => 'Brokent',
-            'price' => 30.00,
-            'type' => 'fixed',
-            'category_id' => $seasonCategory->id,
-        ]);
-        Product::create([
-            'name' => 'Lost',
-            'description' => 'Lost',
-            'price' => 20.00,
-            'type' => 'fixed',
-            'category_id' => $seasonCategory->id,
-        ]);
     }
 }

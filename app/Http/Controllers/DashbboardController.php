@@ -109,11 +109,11 @@ class DashbboardController extends Controller
             ->when(!$isSeasonal, function ($query) use ($from, $to) {
                 $query->where(function ($query) use ($from, $to) {
                     $query->whereBetween('rental_start_date', [$from, $to])
-                          ->orWhereBetween('rental_end_date', [$from, $to])
-                          ->orWhere(function ($subQuery) use ($from, $to) {
-                              $subQuery->where('rental_start_date', '<=', $from)
-                                       ->where('rental_end_date', '>=', $to);
-                          });
+                        ->orWhereBetween('rental_end_date', [$from, $to])
+                        ->orWhere(function ($subQuery) use ($from, $to) {
+                            $subQuery->where('rental_start_date', '<=', $from)
+                                ->where('rental_end_date', '>=', $to);
+                        });
                 });
             })
             ->get();
@@ -126,14 +126,27 @@ class DashbboardController extends Controller
         foreach ($invoices as $invoice) {
             $totals = $invoice->calculateTotals();
 
-            $paid = $invoice->deposit + $invoice->paid_amount;
-            $unpaid = max(0, $totals['finalTotal'] - $paid);
+            $finalTotal = $totals['subtotal'];
+            $discount = $totals['discountAmount'];
 
-            $totalPaidInvoices += $paid;
-            $totalUnpaidInvoices += $unpaid;
+            // Total payments made
+            $paid = $invoice->paid_amount + $invoice->deposit;
 
+            // Allocate discount proportionally
+            $discountOnPaid = min($discount, $paid);
+            $discountOnUnpaid = $discount - $discountOnPaid;
+
+            // Adjust paid and unpaid with discounts
+            $adjustedPaid = $paid + $discountOnPaid;
+            $adjustedUnpaid = max(0, $finalTotal - $adjustedPaid);
+
+            // Add to totals
+            $totalPaidInvoices += $adjustedPaid;
+            $totalUnpaidInvoices += $adjustedUnpaid;
+
+            // Check for credit card payments
             if ($invoice->payment_method === 'credit_card') {
-                $totalPaidByCreditCard += $paid;
+                $totalPaidByCreditCard += $adjustedPaid;
             }
         }
 
@@ -146,6 +159,7 @@ class DashbboardController extends Controller
 
         return view('trial-balance.index', compact('trialBalanceData', 'fromDate', 'toDate'));
     }
+
 
     //with returned cost
     //     public function trialBalance(Request $request)
@@ -235,11 +249,11 @@ class DashbboardController extends Controller
                     if (!$isSeasonal) {
                         $invoiceQuery->where(function ($dateQuery) use ($from, $to) {
                             $dateQuery->whereBetween('rental_start_date', [$from, $to])
-                                      ->orWhereBetween('rental_end_date', [$from, $to])
-                                      ->orWhere(function ($spanQuery) use ($from, $to) {
-                                          $spanQuery->where('rental_start_date', '<=', $from)
-                                                    ->where('rental_end_date', '>=', $to);
-                                      });
+                                ->orWhereBetween('rental_end_date', [$from, $to])
+                                ->orWhere(function ($spanQuery) use ($from, $to) {
+                                    $spanQuery->where('rental_start_date', '<=', $from)
+                                        ->where('rental_end_date', '>=', $to);
+                                });
                         });
                     }
                 });
@@ -251,11 +265,11 @@ class DashbboardController extends Controller
                     if (!$isSeasonal) {
                         $invoiceQuery->where(function ($dateQuery) use ($from, $to) {
                             $dateQuery->whereBetween('rental_start_date', [$from, $to])
-                                      ->orWhereBetween('rental_end_date', [$from, $to])
-                                      ->orWhere(function ($spanQuery) use ($from, $to) {
-                                          $spanQuery->where('rental_start_date', '<=', $from)
-                                                    ->where('rental_end_date', '>=', $to);
-                                      });
+                                ->orWhereBetween('rental_end_date', [$from, $to])
+                                ->orWhere(function ($spanQuery) use ($from, $to) {
+                                    $spanQuery->where('rental_start_date', '<=', $from)
+                                        ->where('rental_end_date', '>=', $to);
+                                });
                         });
                     }
                 });
@@ -296,11 +310,11 @@ class DashbboardController extends Controller
             ->where(function ($dateQuery) use ($from, $to, $isSeasonal) {
                 if (!$isSeasonal) {
                     $dateQuery->whereBetween('rental_start_date', [$from, $to])
-                              ->orWhereBetween('rental_end_date', [$from, $to])
-                              ->orWhere(function ($spanQuery) use ($from, $to) {
-                                  $spanQuery->where('rental_start_date', '<=', $from)
-                                            ->where('rental_end_date', '>=', $to);
-                              });
+                        ->orWhereBetween('rental_end_date', [$from, $to])
+                        ->orWhere(function ($spanQuery) use ($from, $to) {
+                            $spanQuery->where('rental_start_date', '<=', $from)
+                                ->where('rental_end_date', '>=', $to);
+                        });
                 }
             })
             ->with('customItems')
@@ -318,6 +332,4 @@ class DashbboardController extends Controller
         // Return the view with only the quantities of rented products
         return view('trial-balance.products', compact('productBalances', 'fromDate', 'toDate'));
     }
-
-
 }

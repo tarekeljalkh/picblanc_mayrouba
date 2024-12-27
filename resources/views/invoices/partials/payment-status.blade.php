@@ -11,7 +11,9 @@
         $subtotal = $totals['subtotal'];
         $returnedItemsCost = $totals['returnedItemsCost'];
         $remainingBalance = $totals['balanceDue'];
-        $paidAmount = $invoice->deposit + $invoice->paid_amount;
+
+        // Include discount in paid amount calculation
+        $paidAmount = $invoice->deposit + $invoice->paid_amount + $discountAmount;
     @endphp
 
     <!-- Total Amount -->
