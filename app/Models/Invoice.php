@@ -248,9 +248,9 @@ class Invoice extends Model
         'returnedItemsCost' => round($returnedItemsCost, 2), // Returned items cost
         'refundForUnusedDays' => round($refundForUnusedDays, 2), // Refund for unused days
         'finalTotal' => round($finalTotal, 2), // Final total after adjustments
-        'balanceDue' => round($balanceDue, 2), // Remaining balance
+        'balanceDue' => round(max(0, $finalTotal - $totalPaid - $refundForUnusedDays), 2), // Remaining balance adjusted
     ];
-}
+    }
 
 
     // public function calculateTotals()
