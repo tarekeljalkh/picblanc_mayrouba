@@ -16,7 +16,7 @@
                             <img src="{{ asset('logo_croped.png') }}" alt="Logo" width="150">
                         </div>
                         <p class="mb-1">Mayrouba Rental Shop</p>
-                        <p class="mb-1">Tel: 03 71 57 57</p>
+                        <p class="mb-1">Tel: 71 72 12 36</p>
                     </div>
                     <div>
                         <h5 class="mb-3">Rental Agreement #{{ $invoice->id }}</h5>

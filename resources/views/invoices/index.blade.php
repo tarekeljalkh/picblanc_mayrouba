@@ -81,44 +81,48 @@
                     </thead>
                     <tbody>
                         @foreach ($invoices as $invoice)
-                            <tr>
-                                <!-- Customer Name -->
-                                <td>{{ $invoice->customer->name }}</td>
+                        <tr>
+                            <!-- Customer Name -->
+                            <td>{{ $invoice->customer->name }}</td>
 
-                                <!-- Final Total -->
-                                <td>${{ number_format($invoice->total_price, 2) }}</td>
+                            <!-- Final Total -->
+                            @php
+                                // Use calculateTotals for accurate values
+                                $totals = $invoice->calculateTotals();
+                            @endphp
+                            <td>${{ number_format($totals['finalTotal'], 2) }}</td>
 
-                                <!-- Total Paid -->
-                                <td>${{ number_format($invoice->paid_amount + $invoice->deposit, 2) }}</td>
+                            <!-- Total Paid -->
+                            <td>${{ number_format($invoice->paid_amount + $invoice->deposit, 2) }}</td>
 
-                                <!-- Balance Due -->
-                                <td>${{ number_format($invoice->balance_due, 2) }}</td>
+                            <!-- Balance Due -->
+                            <td>${{ number_format($totals['balanceDue'], 2) }}</td>
 
-                                <!-- Payment Status -->
-                                <td>
-                                    <span class="badge {{ $invoice->payment_status === 'fully_paid' ? 'bg-success' : ($invoice->payment_status === 'partially_paid' ? 'bg-warning' : 'bg-danger') }}">
-                                        {{ ucfirst(str_replace('_', ' ', $invoice->payment_status)) }}
-                                    </span>
-                                </td>
+                            <!-- Payment Status -->
+                            <td>
+                                <span class="badge {{ $invoice->payment_status === 'fully_paid' ? 'bg-success' : ($invoice->payment_status === 'partially_paid' ? 'bg-warning' : 'bg-danger') }}">
+                                    {{ ucfirst(str_replace('_', ' ', $invoice->payment_status)) }}
+                                </span>
+                            </td>
 
-                                <!-- Rental Dates (Daily Category Only) -->
-                                @if (session('category') === 'daily')
-                                    <td>{{ optional($invoice->rental_start_date)->format('d/m/Y h:i A') }}</td>
-                                    <td>{{ optional($invoice->rental_end_date)->format('d/m/Y h:i A') }}</td>
+                            <!-- Rental Dates (Daily Category Only) -->
+                            @if (session('category') === 'daily')
+                                <td>{{ optional($invoice->rental_start_date)->format('d/m/Y h:i A') }}</td>
+                                <td>{{ optional($invoice->rental_end_date)->format('d/m/Y h:i A') }}</td>
+                            @endif
+
+                            <!-- Actions -->
+                            <td>
+                                <a href="{{ route('invoices.show', $invoice->id) }}" class="btn btn-info btn-sm">Show</a>
+                                <a href="{{ route('invoices.edit', $invoice->id) }}" class="btn btn-warning btn-sm">Edit</a>
+                                <a href="{{ route('invoices.print', $invoice->id) }}" class="btn btn-primary btn-sm">Print</a>
+                                @if (auth()->user()->role === 'admin')
+                                    <a href="{{ route('invoices.destroy', $invoice->id) }}" class="btn btn-danger btn-sm delete-item">Delete</a>
                                 @endif
-
-                                <!-- Actions -->
-                                <td>
-                                    <a href="{{ route('invoices.show', $invoice->id) }}" class="btn btn-info btn-sm">Show</a>
-                                    <a href="{{ route('invoices.edit', $invoice->id) }}" class="btn btn-warning btn-sm">Edit</a>
-                                    <a href="{{ route('invoices.print', $invoice->id) }}" class="btn btn-primary btn-sm">Print</a>
-                                    @if (auth()->user()->role === 'admin')
-                                        <a href="{{ route('invoices.destroy', $invoice->id) }}" class="btn btn-danger btn-sm delete-item">Delete</a>
-                                    @endif
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
+                            </td>
+                        </tr>
+                    @endforeach
+                                        </tbody>
                 </table>
 
                 <!-- Pagination -->

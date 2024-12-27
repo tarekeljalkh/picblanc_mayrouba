@@ -69,7 +69,7 @@
             <div>
                 <img src="{{ public_path('logo_croped.png') }}" alt="Logo" width="150">
                 <p>Mayrouba Rental Shop</p>
-                <p>Tel: 03 71 57 57</p>
+                <p>Tel: 71 72 12 36</p>
             </div>
             <div>
                 <h5>Rental Agreement #{{ $invoice->id }}</h5>

@@ -28,19 +28,26 @@
                         <div class="col-md-4">
                             <label for="from_date" class="form-label">From Date</label>
                             <input type="date" id="from_date" name="from_date" class="form-control"
-                                   value="{{ request('from_date', $fromDate ?? \Carbon\Carbon::today()->toDateString()) }}">
+                                   value="{{ old('from_date', $fromDate) }}">
                         </div>
                         <div class="col-md-4">
                             <label for="to_date" class="form-label">To Date</label>
                             <input type="date" id="to_date" name="to_date" class="form-control"
-                                   value="{{ request('to_date', $toDate ?? \Carbon\Carbon::today()->toDateString()) }}">
+                                   value="{{ old('to_date', $toDate) }}">
                         </div>
                         <div class="col-md-4 d-flex align-items-end">
                             <button type="submit" class="btn btn-primary w-100 me-2">Filter</button>
-                            <a href="{{ route('trialbalance.index') }}" class="btn btn-secondary w-100">Reset</a>
+                            <button type="button" id="reset-button" class="btn btn-secondary w-100">Reset</button>
                         </div>
                     </div>
                 </form>
+
+                <!-- Loading Spinner -->
+                <div id="loading" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:9999;">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
 
                 <!-- Trial Balance Table -->
                 @if (count($trialBalanceData) > 0)
@@ -73,11 +80,25 @@
 
 @push('scripts')
     <script>
+        // Initialize Flatpickr for date inputs
         flatpickr('#from_date', {
             dateFormat: "Y-m-d"
         });
         flatpickr('#to_date', {
             dateFormat: "Y-m-d"
+        });
+
+        // Show loading spinner on form submission
+        const form = document.querySelector('form');
+        form.addEventListener('submit', function () {
+            document.getElementById('loading').style.display = 'block';
+        });
+
+        // Reset button functionality
+        document.getElementById('reset-button').addEventListener('click', function () {
+            document.getElementById('from_date').value = '';
+            document.getElementById('to_date').value = '';
+            form.submit();
         });
     </script>
 @endpush

@@ -89,15 +89,11 @@ class DashbboardController extends Controller
         $fromDate = $request->input('from_date', Carbon::today()->toDateString());
         $toDate = $request->input('to_date', Carbon::today()->toDateString());
 
-        // Parse the date range
-        try {
-            $from = Carbon::parse($fromDate)->startOfDay();
-            $to = Carbon::parse($toDate)->endOfDay();
-        } catch (\Exception $e) {
-            return redirect()->back()->withErrors('Invalid date format.');
-        }
+        // Parse the dates
+        $from = Carbon::parse($fromDate)->startOfDay();
+        $to = Carbon::parse($toDate)->endOfDay();
 
-        // Get the selected category
+        // Fetch selected category
         $categoryName = session('category', 'daily');
         $category = Category::where('name', $categoryName)->first();
 
@@ -105,14 +101,22 @@ class DashbboardController extends Controller
             return redirect()->back()->withErrors('Invalid category selected.');
         }
 
-        // Fetch invoices for the specified category and date range
-        $invoices = Invoice::where('category_id', $category->id)
-            ->whereBetween('created_at', [$from, $to])
-            ->get();
+        // Check if the category is "season"
+        $isSeasonal = $category->name === 'season';
 
-        if ($invoices->isEmpty()) {
-            return redirect()->back()->with('info', 'No invoices found for the selected date range.');
-        }
+        // Fetch invoices: no date filtering for the "season" category
+        $invoices = Invoice::where('category_id', $category->id)
+            ->when(!$isSeasonal, function ($query) use ($from, $to) {
+                $query->where(function ($query) use ($from, $to) {
+                    $query->whereBetween('rental_start_date', [$from, $to])
+                          ->orWhereBetween('rental_end_date', [$from, $to])
+                          ->orWhere(function ($subQuery) use ($from, $to) {
+                              $subQuery->where('rental_start_date', '<=', $from)
+                                       ->where('rental_end_date', '>=', $to);
+                          });
+                });
+            })
+            ->get();
 
         // Initialize totals
         $totalPaidInvoices = 0;
@@ -120,18 +124,14 @@ class DashbboardController extends Controller
         $totalPaidByCreditCard = 0;
 
         foreach ($invoices as $invoice) {
-            // Use calculateTotals to ensure consistent calculations
             $totals = $invoice->calculateTotals();
 
-            // Paid and unpaid amounts
-            $paid = $invoice->deposit + $invoice->paid_amount; // Total amount paid
-            $unpaid = max(0, $totals['finalTotal'] - $paid); // Remaining balance
+            $paid = $invoice->deposit + $invoice->paid_amount;
+            $unpaid = max(0, $totals['finalTotal'] - $paid);
 
-            // Accumulate totals
             $totalPaidInvoices += $paid;
             $totalUnpaidInvoices += $unpaid;
 
-            // Track credit card payments
             if ($invoice->payment_method === 'credit_card') {
                 $totalPaidByCreditCard += $paid;
             }
@@ -223,19 +223,42 @@ class DashbboardController extends Controller
             return redirect()->back()->withErrors('Invalid category selected.');
         }
 
+        // Check if the category is "season"
+        $isSeasonal = $category->name === 'season';
+
         // Fetch all products with invoice items and additional items
         $products = Product::with([
-            'invoiceItems' => function ($query) use ($from, $to, $category) {
-                $query->whereBetween('created_at', [$from, $to])
-                    ->whereHas('invoice', function ($invoiceQuery) use ($category) {
-                        $invoiceQuery->where('category_id', $category->id);
-                    });
+            'invoiceItems' => function ($query) use ($from, $to, $category, $isSeasonal) {
+                $query->whereHas('invoice', function ($invoiceQuery) use ($category, $from, $to, $isSeasonal) {
+                    $invoiceQuery->where('category_id', $category->id);
+
+                    if (!$isSeasonal) {
+                        $invoiceQuery->where(function ($dateQuery) use ($from, $to) {
+                            $dateQuery->whereBetween('rental_start_date', [$from, $to])
+                                      ->orWhereBetween('rental_end_date', [$from, $to])
+                                      ->orWhere(function ($spanQuery) use ($from, $to) {
+                                          $spanQuery->where('rental_start_date', '<=', $from)
+                                                    ->where('rental_end_date', '>=', $to);
+                                      });
+                        });
+                    }
+                });
             },
-            'additionalItems' => function ($query) use ($from, $to, $category) {
-                $query->whereBetween('created_at', [$from, $to])
-                    ->whereHas('invoice', function ($invoiceQuery) use ($category) {
-                        $invoiceQuery->where('category_id', $category->id);
-                    });
+            'additionalItems' => function ($query) use ($from, $to, $category, $isSeasonal) {
+                $query->whereHas('invoice', function ($invoiceQuery) use ($category, $from, $to, $isSeasonal) {
+                    $invoiceQuery->where('category_id', $category->id);
+
+                    if (!$isSeasonal) {
+                        $invoiceQuery->where(function ($dateQuery) use ($from, $to) {
+                            $dateQuery->whereBetween('rental_start_date', [$from, $to])
+                                      ->orWhereBetween('rental_end_date', [$from, $to])
+                                      ->orWhere(function ($spanQuery) use ($from, $to) {
+                                          $spanQuery->where('rental_start_date', '<=', $from)
+                                                    ->where('rental_end_date', '>=', $to);
+                                      });
+                        });
+                    }
+                });
             }
         ])->get();
 
@@ -246,21 +269,17 @@ class DashbboardController extends Controller
 
             // Calculate totals for original invoice items
             foreach ($product->invoiceItems as $item) {
-                $remainingQuantity = $item->quantity - $item->returned_quantity;
+                $remainingQuantity = $item->quantity - ($item->returned_quantity ?? 0);
 
-                // Only factor in days for daily rentals
-                $effectiveQuantity = session('category') === 'daily' ? $remainingQuantity * ($item->days ?? 1) : $remainingQuantity;
-
+                // Only sum quantities, do not multiply by days
                 $totalQuantity += $remainingQuantity;
             }
 
             // Calculate totals for additional items
             foreach ($product->additionalItems as $item) {
-                $remainingQuantity = $item->quantity - $item->returned_quantity;
+                $remainingQuantity = $item->quantity - ($item->returned_quantity ?? 0);
 
-                // Only factor in days for daily rentals
-                $effectiveQuantity = session('category') === 'daily' ? $remainingQuantity * ($item->days ?? 1) : $remainingQuantity;
-
+                // Only sum quantities, do not multiply by days
                 $totalQuantity += $remainingQuantity;
             }
 
@@ -272,7 +291,33 @@ class DashbboardController extends Controller
             }
         }
 
+        // Fetch custom items
+        $customItems = Invoice::where('category_id', $category->id)
+            ->where(function ($dateQuery) use ($from, $to, $isSeasonal) {
+                if (!$isSeasonal) {
+                    $dateQuery->whereBetween('rental_start_date', [$from, $to])
+                              ->orWhereBetween('rental_end_date', [$from, $to])
+                              ->orWhere(function ($spanQuery) use ($from, $to) {
+                                  $spanQuery->where('rental_start_date', '<=', $from)
+                                            ->where('rental_end_date', '>=', $to);
+                              });
+                }
+            })
+            ->with('customItems')
+            ->get();
+
+        foreach ($customItems as $invoice) {
+            foreach ($invoice->customItems as $customItem) {
+                $productBalances[] = [
+                    'product' => $customItem->name,
+                    'quantity' => $customItem->quantity,
+                ];
+            }
+        }
+
         // Return the view with only the quantities of rented products
         return view('trial-balance.products', compact('productBalances', 'fromDate', 'toDate'));
     }
+
+
 }

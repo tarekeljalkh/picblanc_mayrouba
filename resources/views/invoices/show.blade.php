@@ -23,7 +23,7 @@
                                 </span>
                             </div>
                             <p class="mb-2">Mayrouba Rental Shop</p>
-                            <p class="mb-2">Tel: 03 71 57 57</p>
+                            <p class="mb-2">Tel: 71 72 12 36</p>
                         </div>
                         <div>
                             <h5 class="mb-6">Rental Agreement #{{ $invoice->id }}</h5>
