@@ -120,6 +120,10 @@
                         <tr>
                             <td>
                                 <strong>Salesperson:</strong> {{ $invoice->user->name ?? 'N/A' }}<br>
+                                @if ($invoice->note)
+                                <strong>NOTE:</strong> {{ $invoice->note }} <br>
+                            @endif
+
                                 <span>
                                     @php
                                         $totalPaid = $invoice->paid_amount + $invoice->deposit;
@@ -132,9 +136,6 @@
                                         <span class="badge bg-danger">Payment: Not Paid</span>
                                     @endif
                                 </span><br>
-                                @if ($invoice->note)
-                                    <strong>NOTE:</strong> {{ $invoice->note }}
-                                @endif
                             </td>
                             <td class="text-end">
                                 @php

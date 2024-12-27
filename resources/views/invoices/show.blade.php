@@ -206,11 +206,18 @@
                                         <span class="me-2 h6">Salesperson:</span>
                                         <span>{{ $invoice->user->name ?? 'N/A' }}</span>
                                     </p>
+                                    <!-- Note -->
+                                    @if ($invoice->note)
+                                        <p><strong>NOTE:</strong> {{ $invoice->note }}</p>
+                                    @endif
+
                                     <div class="mb-3">
-                                        <span class="badge {{ $invoice->payment_status === 'fully_paid' ? 'bg-success' : ($invoice->payment_status === 'partially_paid' ? 'bg-warning' : 'bg-danger') }}">
+                                        <span
+                                            class="badge {{ $invoice->payment_status === 'fully_paid' ? 'bg-success' : ($invoice->payment_status === 'partially_paid' ? 'bg-warning' : 'bg-danger') }}">
                                             {{ ucfirst(str_replace('_', ' ', $invoice->payment_status)) }}
                                         </span>
                                     </div>
+
                                 </td>
                                 <td class="px-0 py-3 w-px-200">
                                     <p class="mb-2">Base Total (All Items):</p>
@@ -228,7 +235,8 @@
                                     <p class="fw-medium mb-2">${{ number_format($invoice->deposit, 2) }}</p>
                                     <p class="fw-medium mb-2">${{ number_format($invoice->paid_amount, 2) }}</p>
                                     {{-- <p class="fw-medium mb-2">${{ number_format($totals['finalTotal'], 2) }}</p> --}}
-                                    <p class="fw-medium mb-0 text-danger">${{ number_format($totals['balanceDue'], 2) }}</p>
+                                    <p class="fw-medium mb-0 text-danger">${{ number_format($totals['balanceDue'], 2) }}
+                                    </p>
                                 </td>
                             </tr>
                         </tbody>
