@@ -126,18 +126,19 @@ class DashbboardController extends Controller
         foreach ($invoices as $invoice) {
             $totals = $invoice->calculateTotals();
 
-            // Get base total for the invoice
+            // Get relevant totals for the invoice
             $finalTotal = $totals['finalTotal'];
+            $refundForUnusedDays = $totals['refundForUnusedDays'];
 
             // Total payments made (including deposit)
             $paid = $invoice->paid_amount + $invoice->deposit;
 
-            // Calculate unpaid
-            $unpaid = max(0, $finalTotal - $paid);
+            // Calculate unpaid, considering refund
+            $unpaid = max(0, $finalTotal - $paid - $refundForUnusedDays);
 
             // Add to totals
             $totalPaidInvoices += $paid; // Add the exact paid amount
-            $totalUnpaidInvoices += $unpaid; // Add the exact unpaid amount
+            $totalUnpaidInvoices += $unpaid; // Subtract refund from unpaid invoices
 
             // Check for credit card payments
             if ($invoice->payment_method === 'credit_card') {
@@ -154,6 +155,7 @@ class DashbboardController extends Controller
 
         return view('trial-balance.index', compact('trialBalanceData', 'fromDate', 'toDate'));
     }
+
 
 
     //with returned cost

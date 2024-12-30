@@ -18,6 +18,8 @@ return new class extends Migration
             $table->string('description')->nullable(); // Custom item description
             $table->decimal('price', 10, 2); // Price per unit
             $table->integer('quantity'); // Quantity
+            $table->integer('returned_quantity')->default(0);
+            $table->enum('status', ['draft', 'active', 'returned', 'overdue'])->default('active'); // Rental status
             $table->timestamps();
         });
     }

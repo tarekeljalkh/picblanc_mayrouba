@@ -49,20 +49,6 @@
                         </div>
                         {{-- End Price --}}
 
-                        {{-- Type --}}
-                        <div class="mb-4 row">
-                            <label for="type" class="col-md-2 col-form-label">Price Type</label>
-                            <div class="col-md-10">
-                                <select id="type" name="type" class="form-select" required>
-                                    <option value="fixed" {{ $product->type->value === 'fixed' ? 'selected' : '' }}>Fixed
-                                    </option>
-                                    <option value="standard" {{ $product->type->value === 'standard' ? 'selected' : '' }}>
-                                        Standard</option>
-                                </select>
-                            </div>
-                        </div>
-                        {{-- End Type --}}
-
                         {{-- Update Button --}}
                         <div class="mt-4 row">
                             <div class="col-md-12 text-end">

@@ -41,10 +41,12 @@
                         <tr>
                             <th>Invoice ID</th>
                             <th>Total Price</th>
-                            <th>Returned Cost</th>
                             <th>Status</th>
-                            <th>Rental Start Date</th>
-                            <th>Rental End Date</th>
+                            <!-- Rental Dates (Daily Category Only) -->
+                            @if (session('category') === 'daily')
+                                <th>Rental Start Date</th>
+                                <th>Rental End Date</th>
+                            @endif
                             <th>Items</th>
                             <th>Created At</th>
                             <th>Action</th>
@@ -59,10 +61,17 @@
                             <tr>
                                 <td>{{ $invoice->id }}</td>
                                 <td>${{ number_format($netTotal, 2) }}</td>
-                                <td>${{ number_format($returnedCost, 2) }}</td>
-                                <td>{{ ucfirst($invoice->status) }}</td>
-                                <td>{{ \Carbon\Carbon::parse($invoice->rental_start_date)->format('d/m/Y') }}</td>
-                                <td>{{ \Carbon\Carbon::parse($invoice->rental_end_date)->format('d/m/Y') }}</td>
+                                <td> <span
+                                        class="badge {{ $invoice->payment_status === 'fully_paid' ? 'bg-success' : ($invoice->payment_status === 'partially_paid' ? 'bg-warning' : 'bg-danger') }}">
+                                        {{ ucfirst(str_replace('_', ' ', $invoice->payment_status)) }}
+                                    </span>
+                                </td>
+                                <!-- Rental Dates (Daily Category Only) -->
+                                @if (session('category') === 'daily')
+                                    <td>{{ \Carbon\Carbon::parse($invoice->rental_start_date)->format('d/m/Y h:i A') }}
+                                    </td>
+                                    <td>{{ \Carbon\Carbon::parse($invoice->rental_end_date)->format('d/m/Y h:i A') }}</td>
+                                @endif
                                 <td>
                                     <ul>
                                         @foreach ($invoice->items as $item)
@@ -70,8 +79,9 @@
                                         @endforeach
                                     </ul>
                                 </td>
-                                <td>{{ $invoice->created_at }}</td>
-                                <td><a href="{{ route('invoices.print', $invoice->id) }}" class="btn btn-warning">Print</a></td>
+                                <td>{{ $invoice->created_at->format('d/m/Y h:i A') }}</td>
+                                <td><a href="{{ route('invoices.print', $invoice->id) }}" class="btn btn-warning">Print</a>
+                                </td>
                             </tr>
                         @endforeach
                     </tbody>

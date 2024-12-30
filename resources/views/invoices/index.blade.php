@@ -74,9 +74,6 @@
                     <thead>
                         <tr>
                             <th>Customer</th>
-                            <th>Final Total</th>
-                            <th>Total Paid</th>
-                            <th>Balance Due</th>
                             <th>Payment Status</th>
                             @if (session('category') === 'daily')
                                 <th>From</th>
@@ -90,22 +87,6 @@
                             <tr>
                                 <!-- Customer Name -->
                                 <td>{{ $invoice->customer->name }}</td>
-
-                                <!-- Final Total -->
-                                @php
-                                    // Use calculateTotals for accurate values
-                                    $totals = $invoice->calculateTotals();
-                                @endphp
-                                <td>${{ number_format($totals['subtotal'], 2) }}</td>
-
-                                <!-- Total Paid -->
-                                @php
-                                    $totalPaid = $invoice->paid_amount + $invoice->deposit + $totals['discountAmount'];
-                                @endphp
-                                <td>${{ number_format($totalPaid, 2) }}</td>
-
-                                <!-- Balance Due -->
-                                <td>${{ number_format($totals['balanceDue'], 2) }}</td>
 
                                 <!-- Payment Status -->
                                 <td>

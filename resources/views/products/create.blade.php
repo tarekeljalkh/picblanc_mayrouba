@@ -44,18 +44,6 @@
                     </div>
                     {{-- End Price --}}
 
-                    {{-- Product Type --}}
-                    <div class="mb-4 row">
-                        <label for="type" class="col-md-2 col-form-label">Price Type</label>
-                        <div class="col-md-10">
-                            <select class="form-select" id="type" name="type" required>
-                                <option value="standard">Standard</option>
-                                <option value="fixed">Fixed</option>
-                            </select>
-                        </div>
-                    </div>
-                    {{-- End Product Type --}}
-
                     {{-- Create Button --}}
                     <div class="mt-4 row">
                         <div class="col-md-12 text-end">

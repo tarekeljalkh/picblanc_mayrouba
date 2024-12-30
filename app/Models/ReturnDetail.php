@@ -13,6 +13,7 @@ class ReturnDetail extends Model
         'invoice_id',          // ID of the invoice this return belongs to
         'invoice_item_id',     // ID of the specific invoice item
         'additional_item_id',  // ID of the additional item (MISSING - add this)
+        'custom_item_id',
         'product_id', // Add product_id here
         'returned_quantity',   // Quantity returned
         'days_used',           // Days the returned items were used
@@ -45,6 +46,11 @@ class ReturnDetail extends Model
     {
         return $this->belongsTo(AdditionalItem::class, 'additional_item_id');
     }
+
+    public function customItem()
+{
+    return $this->belongsTo(CustomItem::class);
+}
 
 
     /**

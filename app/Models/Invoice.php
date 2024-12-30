@@ -243,6 +243,10 @@ class Invoice extends Model
         // Balance Due: Amount still owed (does not account for returned items unless refunded)
         $totalPaid = $this->deposit + $this->paid_amount;
         $balanceDue = max(0, $finalTotal - $totalPaid);
+
+            // Your "final total" definition
+    $finalTotalCustom = $subtotalForDiscount + $additionalItemsCost - $refundForUnusedDays - $discountAmount - $totalPaid;
+
         return [
             'subtotal' => round($totalSubtotal, 2), // Total of all items including additional items
             'subtotalForDiscount' => round($subtotalForDiscount, 2), // Discounted items subtotal
@@ -251,6 +255,7 @@ class Invoice extends Model
             'returnedItemsCost' => round($returnedItemsCost, 2), // Returned items cost
             'refundForUnusedDays' => round($refundForUnusedDays, 2), // Refund for unused days
             'finalTotal' => round($finalTotal, 2), // Final total after adjustments
+            'finalTotalCustom' => round($finalTotalCustom, 2), // New custom final total
             'balanceDue' => round(max(0, $finalTotal - $totalPaid - $refundForUnusedDays), 2), // Remaining balance adjusted
         ];
     }
@@ -342,18 +347,26 @@ class Invoice extends Model
 
     public function getPaymentStatusAttribute()
     {
-        $balanceDue = $this->balance_due;
+        $totals = $this->calculateTotals(); // Ensure this method provides accurate balance and total values
+        $balanceDue = $totals['balanceDue'];
+        $totalPaid = $this->paid_amount + $this->deposit;
 
-        if ($balanceDue <= 0) {
-            return 'fully_paid';
+        // Check payment status based on the balance due and payments made
+        if ($totalPaid <= 0 && $balanceDue > 0) {
+            return 'unpaid';
         }
 
-        if ($balanceDue > 0 && ($this->paid_amount + $this->deposit) > 0) {
+        if ($totalPaid > 0 && $balanceDue > 0) {
             return 'partially_paid';
         }
 
-        return 'unpaid';
+        if ($balanceDue <= 0 && $totalPaid >= $totals['finalTotal']) {
+            return 'fully_paid';
+        }
+
+        return 'unknown'; // Fallback for unexpected cases
     }
+
 
 
     public function getTotalWithAdditionalAttribute()

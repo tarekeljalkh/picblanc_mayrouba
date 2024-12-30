@@ -15,8 +15,9 @@ return new class extends Migration
             $table->id();
             $table->foreignId('invoice_id')->constrained('invoices')->onDelete('cascade');
             $table->foreignId('invoice_item_id')->nullable()->constrained('invoice_items')->onDelete('cascade');
-            $table->foreignId('product_id')->constrained('products')->onDelete('cascade');
+            $table->foreignId('product_id')->nullable()->constrained('products')->onDelete('cascade');
             $table->foreignId('additional_item_id')->nullable()->constrained('additional_items')->onDelete('cascade');
+            $table->foreignId('custom_item_id')->nullable()->constrained('custom_items')->onDelete('cascade');
             $table->integer('returned_quantity');
             $table->integer('days_used');
             $table->decimal('cost', 10, 2);
@@ -27,6 +28,7 @@ return new class extends Migration
             // Indexes for faster lookups
             $table->index('invoice_id');
             $table->index('invoice_item_id');
+            $table->index('custom_item_id');
         });
     }
 

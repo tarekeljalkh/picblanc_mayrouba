@@ -15,6 +15,7 @@
             </tr>
         </thead>
         <tbody>
+            <!-- Original Items -->
             @foreach ($invoice->items as $item)
                 @if ($item->quantity - $item->returned_quantity > 0)
                     <tr>
@@ -52,6 +53,7 @@
                 @endif
             @endforeach
 
+            <!-- Additional Items -->
             @foreach ($invoice->additionalItems as $addedItem)
                 @if ($addedItem->quantity - $addedItem->returned_quantity > 0)
                     <tr>
@@ -88,12 +90,51 @@
                     </tr>
                 @endif
             @endforeach
+
+            <!-- Custom Items -->
+            @foreach ($invoice->customItems as $customItem)
+                @if ($customItem->quantity - $customItem->returned_quantity > 0)
+                    <tr>
+                        <td>
+                            <input type="checkbox" class="form-check-input return-checkbox"
+                                name="returns[custom][{{ $customItem->id }}][selected]" value="1"
+                                {{ old("returns.custom.{$customItem->id}.selected") ? 'checked' : '' }}>
+                        </td>
+                        <td>{{ $customItem->name }}</td>
+                        <td>{{ $customItem->quantity }}</td>
+                        <td>{{ $customItem->quantity - $customItem->returned_quantity }}</td>
+                        <td>
+                            <input type="number" class="form-control return-quantity"
+                                name="returns[custom][{{ $customItem->id }}][quantity]"
+                                max="{{ $customItem->quantity - $customItem->returned_quantity }}"
+                                value="{{ old("returns.custom.{$customItem->id}.quantity") }}"
+                                {{ old("returns.custom.{$customItem->id}.selected") ? '' : 'disabled' }}>
+                        </td>
+                        @if (session('category') === 'daily')
+                            <td>
+                                <input type="datetime-local" class="form-control return-date"
+                                    name="returns[custom][{{ $customItem->id }}][return_date]"
+                                    data-start-date="{{ $customItem->rental_start_date }}"
+                                    value="{{ old("returns.custom.{$customItem->id}.return_date") }}"
+                                    {{ old("returns.custom.{$customItem->id}.selected") ? '' : 'disabled' }}>
+                            </td>
+                            <td>
+                                <input type="number" class="form-control days-of-use"
+                                    name="returns[custom][{{ $customItem->id }}][days_of_use]"
+                                    value="{{ old("returns.custom.{$customItem->id}.days_of_use") }}"
+                                    {{ old("returns.custom.{$customItem->id}.selected") ? '' : 'disabled' }}>
+                            </td>
+                        @endif
+                    </tr>
+                @endif
+            @endforeach
         </tbody>
     </table>
     <div class="d-flex justify-content-end mt-3">
         <button type="submit" class="btn btn-warning">Process Returns</button>
     </div>
 </form>
+
 
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>

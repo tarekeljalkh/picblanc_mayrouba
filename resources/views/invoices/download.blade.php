@@ -161,7 +161,7 @@
                 $subtotalForDiscount = $totals['subtotalForDiscount'];
                 $additionalItemsCost = $totals['additionalItemsCost'];
                 $refundForUnusedDays = $totals['refundForUnusedDays'];
-                $finalTotal = $totals['finalTotal'];
+                $finalTotalCustom = $totals['finalTotalCustom'];
                 $balanceDue = $totals['balanceDue'];
             @endphp
             <tr>
@@ -170,15 +170,15 @@
             </tr>
             <tr>
                 <td><strong>Additional Items Cost:</strong></td>
-                <td class="text-end text-danger">- ${{ number_format($additionalItemsCost, 2) }}</td>
+                <td class="text-end text-success">+ ${{ number_format($additionalItemsCost, 2) }}</td>
             </tr>
             <tr>
                 <td><strong>Refund for Unused Days:</strong></td>
-                <td class="text-end text-success">- ${{ number_format($refundForUnusedDays, 2) }}</td>
+                <td class="text-end text-danger">- ${{ number_format($refundForUnusedDays, 2) }}</td>
             </tr>
             <tr>
                 <td><strong>Final Total:</strong></td>
-                <td class="text-end">${{ number_format($finalTotal, 2) }}</td>
+                <td class="text-end">${{ number_format($finalTotalCustom, 2) }}</td>
             </tr>
             <tr>
                 <td class="text-danger"><strong>Balance Due:</strong></td>

@@ -177,7 +177,7 @@
                                     @endphp
                                     <tr>
                                         <td>
-                                            {{ $return->invoiceItem->product->name ?? ($return->additionalItem->product->name ?? 'N/A') }}
+                                            {{ $return->invoiceItem->product->name ?? $return->additionalItem->product->name ?? ($return->customItem->name ?? 'N/A') }}
                                         </td>
                                         <td>{{ $return->returned_quantity }}</td>
                                         <td>${{ number_format($cost, 2) }}</td>
@@ -225,8 +225,8 @@
                                     <p class="mb-2">Additional Items Cost:</p> <!-- New Line for Additional Items -->
                                     <p class="mb-2">Refund for Unused Days:</p>
                                     <p class="mb-2">Deposit:</p>
+                                    <p class="mb-2">Final Total:</p>
                                     <p class="mb-2">Paid Amount:</p>
-                                    {{-- <p class="mb-2">Final Total:</p> --}}
                                     <p class="mb-2 text-danger fw-bold">Balance Due:</p>
                                 </td>
                                 <td class="text-end px-0 py-6 w-px-100 fw-medium text-heading">
@@ -235,8 +235,8 @@
                                     <p class="fw-medium mb-2">${{ number_format($totals['additionalItemsCost'], 2) }}</p> <!-- Display Value -->
                                     <p class="fw-medium mb-2">- ${{ number_format($totals['refundForUnusedDays'], 2) }}</p>
                                     <p class="fw-medium mb-2">${{ number_format($invoice->deposit, 2) }}</p>
+                                    <p class="fw-medium mb-2">${{ number_format($totals['finalTotalCustom'], 2) }}</p>
                                     <p class="fw-medium mb-2">${{ number_format($invoice->paid_amount, 2) }}</p>
-                                    {{-- <p class="fw-medium mb-2">${{ number_format($totals['finalTotal'], 2) }}</p> --}}
                                     <p class="fw-medium mb-0 text-danger">${{ number_format($totals['balanceDue'], 2) }}
                                     </p>
                                 </td>

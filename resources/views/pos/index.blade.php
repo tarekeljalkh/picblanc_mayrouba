@@ -333,7 +333,27 @@
                     renderCart();
                     calculateTotalAmount();
                     $('#addCustomItemModal').modal('hide'); // Close the modal
+                    validateCheckoutButton(); // Re-validate checkout button
                 });
+
+                // $('#customItemForm').on('submit', function(e) {
+                //     e.preventDefault();
+                //     const name = $('#custom-item-name').val();
+                //     const price = parseFloat($('#custom-item-price').val());
+                //     const quantity = parseInt($('#custom-item-quantity').val());
+
+                //     cart.push({
+                //         id: null, // Custom items have no product ID
+                //         name: name,
+                //         price: price,
+                //         quantity: quantity,
+                //         type: 'custom' // Mark as custom
+                //     });
+
+                //     renderCart();
+                //     calculateTotalAmount();
+                //     $('#addCustomItemModal').modal('hide'); // Close the modal
+                // });
 
                 // Trigger recalculations when discount, deposit, payment amount, or days change
                 $('#total-discount, #deposit, #payment-amount, #rental-days').on('input', function() {

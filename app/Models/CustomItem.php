@@ -21,4 +21,10 @@ class CustomItem extends Model
     {
         return $this->belongsTo(Invoice::class);
     }
+
+    public function returnDetails()
+{
+    return $this->hasMany(ReturnDetail::class);
+}
+
 }

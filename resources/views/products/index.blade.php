@@ -25,7 +25,6 @@
                             <th>Name</th>
                             <th>Description</th>
                             <th>Price</th>
-                            <th>Price Type</th>
                             <th>Action</th>
                         </tr>
                     </thead>
@@ -35,7 +34,6 @@
                                 <td>{{ $product->name }}</td>
                                 <td>{{ $product->description }}</td>
                                 <td>{{ $product->price }}</td>
-                                <td>{{ $product->type }}</td>
                                 <td>
                                     <!-- Conditional Button for Rental Details -->
                                     @if ($product->rentedQuantity() > 0)
