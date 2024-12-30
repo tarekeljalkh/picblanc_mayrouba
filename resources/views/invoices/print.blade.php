@@ -139,14 +139,15 @@
                             </td>
                             <td class="text-end">
                                 @php
-                                    $subtotal = $totals['subtotal'];
+                                    $subtotalForDiscount = $totals['subtotalForDiscount'];
                                     $returnedCost = $totals['returnedItemsCost'];
+                                    $additionalItemsCost = $totals['additionalItemsCost'];
                                     $refundForUnusedDays = $totals['refundForUnusedDays'];
                                     $finalTotal = $totals['finalTotal'];
                                     $balanceDue = $totals['balanceDue'];
                                 @endphp
-                                <p class="mb-1">Subtotal: ${{ number_format($subtotal, 2) }}</p>
-                                <p class="mb-1 text-danger">Returned Items Cost: - ${{ number_format($returnedCost, 2) }}</p>
+                                <p class="mb-1">Subtotal: ${{ number_format($subtotalForDiscount, 2) }}</p>
+                                <p class="mb-1">Additional Items Cost: ${{ number_format($additionalItemsCost, 2) }}</p>
                                 <p class="mb-1 text-success">Refund for Unused Days: - ${{ number_format($refundForUnusedDays, 2) }}</p>
                                 <p class="mb-1">Final Total: ${{ number_format($finalTotal, 2) }}</p>
                                 <p class="mb-1 text-danger fw-bold">Balance Due: ${{ number_format($balanceDue, 2) }}</p>

@@ -118,7 +118,8 @@
                         <td>{{ $item->product->name }}</td>
                         <td>${{ number_format($item->price, 2) }}</td>
                         <td>{{ $item->quantity }}</td>
-                        <td>${{ number_format($item->price * $item->quantity * ($invoice->category->name === 'daily' ? $item->days : 1), 2) }}</td>
+                        <td>${{ number_format($item->price * $item->quantity * ($invoice->category->name === 'daily' ? $item->days : 1), 2) }}
+                        </td>
                         @if ($invoice->category->name === 'daily')
                             <td>{{ optional($item->rental_start_date)->format('d/m/Y h:i A') }}</td>
                             <td>{{ optional($item->rental_end_date)->format('d/m/Y h:i A') }}</td>
@@ -157,19 +158,19 @@
         <h6>Invoice Summary</h6>
         <table>
             @php
-                $subtotal = $totals['subtotal'];
-                $returnedItemsCost = $totals['returnedItemsCost'];
+                $subtotalForDiscount = $totals['subtotalForDiscount'];
+                $additionalItemsCost = $totals['additionalItemsCost'];
                 $refundForUnusedDays = $totals['refundForUnusedDays'];
                 $finalTotal = $totals['finalTotal'];
                 $balanceDue = $totals['balanceDue'];
             @endphp
             <tr>
                 <td><strong>Subtotal:</strong></td>
-                <td class="text-end">${{ number_format($subtotal, 2) }}</td>
+                <td class="text-end">${{ number_format($subtotalForDiscount, 2) }}</td>
             </tr>
             <tr>
-                <td><strong>Returned Items Cost:</strong></td>
-                <td class="text-end text-danger">- ${{ number_format($returnedItemsCost, 2) }}</td>
+                <td><strong>Additional Items Cost:</strong></td>
+                <td class="text-end text-danger">- ${{ number_format($additionalItemsCost, 2) }}</td>
             </tr>
             <tr>
                 <td><strong>Refund for Unused Days:</strong></td>

@@ -126,27 +126,22 @@ class DashbboardController extends Controller
         foreach ($invoices as $invoice) {
             $totals = $invoice->calculateTotals();
 
-            $finalTotal = $totals['subtotal'];
-            $discount = $totals['discountAmount'];
+            // Get base total for the invoice
+            $finalTotal = $totals['finalTotal'];
 
-            // Total payments made
+            // Total payments made (including deposit)
             $paid = $invoice->paid_amount + $invoice->deposit;
 
-            // Allocate discount proportionally
-            $discountOnPaid = min($discount, $paid);
-            $discountOnUnpaid = $discount - $discountOnPaid;
-
-            // Adjust paid and unpaid with discounts
-            $adjustedPaid = $paid + $discountOnPaid;
-            $adjustedUnpaid = max(0, $finalTotal - $adjustedPaid);
+            // Calculate unpaid
+            $unpaid = max(0, $finalTotal - $paid);
 
             // Add to totals
-            $totalPaidInvoices += $adjustedPaid;
-            $totalUnpaidInvoices += $adjustedUnpaid;
+            $totalPaidInvoices += $paid; // Add the exact paid amount
+            $totalUnpaidInvoices += $unpaid; // Add the exact unpaid amount
 
             // Check for credit card payments
             if ($invoice->payment_method === 'credit_card') {
-                $totalPaidByCreditCard += $adjustedPaid;
+                $totalPaidByCreditCard += $paid;
             }
         }
 
