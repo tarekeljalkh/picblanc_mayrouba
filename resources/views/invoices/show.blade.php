@@ -185,7 +185,9 @@
                                         </td>
                                         <td>{{ $return->returned_quantity }}</td>
                                         <td>${{ number_format($cost, 2) }}</td>
+                                        @if ($invoice->category->name === 'daily')
                                         <td>{{ optional($rentalStartDate)->format('d/m/Y h:i A') }}</td>
+                                        @endif
                                         <td>{{ optional($return->return_date)->format('d/m/Y h:i A') }}</td>
                                         @if ($invoice->category->name === 'daily')
                                             <td>{{ $return->days_used }}</td>
