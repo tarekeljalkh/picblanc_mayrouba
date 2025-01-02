@@ -174,17 +174,18 @@
                                             $return->days_used *
                                             $return->returned_quantity *
                                             ($return->invoiceItem->price ?? ($return->additionalItem->price ?? 0));
+
+                                        $rentalStartDate =
+                                            optional($return->invoiceItem)->rental_start_date ??
+                                            optional($return->additionalItem)->rental_start_date;
                                     @endphp
                                     <tr>
                                         <td>
-                                            {{ $return->invoiceItem->product->name ?? $return->additionalItem->product->name ?? ($return->customItem->name ?? 'N/A') }}
+                                            {{ $return->invoiceItem->product->name ?? ($return->additionalItem->product->name ?? ($return->customItem->name ?? 'N/A')) }}
                                         </td>
                                         <td>{{ $return->returned_quantity }}</td>
                                         <td>${{ number_format($cost, 2) }}</td>
-                                        @if ($invoice->category->name === 'daily')
-                                            <td>{{ optional($return->invoiceItem->rental_start_date)->format('d/m/Y h:i A') ?? optional($return->additionalItem->rental_start_date)->format('d/m/Y h:i A') }}
-                                            </td>
-                                        @endif
+                                        <td>{{ optional($rentalStartDate)->format('d/m/Y h:i A') }}</td>
                                         <td>{{ optional($return->return_date)->format('d/m/Y h:i A') }}</td>
                                         @if ($invoice->category->name === 'daily')
                                             <td>{{ $return->days_used }}</td>
@@ -192,6 +193,7 @@
                                     </tr>
                                 @endforeach
                             </tbody>
+
                         </table>
                     </div>
                 @endif
@@ -232,7 +234,8 @@
                                 <td class="text-end px-0 py-6 w-px-100 fw-medium text-heading">
                                     <p class="fw-medium mb-2">${{ number_format($totals['subtotalForDiscount'], 2) }}</p>
                                     <p class="fw-medium mb-2">- ${{ number_format($totals['discountAmount'], 2) }}</p>
-                                    <p class="fw-medium mb-2">${{ number_format($totals['additionalItemsCost'], 2) }}</p> <!-- Display Value -->
+                                    <p class="fw-medium mb-2">${{ number_format($totals['additionalItemsCost'], 2) }}</p>
+                                    <!-- Display Value -->
                                     <p class="fw-medium mb-2">- ${{ number_format($totals['refundForUnusedDays'], 2) }}</p>
                                     <p class="fw-medium mb-2">${{ number_format($invoice->deposit, 2) }}</p>
                                     <p class="fw-medium mb-2">${{ number_format($totals['finalTotalCustom'], 2) }}</p>
