@@ -137,7 +137,7 @@
 
 
 @push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="{{ asset('assets/vendor/libs/flatpickr/flatpickr.js') }}"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         function initializeFlatpickr() {

@@ -57,6 +57,7 @@
                                     </span>
                                 </div>
                             </a>
+                            <hr class="d-none d-sm-block d-lg-none">
                         </div>
 
                         <!-- Unpaid Invoices Card -->
@@ -73,6 +74,7 @@
                                     </span>
                                 </div>
                             </a>
+                            <hr class="d-none d-sm-block d-lg-none">
                         </div>
 
 
@@ -90,6 +92,7 @@
                                     </span>
                                 </div>
                             </a>
+                            <hr class="d-none d-sm-block d-lg-none">
                         </div>
 
 
@@ -107,6 +110,7 @@
                                     </span>
                                 </div>
                             </a>
+                            <hr class="d-none d-sm-block d-lg-none">
                         </div>
                     </div>
                 </div>
