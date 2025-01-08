@@ -3,7 +3,6 @@
 @section('title', 'Dashboard')
 
 @section('content')
-    <div class="container-xxl flex-grow-1 container-p-y">
         <!-- Card Widgets -->
         <div class="card mb-6">
             <div class="card-widget-separator-wrapper">
@@ -116,5 +115,4 @@
                 </div>
             </div>
         </div>
-    </div>
 @endsection

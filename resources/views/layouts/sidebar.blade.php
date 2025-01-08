@@ -150,38 +150,5 @@
                 </a>
             </li>
         @endif
-
-        <!-- Profile -->
-        <li class="menu-header small text-uppercase">
-            <span class="menu-header-text">Profile</span>
-        </li>
-
-
-        <!-- Admin Profile Dropdown -->
-        <li class="menu-item">
-            <a href="javascript:void(0);" class="menu-link menu-toggle">
-                <i class="menu-icon tf-icons bx bx-user-circle"></i>
-                <div class="text-truncate" data-i18n="Admin">Profile</div>
-            </a>
-            <ul class="menu-sub">
-                <li class="menu-item {{ Route::is('profile.edit') ? 'active' : '' }}">
-                    <a href="{{ route('profile.edit') }}" class="menu-link">
-                        <div class="text-truncate" data-i18n="Edit Profile">Edit Profile</div>
-                    </a>
-                </li>
-                <li class="menu-item">
-                    <a href="javascript:void(0);" onclick="document.getElementById('logout-form').submit();"
-                        class="menu-link">
-                        <div class="text-truncate" data-i18n="Logout">Logout</div>
-                    </a>
-                    <form id="logout-form" method="POST" action="{{ route('logout') }}" class="d-none">
-                        @csrf
-                    </form>
-                </li>
-            </ul>
-        </li>
-
-        <!-- End Admin Profile Dropdown -->
-
     </ul>
 </aside>
