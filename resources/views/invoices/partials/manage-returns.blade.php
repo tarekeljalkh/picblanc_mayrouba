@@ -1,5 +1,6 @@
 <form action="{{ route('invoices.process-returns', $invoice->id) }}" method="POST">
     @csrf
+    <div class="table-responsive">
     <table class="table table-bordered">
         <thead class="table-light">
             <tr>
@@ -130,6 +131,7 @@
             @endforeach
         </tbody>
     </table>
+</div>
     <div class="d-flex justify-content-end mt-3">
         <button type="submit" class="btn btn-warning">Process Returns</button>
     </div>
