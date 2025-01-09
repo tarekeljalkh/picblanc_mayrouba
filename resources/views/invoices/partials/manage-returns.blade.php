@@ -141,56 +141,74 @@
 @push('scripts')
 <script src="{{ asset('assets/vendor/libs/flatpickr/flatpickr.js') }}"></script>
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
-        function initializeFlatpickr() {
-            document.querySelectorAll('.return-date').forEach(input => {
-                const startDate = input.getAttribute('data-start-date');
+document.addEventListener('DOMContentLoaded', function () {
+    function initializeFlatpickr() {
+        document.querySelectorAll('.return-date').forEach(input => {
+            const startDate = input.getAttribute('data-start-date');
 
-                flatpickr(input, {
-                    enableTime: true,
-                    dateFormat: 'Y-m-d H:i',
-                    minDate: startDate,
-                    onChange: function () {
-                        calculateDaysOfUse(input);
-                    },
-                });
-            });
-        }
-
-        initializeFlatpickr();
-
-        document.querySelectorAll('.return-checkbox').forEach(checkbox => {
-            checkbox.addEventListener('change', function () {
-                const row = this.closest('tr');
-                const quantityInput = row.querySelector('.return-quantity');
-                const dateInput = row.querySelector('.return-date');
-                const daysOfUseInput = row.querySelector('.days-of-use');
-
-                const enableInputs = this.checked;
-                quantityInput.disabled = !enableInputs;
-                dateInput.disabled = !enableInputs;
-                daysOfUseInput.disabled = !enableInputs;
-
-                if (!enableInputs) {
-                    quantityInput.value = '';
-                    dateInput.value = '';
-                    daysOfUseInput.value = '';
-                }
+            flatpickr(input, {
+                enableTime: true,
+                dateFormat: 'Y-m-d H:i',
+                minDate: startDate,
+                onChange: function () {
+                    calculateDaysOfUse(input);
+                },
             });
         });
+    }
 
-        function calculateDaysOfUse(input) {
-            const row = input.closest('tr');
-            const rentalStartDate = new Date(input.getAttribute('data-start-date'));
-            const returnDate = new Date(input.value);
+    initializeFlatpickr();
+
+    document.querySelectorAll('.return-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', function () {
+            const row = this.closest('tr');
+            const quantityInput = row.querySelector('.return-quantity');
+            const dateInput = row.querySelector('.return-date');
             const daysOfUseInput = row.querySelector('.days-of-use');
 
-            if (!isNaN(rentalStartDate) && !isNaN(returnDate) && returnDate >= rentalStartDate) {
-                const diffTime = returnDate - rentalStartDate;
-                const daysUsed = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                daysOfUseInput.value = Math.max(1, daysUsed);
+            if (this.checked) {
+                // Enable inputs
+                quantityInput.removeAttribute('disabled');
+                dateInput.removeAttribute('disabled');
+                if (daysOfUseInput) {
+                    daysOfUseInput.removeAttribute('disabled');
+                }
+
+                // Reinitialize Flatpickr for the now-enabled date input
+                flatpickr(dateInput, {
+                    enableTime: true,
+                    dateFormat: 'Y-m-d H:i',
+                    minDate: dateInput.getAttribute('data-start-date'),
+                    onChange: function () {
+                        calculateDaysOfUse(dateInput);
+                    },
+                });
+            } else {
+                // Disable inputs and clear values
+                quantityInput.setAttribute('disabled', 'true');
+                quantityInput.value = '';
+                dateInput.setAttribute('disabled', 'true');
+                dateInput.value = '';
+                if (daysOfUseInput) {
+                    daysOfUseInput.setAttribute('disabled', 'true');
+                    daysOfUseInput.value = '';
+                }
             }
-        }
+        });
     });
+
+    function calculateDaysOfUse(input) {
+        const row = input.closest('tr');
+        const rentalStartDate = new Date(input.getAttribute('data-start-date'));
+        const returnDate = new Date(input.value);
+        const daysOfUseInput = row.querySelector('.days-of-use');
+
+        if (!isNaN(rentalStartDate) && !isNaN(returnDate) && returnDate >= rentalStartDate) {
+            const diffTime = returnDate - rentalStartDate;
+            const daysUsed = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            daysOfUseInput.value = Math.max(1, daysUsed);
+        }
+    }
+});
 </script>
 @endpush
