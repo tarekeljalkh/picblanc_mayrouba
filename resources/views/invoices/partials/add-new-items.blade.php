@@ -1,5 +1,6 @@
 <form action="{{ route('invoices.add-items', $invoice->id) }}" method="POST" id="addItemsForm">
     @csrf
+    <div class="table-responsive">
     <table class="table" id="itemsTable">
         <thead>
             <tr>
@@ -68,6 +69,7 @@
             </tr>
         </tfoot>
     </table>
+</div>
     <div class="d-flex justify-content-between mt-3">
         <button type="button" class="btn btn-success" id="addRow">Add Row</button>
         <button type="submit" class="btn btn-primary">Add Items</button>
