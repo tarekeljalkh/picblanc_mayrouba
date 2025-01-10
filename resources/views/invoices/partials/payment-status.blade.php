@@ -19,7 +19,7 @@
     <!-- Total Amount -->
     <div class="mb-3">
         <label for="totalAmount" class="form-label">Total Amount ($)</label>
-        <input type="text" id="totalAmount" class="form-control" value="{{ number_format($finalTotalCustom, 2) }}" readonly>
+        <input type="text" id="totalAmount" class="form-control" value="{{ number_format($finalTotal, 2) }}" readonly>
     </div>
 
     <!-- Paid Amount -->
