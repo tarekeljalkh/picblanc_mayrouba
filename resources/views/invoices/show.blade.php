@@ -240,7 +240,7 @@
                                     <!-- Display Value -->
                                     <p class="fw-medium mb-2">- ${{ number_format($totals['refundForUnusedDays'], 2) }}</p>
                                     <p class="fw-medium mb-2">${{ number_format($invoice->deposit, 2) }}</p>
-                                    <p class="fw-medium mb-2">${{ number_format($totals['finalTotalCustom'], 2) }}</p>
+                                    <p class="fw-medium mb-2">${{ number_format($totals['finalTotal'], 2) }}</p>
                                     <p class="fw-medium mb-2">${{ number_format($invoice->paid_amount, 2) }}</p>
                                     <p class="fw-medium mb-0 text-danger">${{ number_format($totals['balanceDue'], 2) }}
                                     </p>
