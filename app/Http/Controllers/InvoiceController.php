@@ -78,8 +78,7 @@ class InvoiceController extends Controller
                 // Filter for partially paid invoices
                 $query->where('paid_amount', '>', 0)
                     ->whereColumn('paid_amount', '<', 'total_amount');
-            })
-            ->paginate(10); // Paginate results for better performance
+            })->get();
 
         // Pass the selected category, status, and payment status to the view
         return view('invoices.index', compact('invoices', 'selectedCategory', 'status', 'paymentStatus'));

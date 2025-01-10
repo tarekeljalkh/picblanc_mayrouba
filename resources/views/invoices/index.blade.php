@@ -119,15 +119,6 @@
                         @endforeach
                     </tbody>
                 </table>
-
-                <!-- Pagination -->
-                <div class="mt-3">
-                    <nav>
-                        <ul class="pagination justify-content-center">
-                            {{ $invoices->onEachSide(1)->links('pagination::bootstrap-4') }}
-                        </ul>
-                    </nav>
-                </div>
             </div>
         </div>
     </div>
