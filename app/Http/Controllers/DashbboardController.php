@@ -35,7 +35,7 @@ class DashbboardController extends Controller
             ->count();
 
         $totalUnpaid = Invoice::where('category_id', $category->id)
-            ->where('paid_amount', 0) // Unpaid invoices
+            ->whereColumn('paid_amount', '<', 'total_amount') // Unpaid or partially paid invoices
             ->count();
 
         $notReturnedCount = Invoice::where('category_id', $category->id)
@@ -82,6 +82,7 @@ class DashbboardController extends Controller
             'categoryName'
         ));
     }
+
 
     public function trialBalance(Request $request)
     {

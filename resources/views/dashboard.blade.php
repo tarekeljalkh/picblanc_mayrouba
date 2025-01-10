@@ -44,7 +44,7 @@
 
                         <!-- Paid Invoices Card -->
                         <div class="col-sm-6 col-lg-3">
-                            <a href="{{ route('invoices.index', ['payment_status' => 'paid']) }}"
+                            <a href="{{ route('invoices.index') }}"
                                 class="d-flex justify-content-between align-items-center card-widget-3 border-end pb-4 pb-sm-0">
                                 <div>
                                     <h4 class="mb-0">{{ $totalPaid }}</h4>
@@ -61,7 +61,7 @@
 
                         <!-- Unpaid Invoices Card -->
                         <div class="col-sm-6 col-lg-3">
-                            <a href="{{ route('invoices.index', ['payment_status' => 'unpaid']) }}"
+                            <a href="{{ route('invoices.index')}}"
                                 class="d-flex justify-content-between align-items-center card-widget-3 border-end pb-4 pb-sm-0">
                                 <div>
                                     <h4 class="mb-0">{{ $totalUnpaid }}</h4>
