@@ -104,9 +104,14 @@ class DashbboardController extends Controller
         // Check if the category is "season"
         $isSeasonal = $category->name === 'season';
 
-        // Fetch invoices: no date filtering for the "season" category
+        // Fetch invoices
         $invoices = Invoice::where('category_id', $category->id)
+            ->when($isSeasonal, function ($query) use ($from, $to) {
+                // Filter by created_at for "season" category
+                $query->whereBetween('created_at', [$from, $to]);
+            })
             ->when(!$isSeasonal, function ($query) use ($from, $to) {
+                // Filter by rental dates for non-seasonal categories
                 $query->where(function ($query) use ($from, $to) {
                     $query->whereBetween('rental_start_date', [$from, $to])
                         ->orWhereBetween('rental_end_date', [$from, $to])
@@ -157,65 +162,6 @@ class DashbboardController extends Controller
     }
 
 
-
-    //with returned cost
-    //     public function trialBalance(Request $request)
-    // {
-    //     // Retrieve date range from the request or default to today's date
-    //     $fromDate = $request->input('from_date', Carbon::today()->toDateString());
-    //     $toDate = $request->input('to_date', Carbon::today()->toDateString());
-
-    //     // Parse the date range
-    //     $from = Carbon::parse($fromDate)->startOfDay();
-    //     $to = Carbon::parse($toDate)->endOfDay();
-
-    //     // Get the selected category
-    //     $categoryName = session('category', 'daily');
-    //     $category = Category::where('name', $categoryName)->first();
-
-    //     if (!$category) {
-    //         return redirect()->back()->withErrors('Invalid category selected.');
-    //     }
-
-    //     // Fetch invoices for the specified category and date range
-    //     $invoices = Invoice::where('category_id', $category->id)
-    //         ->whereBetween('created_at', [$from, $to])
-    //         ->get();
-
-    //     // Initialize totals
-    //     $totalPaidInvoices = 0;
-    //     $totalUnpaidInvoices = 0;
-    //     $totalPaidByCreditCard = 0;
-    //     $totalReturnedCost = 0; // New: Initialize total returned cost
-
-    //     foreach ($invoices as $invoice) {
-    //         $paid = $invoice->deposit + $invoice->paid_amount; // Total amount paid (deposit + actual payments)
-    //         $unpaid = max(0, $invoice->total_price - $paid);  // Remaining balance
-
-    //         $totalPaidInvoices += $paid;
-    //         $totalUnpaidInvoices += $unpaid;
-
-    //         if ($invoice->payment_method === 'credit_card') {
-    //             $totalPaidByCreditCard += $paid;
-    //         }
-
-    //         // Calculate the total returned cost for the invoice
-    //         $totalReturnedCost += $invoice->returnDetails->sum('cost');
-    //     }
-
-    //     // Prepare trial balance data
-    //     $trialBalanceData = [
-    //         ['description' => 'Total Paid Invoices', 'amount' => $totalPaidInvoices],
-    //         ['description' => 'Total Unpaid Invoices', 'amount' => $totalUnpaidInvoices],
-    //         ['description' => 'Total Paid by Credit Card', 'amount' => $totalPaidByCreditCard],
-    //         ['description' => 'Total Returned Cost', 'amount' => $totalReturnedCost], // Add returned cost to the report
-    //     ];
-
-    //     return view('trial-balance.index', compact('trialBalanceData', 'fromDate', 'toDate'));
-    // }
-
-
-
     public function trialBalanceByProducts(Request $request)
     {
         // Set default "from" and "to" dates to today if not provided
@@ -243,7 +189,11 @@ class DashbboardController extends Controller
                 $query->whereHas('invoice', function ($invoiceQuery) use ($category, $from, $to, $isSeasonal) {
                     $invoiceQuery->where('category_id', $category->id);
 
-                    if (!$isSeasonal) {
+                    if ($isSeasonal) {
+                        // Filter by created_at for "season" category
+                        $invoiceQuery->whereBetween('created_at', [$from, $to]);
+                    } else {
+                        // Filter by rental dates for non-seasonal categories
                         $invoiceQuery->where(function ($dateQuery) use ($from, $to) {
                             $dateQuery->whereBetween('rental_start_date', [$from, $to])
                                 ->orWhereBetween('rental_end_date', [$from, $to])
@@ -259,7 +209,11 @@ class DashbboardController extends Controller
                 $query->whereHas('invoice', function ($invoiceQuery) use ($category, $from, $to, $isSeasonal) {
                     $invoiceQuery->where('category_id', $category->id);
 
-                    if (!$isSeasonal) {
+                    if ($isSeasonal) {
+                        // Filter by created_at for "season" category
+                        $invoiceQuery->whereBetween('created_at', [$from, $to]);
+                    } else {
+                        // Filter by rental dates for non-seasonal categories
                         $invoiceQuery->where(function ($dateQuery) use ($from, $to) {
                             $dateQuery->whereBetween('rental_start_date', [$from, $to])
                                 ->orWhereBetween('rental_end_date', [$from, $to])
@@ -305,7 +259,11 @@ class DashbboardController extends Controller
         // Fetch custom items
         $customItems = Invoice::where('category_id', $category->id)
             ->where(function ($dateQuery) use ($from, $to, $isSeasonal) {
-                if (!$isSeasonal) {
+                if ($isSeasonal) {
+                    // Filter by created_at for "season" category
+                    $dateQuery->whereBetween('created_at', [$from, $to]);
+                } else {
+                    // Filter by rental dates for non-seasonal categories
                     $dateQuery->whereBetween('rental_start_date', [$from, $to])
                         ->orWhereBetween('rental_end_date', [$from, $to])
                         ->orWhere(function ($spanQuery) use ($from, $to) {
@@ -329,4 +287,5 @@ class DashbboardController extends Controller
         // Return the view with only the quantities of rented products
         return view('trial-balance.products', compact('productBalances', 'fromDate', 'toDate'));
     }
+
 }
