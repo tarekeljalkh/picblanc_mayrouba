@@ -123,7 +123,16 @@
                                         </tr>
                                     </tbody>
                                 </table>
+                                <br>
                                 <button type="button" class="btn btn-success" id="add-item">Add Item</button>
+
+                                @if (session('category') === 'season')
+                                    <button type="button" class="btn btn-primary" data-bs-toggle="modal"
+                                        data-bs-target="#customItemModal">
+                                        Add Custom Item
+                                    </button>
+                                @endif
+
                             </div>
                         </div>
 
@@ -225,6 +234,40 @@
         </div>
     </div>
 
+    @if (session('category') === 'season')
+        <div class="modal fade" id="customItemModal" tabindex="-1" aria-labelledby="customItemModalLabel"
+            aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="customItemModalLabel">Add Custom Item</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="customItemForm">
+                            <div class="mb-3">
+                                <label for="custom-item-name" class="form-label">Item Name</label>
+                                <input type="text" class="form-control" id="custom-item-name" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="custom-item-price" class="form-label">Price ($)</label>
+                                <input type="number" class="form-control" id="custom-item-price" step="0.01"
+                                    required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="custom-item-quantity" class="form-label">Quantity</label>
+                                <input type="number" class="form-control" id="custom-item-quantity" value="1"
+                                    min="1" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100">Add to Invoice</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endif
+
+
     {{-- Include jQuery, Flatpickr, and Select2 CDN --}}
     <script src="{{ asset('assets/js/jquery-3.6.0.min.js') }}"></script>
     <script src="{{ asset('assets/vendor/libs/flatpickr/flatpickr.js') }}"></script>
@@ -290,60 +333,27 @@
             calculateInvoiceTotal();
         }
 
-        // Calculate the overall invoice total
-        function calculateInvoiceTotal() {
-    let subtotal = 0; // For per-day products
-    let fixedTotal = 0; // For fixed products
-
-    // Calculate subtotal and fixed total
-    $('#invoice-items-table tbody tr').each(function () {
-        const row = $(this);
-        const productType = row.find('.product-select option:selected').data('type');
-        const quantity = parseFloat(row.find('.quantity').val()) || 0;
-        const price = parseFloat(row.find('.price').val()) || 0;
-
-        if (productType === 'fixed') {
-            fixedTotal += quantity * price;
-        } else {
-            subtotal += quantity * price;
-        }
-    });
-
-    // Fetch input values
-    const discount = parseFloat($('#total_discount').val()) || 0;
-    const discountAmount = (subtotal * discount) / 100;
-    const deposit = parseFloat($('#deposit').val()) || 0; // Subtracted as it's a pre-payment
-    const days = Math.max(parseInt($('#days').val()) || 1, 1);
-    const paymentAmount = parseFloat($('#payment_amount').val()) || 0;
-
-    // Calculate total before payment
-    const totalBeforePayment = (subtotal - discountAmount) * days + fixedTotal - deposit;
-
-    // Deduct payment amount from total
-    const totalAfterPayment = totalBeforePayment - paymentAmount;
-
-    // Ensure totalAfterPayment is not negative
-    const finalTotal = totalAfterPayment > 0 ? totalAfterPayment : 0;
-
-    // Update fields
-    $('#total_amount').val(finalTotal.toFixed(2)); // Total amount reflects after payment
-    $('#remaining_balance').text(finalTotal.toFixed(2)); // Balance reflects the same value
-
-    // Validate form after recalculating
-    checkFormValidity();
-}
-
-
-        // Validate the form
         function checkFormValidity() {
             const hasCustomer = $('#select_customer').val() || ($('#customer_name').val() && $('#customer_phone').val() &&
                 $('#customer_address').val());
-            let hasProducts = false;
+            let hasProductsOrCustomItems = false;
 
             // Check if there are products in the table
             $('#invoice-items-table .product-select').each(function() {
                 if ($(this).val() && parseFloat($(this).closest('tr').find('.quantity').val()) > 0) {
-                    hasProducts = true;
+                    hasProductsOrCustomItems = true;
+                    return false; // Break loop
+                }
+            });
+
+            // Check if there are custom items in the table
+            $('#invoice-items-table tbody tr').each(function() {
+                const isCustomItem = !$(this).find('.product-select')
+                .length; // No product-select means it's a custom item
+                const quantity = parseFloat($(this).find('.quantity').val()) || 0;
+
+                if (isCustomItem && quantity > 0) {
+                    hasProductsOrCustomItems = true;
                     return false; // Break loop
                 }
             });
@@ -351,12 +361,79 @@
             const totalAmount = parseFloat($('#total_amount').val()) || 0;
             const paymentAmount = parseFloat($('#payment_amount').val()) || 0;
 
-            // Ensure payment doesn't exceed total amount
+            console.log('Total Amount:', totalAmount, 'Payment Amount:', paymentAmount); // Debugging log
+
+            // Ensure payment is valid (not exceeding total amount)
             const isValidPayment = paymentAmount <= totalAmount;
 
             // Enable/disable form submission
-            $('#create-invoice-button').prop('disabled', !(hasCustomer && hasProducts && isValidPayment));
+            const isFormValid = hasCustomer && hasProductsOrCustomItems && isValidPayment;
+
+            console.log('Form Valid:', isFormValid); // Debugging log
+
+            $('#create-invoice-button').prop('disabled', !isFormValid);
         }
+
+        // Event handlers for `payment_amount` field
+        $('#payment_amount').on('input', function() {
+            const value = parseFloat($(this).val()) || 0;
+
+            console.log('Payment Amount Changed:', value); // Debugging log
+
+            calculateInvoiceTotal(); // Recalculate totals if necessary
+            checkFormValidity();
+        });
+
+        // Other necessary event handlers
+        $('#total_discount, #deposit, #days').on('input', function() {
+            calculateInvoiceTotal();
+            checkFormValidity();
+        });
+
+        // Calculate the overall invoice total
+        function calculateInvoiceTotal() {
+            let subtotal = 0; // For per-day products
+            let fixedTotal = 0; // For fixed products
+
+            // Calculate subtotal and fixed total
+            $('#invoice-items-table tbody tr').each(function() {
+                const row = $(this);
+                const productType = row.find('.product-select option:selected').data('type');
+                const quantity = parseFloat(row.find('.quantity').val()) || 0;
+                const price = parseFloat(row.find('.price').val()) || 0;
+
+                if (productType === 'fixed') {
+                    fixedTotal += quantity * price;
+                } else {
+                    subtotal += quantity * price;
+                }
+            });
+
+            // Fetch input values
+            const discount = parseFloat($('#total_discount').val()) || 0;
+            const discountAmount = (subtotal * discount) / 100;
+            const deposit = parseFloat($('#deposit').val()) || 0; // Subtracted as it's a pre-payment
+            const days = Math.max(parseInt($('#days').val()) || 1, 1);
+            const paymentAmount = parseFloat($('#payment_amount').val()) || 0;
+
+            // Calculate total before payment
+            const totalBeforePayment = (subtotal - discountAmount) * days + fixedTotal - deposit;
+
+            // Deduct payment amount from total
+            const totalAfterPayment = totalBeforePayment - paymentAmount;
+
+            // Ensure totalAfterPayment is not negative
+            const finalTotal = totalAfterPayment > 0 ? totalAfterPayment : 0;
+
+            // Update fields
+            $('#total_amount').val(finalTotal.toFixed(2)); // Total amount reflects after payment
+            $('#remaining_balance').text(finalTotal.toFixed(2)); // Balance reflects the same value
+
+            // Validate form after recalculating
+            checkFormValidity();
+        }
+
+
 
         // Event handlers for product and quantity changes
         $(document).on('change', '.product-select', function() {
@@ -400,6 +477,53 @@
         // Trigger recalculations on input changes
         $('#total_discount, #deposit, #payment_amount').on('input', calculateInvoiceTotal);
         $('#days').on('input', calculateInvoiceTotal);
+
+        // Custom item addition for season category only
+        let customItemIndex = 0; // Keep track of custom item indices globally
+
+        if (category === 'season') {
+            $('#customItemForm').on('submit', function(e) {
+                e.preventDefault();
+
+                const itemName = $('#custom-item-name').val();
+                const itemPrice = parseFloat($('#custom-item-price').val());
+                const itemQuantity = parseInt($('#custom-item-quantity').val());
+
+                // Add custom item to the invoice items table
+                const newRow = `
+            <tr>
+                <td>
+                    <input type="text" class="form-control" name="custom_items[${customItemIndex}][name]" value="${itemName}" readonly>
+                </td>
+                <td>
+                    <input type="number" class="form-control quantity" name="custom_items[${customItemIndex}][quantity]" value="${itemQuantity}" readonly>
+                </td>
+                <td>
+                    <input type="number" class="form-control price" name="custom_items[${customItemIndex}][price]" value="${itemPrice.toFixed(2)}" readonly>
+                </td>
+                <td>
+                    <input type="number" class="form-control total-price" value="${(itemPrice * itemQuantity).toFixed(2)}" readonly>
+                </td>
+                <td>
+                    <button type="button" class="btn btn-danger remove-item">Remove</button>
+                </td>
+            </tr>`;
+                $('#invoice-items-table tbody').append(newRow);
+
+                // Increment the custom item index
+                customItemIndex++;
+
+                // Close the modal
+                $('#customItemModal').modal('hide');
+
+                // Reset the custom item form
+                $('#customItemForm')[0].reset();
+
+                // Recalculate totals and validate the form
+                calculateInvoiceTotal();
+                checkFormValidity();
+            });
+        }
     </script>
 
 @endsection
