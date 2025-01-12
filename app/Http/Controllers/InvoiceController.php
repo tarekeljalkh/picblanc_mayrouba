@@ -46,12 +46,20 @@ class InvoiceController extends Controller
     {
         // Retrieve the selected category from the session, default to 'daily' if none is set
         $selectedCategory = session('category', 'daily');
-
-        // Get the status and payment filters from the request
+        
+        // Get filters from the request
         $status = $request->query('status');
         $paymentStatus = $request->query('payment_status');
-
-        // Fetch invoices based on the selected category and optional status/payment filters
+        $startDate = $request->query('start_date');
+        $endDate = $request->query('end_date');
+        
+        // Default to today's date if no date filters are provided
+        if (!$startDate && !$endDate) {
+            $startDate = \Carbon\Carbon::today()->toDateString();
+            $endDate = \Carbon\Carbon::today()->toDateString();
+        }
+        
+        // Fetch invoices based on the selected category and filters
         $invoices = Invoice::with([
             'customer',              // Load customer relationship
             'items',                 // Load items relationship
@@ -77,14 +85,21 @@ class InvoiceController extends Controller
             ->when($paymentStatus === 'partially_paid', function ($query) {
                 // Filter for partially paid invoices
                 $query->where('paid_amount', '>', 0)
-                    ->whereColumn('paid_amount', '<', 'total_amount');
-            })->get();
-
-        // Pass the selected category, status, and payment status to the view
-        return view('invoices.index', compact('invoices', 'selectedCategory', 'status', 'paymentStatus'));
+                      ->whereColumn('paid_amount', '<', 'total_amount');
+            })
+            ->where(function ($query) use ($startDate, $endDate) {
+                // Filter for rental period overlap with the provided date range
+                $query->whereBetween('rental_start_date', [$startDate, $endDate])
+                      ->orWhere(function ($query) use ($startDate, $endDate) {
+                          $query->where('rental_start_date', '>=', $startDate);
+                      });
+            })
+            ->get();
+        
+        // Pass the selected category, status, payment status, and dates to the view
+        return view('invoices.index', compact('invoices', 'selectedCategory', 'status', 'paymentStatus', 'startDate', 'endDate'));
     }
-
-
+    
     /**
      * Show the form for creating a new resource.
      */
