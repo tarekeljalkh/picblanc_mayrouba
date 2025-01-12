@@ -87,8 +87,11 @@ class InvoiceController extends Controller
                 $query->where('paid_amount', '>', 0)
                       ->whereColumn('paid_amount', '<', 'total_amount');
             })
-            ->where(function ($query) use ($startDate, $endDate) {
-                // Filter for rental period overlap with the provided date range
+            ->when($selectedCategory === 'season', function ($query) use ($startDate, $endDate) {
+                // Filter by created_at for 'season' category
+                $query->whereBetween('created_at', [$startDate, $endDate]);
+            }, function ($query) use ($startDate, $endDate) {
+                // Filter by rental_start_date for other categories
                 $query->whereBetween('rental_start_date', [$startDate, $endDate])
                       ->orWhere(function ($query) use ($startDate, $endDate) {
                           $query->where('rental_start_date', '>=', $startDate);
@@ -99,7 +102,7 @@ class InvoiceController extends Controller
         // Pass the selected category, status, payment status, and dates to the view
         return view('invoices.index', compact('invoices', 'selectedCategory', 'status', 'paymentStatus', 'startDate', 'endDate'));
     }
-    
+        
     /**
      * Show the form for creating a new resource.
      */
