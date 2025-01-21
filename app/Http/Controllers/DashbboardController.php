@@ -91,6 +91,8 @@ class DashbboardController extends Controller
 
     public function trialBalance(Request $request)
     {
+        $user = auth()->user(); // Get the authenticated user
+
         // Retrieve date range from the request or default to today's date
         $fromDate = $request->input('from_date', Carbon::today()->toDateString());
         $toDate = $request->input('to_date', Carbon::today()->toDateString());
@@ -112,6 +114,10 @@ class DashbboardController extends Controller
 
         // Fetch invoices based on the selected category and date range
         $invoices = Invoice::where('category_id', $category->id)
+        ->when($user->role !== 'admin', function ($query) use ($user) {
+            // Restrict to the authenticated user's invoices if not admin
+            $query->where('user_id', $user->id);
+        })
             ->when($isSeasonal, function ($query) use ($from, $to) {
                 // Filter by created_at for "season" category
                 $query->whereBetween('created_at', [$from, $to]);
@@ -171,6 +177,8 @@ class DashbboardController extends Controller
 
     public function trialBalanceByProducts(Request $request)
     {
+        $user = auth()->user(); // Get the authenticated user
+
         // Set default "from" and "to" dates to today if not provided
         $fromDate = $request->input('from_date', Carbon::today()->toDateString());
         $toDate = $request->input('to_date', Carbon::today()->toDateString());
@@ -192,9 +200,13 @@ class DashbboardController extends Controller
 
         // Fetch all products with invoice items and additional items
         $products = Product::with([
-            'invoiceItems' => function ($query) use ($from, $to, $category, $isSeasonal) {
-                $query->whereHas('invoice', function ($invoiceQuery) use ($category, $from, $to, $isSeasonal) {
+            'invoiceItems' => function ($query) use ($from, $to, $category, $isSeasonal, $user) {
+                $query->whereHas('invoice', function ($invoiceQuery) use ($category, $from, $to, $isSeasonal, $user) {
                     $invoiceQuery->where('category_id', $category->id);
+
+                    if ($user->role !== 'admin') {
+                        $invoiceQuery->where('user_id', $user->id);
+                    }
 
                     if ($isSeasonal) {
                         // Filter by created_at for "season" category
@@ -205,16 +217,20 @@ class DashbboardController extends Controller
                             $dateQuery->whereBetween('rental_start_date', [$from, $to])
                                 ->orWhereBetween('rental_end_date', [$from, $to])
                                 ->orWhere(function ($spanQuery) use ($from, $to) {
-                                    $spanQuery->where('rental_start_date', '<=', $from)
-                                        ->where('rental_end_date', '>=', $to);
+                                    $spanQuery->where('rental_start_date', '>=', $from)
+                                        ->where('rental_end_date', '<>', $to);
                                 });
                         });
                     }
                 });
             },
-            'additionalItems' => function ($query) use ($from, $to, $category, $isSeasonal) {
-                $query->whereHas('invoice', function ($invoiceQuery) use ($category, $from, $to, $isSeasonal) {
+            'additionalItems' => function ($query) use ($from, $to, $category, $isSeasonal, $user) {
+                $query->whereHas('invoice', function ($invoiceQuery) use ($category, $from, $to, $isSeasonal, $user) {
                     $invoiceQuery->where('category_id', $category->id);
+
+                    if ($user->role !== 'admin') {
+                        $invoiceQuery->where('user_id', $user->id);
+                    }
 
                     if ($isSeasonal) {
                         // Filter by created_at for "season" category
@@ -225,8 +241,8 @@ class DashbboardController extends Controller
                             $dateQuery->whereBetween('rental_start_date', [$from, $to])
                                 ->orWhereBetween('rental_end_date', [$from, $to])
                                 ->orWhere(function ($spanQuery) use ($from, $to) {
-                                    $spanQuery->where('rental_start_date', '<=', $from)
-                                        ->where('rental_end_date', '>=', $to);
+                                    $spanQuery->where('rental_start_date', '>=', $from)
+                                        ->where('rental_end_date', '<>', $to);
                                 });
                         });
                     }
@@ -265,6 +281,9 @@ class DashbboardController extends Controller
 
         // Fetch custom items
         $customItems = Invoice::where('category_id', $category->id)
+            ->when($user->role !== 'admin', function ($query) use ($user) {
+                $query->where('user_id', $user->id);
+            })
             ->where(function ($dateQuery) use ($from, $to, $isSeasonal) {
                 if ($isSeasonal) {
                     // Filter by created_at for "season" category
@@ -274,8 +293,8 @@ class DashbboardController extends Controller
                     $dateQuery->whereBetween('rental_start_date', [$from, $to])
                         ->orWhereBetween('rental_end_date', [$from, $to])
                         ->orWhere(function ($spanQuery) use ($from, $to) {
-                            $spanQuery->where('rental_start_date', '<=', $from)
-                                ->where('rental_end_date', '>=', $to);
+                            $spanQuery->where('rental_start_date', '>=', $from)
+                                ->where('rental_end_date', '<>', $to);
                         });
                 }
             })
@@ -294,4 +313,4 @@ class DashbboardController extends Controller
         // Return the view with only the quantities of rented products
         return view('trial-balance.products', compact('productBalances', 'fromDate', 'toDate'));
     }
-}
+    }
