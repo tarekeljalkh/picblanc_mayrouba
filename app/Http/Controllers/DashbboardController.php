@@ -39,12 +39,17 @@ class DashbboardController extends Controller
             ->count();
 
         $notReturnedCount = Invoice::where('category_id', $category->id)
-            ->where('status', 'active')
-            ->count();
+            ->with(['items', 'additionalItems', 'customItems'])
+            ->get() // Fetch all invoices matching the category
+            ->filter(fn($invoice) => !$invoice->returned) // Only include invoices where `returned` is true
+            ->count(); // Count the filtered invoices
+
 
         $returnedCount = Invoice::where('category_id', $category->id)
-            ->where('status', 'returned')
-            ->count();
+            ->with(['items', 'additionalItems', 'customItems'])
+            ->get() // Fetch all invoices matching the category
+            ->filter(fn($invoice) => $invoice->returned) // Only include invoices where `returned` is true
+            ->count(); // Count the filtered invoices
 
         $overdueCount = Invoice::where('category_id', $category->id)
             ->where('rental_end_date', '<', now())
@@ -90,7 +95,7 @@ class DashbboardController extends Controller
         $fromDate = $request->input('from_date', Carbon::today()->toDateString());
         $toDate = $request->input('to_date', Carbon::today()->toDateString());
 
-        // Parse the dates
+        // Parse the dates for the start and end of the day
         $from = Carbon::parse($fromDate)->startOfDay();
         $to = Carbon::parse($toDate)->endOfDay();
 
@@ -105,7 +110,7 @@ class DashbboardController extends Controller
         // Check if the category is "season"
         $isSeasonal = $category->name === 'season';
 
-        // Fetch invoices
+        // Fetch invoices based on the selected category and date range
         $invoices = Invoice::where('category_id', $category->id)
             ->when($isSeasonal, function ($query) use ($from, $to) {
                 // Filter by created_at for "season" category
@@ -114,11 +119,11 @@ class DashbboardController extends Controller
             ->when(!$isSeasonal, function ($query) use ($from, $to) {
                 // Filter by rental dates for non-seasonal categories
                 $query->where(function ($query) use ($from, $to) {
-                    $query->whereBetween('rental_start_date', [$from, $to])
-                        ->orWhereBetween('rental_end_date', [$from, $to])
-                        ->orWhere(function ($subQuery) use ($from, $to) {
-                            $subQuery->where('rental_start_date', '<=', $from)
-                                ->where('rental_end_date', '>=', $to);
+                    $query->whereBetween('rental_start_date', [$from, $to]) // Starts within range
+                        ->orWhereBetween('rental_end_date', [$from, $to]) // Ends within range
+                        ->orWhere(function ($subQuery) use ($from, $to) { // Fully overlaps range
+                            $subQuery->where('rental_start_date', '>=', $from)
+                                ->where('rental_end_date', '<>', $to);
                         });
                 });
             })
@@ -129,24 +134,25 @@ class DashbboardController extends Controller
         $totalUnpaidInvoices = 0;
         $totalPaidByCreditCard = 0;
 
+        // Calculate totals for invoices
         foreach ($invoices as $invoice) {
             $totals = $invoice->calculateTotals();
 
-            // Get relevant totals for the invoice
+            // Retrieve final total and refund for unused days
             $finalTotal = $totals['finalTotal'];
             $refundForUnusedDays = $totals['refundForUnusedDays'];
 
-            // Total payments made (including deposit)
+            // Total paid amount (including deposit)
             $paid = $invoice->paid_amount + $invoice->deposit;
 
-            // Calculate unpaid, considering refund
+            // Calculate unpaid amount considering refund
             $unpaid = max(0, $finalTotal - $paid - $refundForUnusedDays);
 
-            // Add to totals
-            $totalPaidInvoices += $paid; // Add the exact paid amount
-            $totalUnpaidInvoices += $unpaid; // Subtract refund from unpaid invoices
+            // Update totals
+            $totalPaidInvoices += $paid; // Add the paid amount
+            $totalUnpaidInvoices += $unpaid; // Add the unpaid amount
 
-            // Check for credit card payments
+            // Check for payments made via credit card
             if ($invoice->payment_method === 'credit_card') {
                 $totalPaidByCreditCard += $paid;
             }
@@ -288,5 +294,4 @@ class DashbboardController extends Controller
         // Return the view with only the quantities of rented products
         return view('trial-balance.products', compact('productBalances', 'fromDate', 'toDate'));
     }
-
 }

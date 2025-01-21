@@ -44,7 +44,7 @@
 
                         <!-- Paid Invoices Card -->
                         <div class="col-sm-6 col-lg-3">
-                            <a href="{{ route('invoices.index') }}"
+                            <a href="{{ route('invoices.index', ['start_date' => '2024-01-01', 'end_date' => '2090-01-01', 'payment_status' => 'fully_paid']) }}"
                                 class="d-flex justify-content-between align-items-center card-widget-3 border-end pb-4 pb-sm-0">
                                 <div>
                                     <h4 class="mb-0">{{ $totalPaid }}</h4>
@@ -61,7 +61,7 @@
 
                         <!-- Unpaid Invoices Card -->
                         <div class="col-sm-6 col-lg-3">
-                            <a href="{{ route('invoices.index')}}"
+                            <a href="{{ route('invoices.index', ['start_date' => '2024-01-01', 'end_date' => '2090-01-01', 'payment_status' => 'unpaid']) }}"
                                 class="d-flex justify-content-between align-items-center card-widget-3 border-end pb-4 pb-sm-0">
                                 <div>
                                     <h4 class="mb-0">{{ $totalUnpaid }}</h4>
@@ -79,7 +79,7 @@
 
                         <!-- Active Invoices Card -->
                         <div class="col-sm-6 col-lg-3">
-                            <a href="{{ route('invoices.index', ['status' => 'active']) }}"
+                            <a href="{{ route('invoices.index', ['start_date' => '2024-01-01', 'end_date' => '2090-01-01', 'status' => 'not_returned']) }}"
                                 class="d-flex justify-content-between align-items-center card-widget-4 border-end pb-4 pb-sm-0">
                                 <div>
                                     <h4 class="mb-0">{{ $notReturnedCount }}</h4>
@@ -97,7 +97,7 @@
 
                         <!-- Returned Invoices Card -->
                         <div class="col-sm-6 col-lg-3">
-                            <a href="{{ route('invoices.index', ['status' => 'returned']) }}"
+                            <a href="{{ route('invoices.index', ['start_date' => '2024-01-01', 'end_date' => '2090-01-01', 'status' => 'returned']) }}"
                                 class="d-flex justify-content-between align-items-center card-widget-5 border-end pb-4 pb-sm-0">
                                 <div>
                                     <h4 class="mb-0">{{ $returnedCount }}</h4>

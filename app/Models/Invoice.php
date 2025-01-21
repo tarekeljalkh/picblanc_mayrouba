@@ -328,6 +328,27 @@ class Invoice extends Model
     //     ];
     // }
 
+    public function getReturnedAttribute()
+    {
+        // Check if all regular items are returned
+        $allItemsReturned = $this->items->every(function ($item) {
+            return $item->quantity <= $item->returned_quantity;
+        });
+
+        // Check if all additional items are returned
+        $allAdditionalItemsReturned = $this->additionalItems->every(function ($item) {
+            return $item->quantity <= $item->returned_quantity;
+        });
+
+        // Check if all custom items are returned
+        $allCustomItemsReturned = $this->customItems->every(function ($item) {
+            return $item->quantity <= $item->returned_quantity;
+        });
+
+        // Return true if all items are returned, otherwise false
+        return $allItemsReturned && $allAdditionalItemsReturned && $allCustomItemsReturned;
+    }
+
     public function checkAndUpdateStatus()
     {
         $totalAmount = $this->total_amount + $this->additionalItems->sum('total_price');

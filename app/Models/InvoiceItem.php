@@ -29,6 +29,9 @@ class InvoiceItem extends Model
         'rental_end_date' => 'datetime',
     ];
 
+    protected $appends = ['returned'];
+
+
     // Relationships
     public function invoice()
     {

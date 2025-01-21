@@ -26,83 +26,57 @@ class InvoiceController extends Controller
     /**
      * Display a listing of the resource.
      */
-    // public function index()
-    // {
-    //     // Retrieve the selected category from the session, default to 'daily' if none is set
-    //     $selectedCategory = session('category', 'daily');
-
-    //     // Fetch invoices based on the selected category
-    //     $invoices = Invoice::with('customer')
-    //         ->whereHas('category', function ($query) use ($selectedCategory) {
-    //             $query->where('name', $selectedCategory);
-    //         })
-    //         ->get();
-
-    //     // Pass the selected category to the view
-    //     return view('invoices.index', compact('invoices', 'selectedCategory'));
-    // }
 
     public function index(Request $request)
     {
-        // Retrieve the selected category from the session, default to 'daily' if none is set
         $selectedCategory = session('category', 'daily');
-        
-        // Get filters from the request
         $status = $request->query('status');
         $paymentStatus = $request->query('payment_status');
         $startDate = $request->query('start_date');
         $endDate = $request->query('end_date');
-        
+
         // Default to today's date if no date filters are provided
         if (!$startDate && !$endDate) {
             $startDate = \Carbon\Carbon::today()->toDateString();
             $endDate = \Carbon\Carbon::today()->toDateString();
         }
-        
-        // Fetch invoices based on the selected category and filters
-        $invoices = Invoice::with([
-            'customer',              // Load customer relationship
-            'items',                 // Load items relationship
-            'customItems',           // Load custom items relationship
-            'additionalItems',       // Load additional items relationship
-            'returnDetails'          // Load returned items relationship
-        ])
+
+        $invoices = Invoice::with(['customer', 'items', 'customItems', 'additionalItems', 'returnDetails'])
             ->whereHas('category', function ($query) use ($selectedCategory) {
                 $query->where('name', $selectedCategory);
             })
-            ->when($status, function ($query, $status) {
-                // Filter by invoice status
-                $query->where('status', $status);
-            })
-            ->when($paymentStatus === 'paid', function ($query) {
-                // Filter for fully paid invoices
+            ->when($paymentStatus === 'fully_paid', function ($query) {
                 $query->whereColumn('paid_amount', '>=', 'total_amount');
             })
             ->when($paymentStatus === 'unpaid', function ($query) {
-                // Filter for unpaid invoices
                 $query->where('paid_amount', 0);
             })
             ->when($paymentStatus === 'partially_paid', function ($query) {
-                // Filter for partially paid invoices
                 $query->where('paid_amount', '>', 0)
                       ->whereColumn('paid_amount', '<', 'total_amount');
             })
             ->when($selectedCategory === 'season', function ($query) use ($startDate, $endDate) {
                 // Filter by created_at for 'season' category
-                $query->whereBetween('created_at', [$startDate, $endDate]);
+                $query->where('created_at', '>=', $startDate);
             }, function ($query) use ($startDate, $endDate) {
-                // Filter by rental_start_date for other categories
-                $query->whereBetween('rental_start_date', [$startDate, $endDate])
-                      ->orWhere(function ($query) use ($startDate, $endDate) {
-                          $query->where('rental_start_date', '>=', $startDate);
-                      });
+                // Filter by rental dates for other categories
+                $query->where('rental_start_date', '>=', $startDate)
+                      ->where('rental_end_date', '<>', $endDate);
             })
             ->get();
-        
-        // Pass the selected category, status, payment status, and dates to the view
+
+        // Filter dynamically based on 'returned' status
+        if ($status === 'returned') {
+            $invoices = $invoices->filter(fn($invoice) => $invoice->returned); // Only include returned invoices
+        } elseif ($status === 'not_returned') {
+            $invoices = $invoices->filter(fn($invoice) => !$invoice->returned); // Only include not returned invoices
+        }
+
+
         return view('invoices.index', compact('invoices', 'selectedCategory', 'status', 'paymentStatus', 'startDate', 'endDate'));
     }
-        
+
+
     /**
      * Show the form for creating a new resource.
      */

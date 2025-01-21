@@ -40,11 +40,11 @@
                             data-bs-target="#payment-status" type="button" role="tab"
                             aria-controls="payment-status" aria-selected="false">Payment Status</button>
                     </li>
-                    <li class="nav-item" role="presentation">
+                    {{-- <li class="nav-item" role="presentation">
                         <button class="nav-link" id="invoice-status-tab" data-bs-toggle="tab"
                             data-bs-target="#invoice-status" type="button" role="tab"
                             aria-controls="invoice-status" aria-selected="false">Invoice Status</button>
-                    </li>
+                    </li> --}}
                 </ul>
                 <div class="tab-content mt-3">
                     {{-- Manage Returns Tab --}}
@@ -63,9 +63,9 @@
                     </div>
 
                     {{-- Invoice Status Tab --}}
-                    <div class="tab-pane fade" id="invoice-status" role="tabpanel" aria-labelledby="invoice-status-tab">
+                    {{-- <div class="tab-pane fade" id="invoice-status" role="tabpanel" aria-labelledby="invoice-status-tab">
                         @include('invoices.partials.invoice-status')
-                    </div>
+                    </div> --}}
                 </div>
             </div>
         </div>
