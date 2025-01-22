@@ -208,6 +208,10 @@
         <!-- Conditions -->
         <p><strong>CONDITION:</strong> I declare having received the merchandise mentioned above in good condition and
             agree to return it on time. I will reimburse the value of any missing, damaged, or broken article.</p>
+                            <p>Mayrouba - Tel: 03715757</p>
+                <p>Warde - Tel: 70100015</p>
+                <p>Mzaar Intercontinental Hotel - Tel: 03788733</p>
+
     </div>
 </body>
 

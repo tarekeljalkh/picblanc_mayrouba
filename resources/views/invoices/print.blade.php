@@ -173,7 +173,7 @@
 
             <!-- Footer -->
             <div style="text-align: center; margin-top: 10px; font-size: 10px;">
-                <p>I declare having received the merchandise in good condition and agree to return it on time.</p>
+                <p>I declare having received the merchandise mentioned above in good condition and I agree to return it on time. I will reimburse the value of any missing, damaged, or broken article.</p>
                 <p>Mayrouba - Tel: 03715757</p>
                 <p>Warde - Tel: 70100015</p>
                 <p>Mzaar Intercontinental Hotel - Tel: 03788733</p>
