@@ -3,116 +3,151 @@
 @section('title', 'Dashboard')
 
 @section('content')
-        <!-- Card Widgets -->
-        <div class="card mb-6">
-            <div class="card-widget-separator-wrapper">
-                <div class="card-body card-widget-separator">
-                    <div class="row gy-4 gy-sm-1">
-                        <!-- Customers Card -->
-                        <div class="col-sm-6 col-lg-3">
-                            <div
-                                class="d-flex justify-content-between align-items-center card-widget-1 border-end pb-4 pb-sm-0">
-                                <div>
-                                    <h4 class="mb-0">{{ $customersCount }}</h4> <!-- Dynamic Customers Count -->
-                                    <p class="mb-0">Customers</p>
-                                </div>
-                                <div class="avatar me-sm-6">
-                                    <span class="avatar-initial rounded bg-label-secondary text-heading">
-                                        <i class="bx bx-user bx-26px"></i>
-                                    </span>
-                                </div>
-                            </div>
-                            <hr class="d-none d-sm-block d-lg-none me-6">
-                        </div>
-
-                        <!-- Invoices Card -->
-                        <div class="col-sm-6 col-lg-3">
-                            <div
-                                class="d-flex justify-content-between align-items-center card-widget-2 border-end pb-4 pb-sm-0">
-                                <div>
-                                    <h4 class="mb-0">{{ $invoicesCount }}</h4> <!-- Dynamic Invoices Count -->
-                                    <p class="mb-0">Invoices</p>
-                                </div>
-                                <div class="avatar me-lg-6">
-                                    <span class="avatar-initial rounded bg-label-secondary text-heading">
-                                        <i class="bx bx-file bx-26px"></i>
-                                    </span>
+    <!-- Card Widgets -->
+    <div class="card mb-6">
+        <div class="card-widget-separator-wrapper">
+            <div class="card-body card-widget-separator">
+                <div class="row g-4">
+                    <!-- Customers Card -->
+                    <div class="col-md-6 col-lg-6">
+                        <a href="{{ route('customers.index') }}" class="text-decoration-none">
+                            <div class="card shadow-sm h-100">
+                                <div class="card-body d-flex align-items-center">
+                                    <div>
+                                        <h4 class="mb-0 text-primary">{{ $customersCount }}</h4>
+                                        <p class="mb-0 fw-bold">Customers</p>
+                                    </div>
+                                    <div class="ms-auto avatar">
+                                        <span class="avatar-initial rounded-circle bg-primary text-white">
+                                            <i class="bx bx-user bx-lg"></i>
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
-                            <hr class="d-none d-sm-block d-lg-none">
-                        </div>
+                        </a>
+                    </div>
 
-                        <!-- Paid Invoices Card -->
-                        <div class="col-sm-6 col-lg-3">
-                            <a href="{{ route('invoices.index', ['start_date' => '2024-01-01', 'end_date' => '2090-01-01', 'payment_status' => 'fully_paid']) }}"
-                                class="d-flex justify-content-between align-items-center card-widget-3 border-end pb-4 pb-sm-0">
-                                <div>
-                                    <h4 class="mb-0">{{ $totalPaid }}</h4>
-                                    <p class="mb-0">Paid Invoices</p>
+                    <!-- Invoices Card -->
+                    <div class="col-md-6 col-lg-6">
+                        <a href="{{ route('invoices.index', ['start_date' => '2024-01-01', 'end_date' => '2090-01-01']) }}"
+                            class="text-decoration-none">
+                            <div class="card shadow-sm h-100">
+                                <div class="card-body d-flex align-items-center">
+                                    <div>
+                                        <h4 class="mb-0 text-success">{{ $invoicesCount }}</h4>
+                                        <p class="mb-0 fw-bold">Invoices</p>
+                                    </div>
+                                    <div class="ms-auto avatar">
+                                        <span class="avatar-initial rounded-circle bg-success text-white">
+                                            <i class="bx bx-file bx-lg"></i>
+                                        </span>
+                                    </div>
                                 </div>
-                                <div class="avatar me-sm-6">
-                                    <span class="avatar-initial rounded bg-label-secondary text-heading">
-                                        <i class="bx bx-check-double bx-26px"></i>
-                                    </span>
-                                </div>
-                            </a>
-                            <hr class="d-none d-sm-block d-lg-none">
-                        </div>
+                            </div>
+                        </a>
+                    </div>
 
-                        <!-- Unpaid Invoices Card -->
-                        <div class="col-sm-6 col-lg-3">
-                            <a href="{{ route('invoices.index', ['start_date' => '2024-01-01', 'end_date' => '2090-01-01', 'payment_status' => 'unpaid']) }}"
-                                class="d-flex justify-content-between align-items-center card-widget-3 border-end pb-4 pb-sm-0">
-                                <div>
-                                    <h4 class="mb-0">{{ $totalUnpaid }}</h4>
-                                    <p class="mb-0">Unpaid Invoices</p>
+                    <!-- Paid Invoices Card -->
+                    <div class="col-md-6 col-lg-4">
+                        <a href="{{ route('invoices.index', ['start_date' => '2024-01-01', 'end_date' => '2090-01-01', 'payment_status' => 'fully_paid']) }}"
+                            class="text-decoration-none">
+                            <div class="card shadow-sm h-100">
+                                <div class="card-body d-flex align-items-center">
+                                    <div>
+                                        <h4 class="mb-0 text-info">{{ $totalPaid }}</h4>
+                                        <p class="mb-0 fw-bold">Paid Invoices</p>
+                                    </div>
+                                    <div class="ms-auto avatar">
+                                        <span class="avatar-initial rounded-circle bg-info text-white">
+                                            <i class="bx bx-check-double bx-lg"></i>
+                                        </span>
+                                    </div>
                                 </div>
-                                <div class="avatar me-sm-6">
-                                    <span class="avatar-initial rounded bg-label-secondary text-heading">
-                                        <i class="bx bx-time bx-26px"></i>
-                                    </span>
-                                </div>
-                            </a>
-                            <hr class="d-none d-sm-block d-lg-none">
-                        </div>
+                            </div>
+                        </a>
+                    </div>
 
+                    <!-- Partially Paid Invoices Card -->
+                    <div class="col-md-6 col-lg-4">
+                        <a href="{{ route('invoices.index', ['start_date' => '2024-01-01', 'end_date' => '2090-01-01', 'payment_status' => 'partially_paid']) }}"
+                            class="text-decoration-none">
+                            <div class="card shadow-sm h-100">
+                                <div class="card-body d-flex align-items-center">
+                                    <div>
+                                        <h4 class="mb-0 text-warning">{{ $totalPartiallyPaid }}</h4>
+                                        <p class="mb-0 fw-bold">Partially Paid Invoices</p>
+                                    </div>
+                                    <div class="ms-auto avatar">
+                                        <span class="avatar-initial rounded-circle bg-warning text-white">
+                                            <i class="bx bx-time bx-lg"></i>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
 
-                        <!-- Active Invoices Card -->
-                        <div class="col-sm-6 col-lg-3">
-                            <a href="{{ route('invoices.index', ['start_date' => '2024-01-01', 'end_date' => '2090-01-01', 'status' => 'not_returned']) }}"
-                                class="d-flex justify-content-between align-items-center card-widget-4 border-end pb-4 pb-sm-0">
-                                <div>
-                                    <h4 class="mb-0">{{ $notReturnedCount }}</h4>
-                                    <p class="mb-0">Not Returned Invoices</p>
+                    <!-- Unpaid Invoices Card -->
+                    <div class="col-md-6 col-lg-4">
+                        <a href="{{ route('invoices.index', ['start_date' => '2024-01-01', 'end_date' => '2090-01-01', 'payment_status' => 'unpaid']) }}"
+                            class="text-decoration-none">
+                            <div class="card shadow-sm h-100">
+                                <div class="card-body d-flex align-items-center">
+                                    <div>
+                                        <h4 class="mb-0 text-danger">{{ $totalUnpaid }}</h4>
+                                        <p class="mb-0 fw-bold">Unpaid Invoices</p>
+                                    </div>
+                                    <div class="ms-auto avatar">
+                                        <span class="avatar-initial rounded-circle bg-danger text-white">
+                                            <i class="bx bx-x-circle bx-lg"></i>
+                                        </span>
+                                    </div>
                                 </div>
-                                <div class="avatar me-sm-6">
-                                    <span class="avatar-initial rounded bg-label-secondary text-heading">
-                                        <i class="bx bx-undo bx-26px"></i>
-                                    </span>
-                                </div>
-                            </a>
-                            <hr class="d-none d-sm-block d-lg-none">
-                        </div>
+                            </div>
+                        </a>
+                    </div>
 
+                    <!-- Not Returned Invoices Card -->
+                    <div class="col-md-6 col-lg-6">
+                        <a href="{{ route('invoices.index', ['start_date' => '2024-01-01', 'end_date' => '2090-01-01', 'status' => 'not_returned']) }}"
+                            class="text-decoration-none">
+                            <div class="card shadow-sm h-100">
+                                <div class="card-body d-flex align-items-center">
+                                    <div>
+                                        <h4 class="mb-0 text-secondary">{{ $notReturnedCount }}</h4>
+                                        <p class="mb-0 fw-bold">Not Returned Invoices</p>
+                                    </div>
+                                    <div class="ms-auto avatar">
+                                        <span class="avatar-initial rounded-circle bg-secondary text-white">
+                                            <i class="bx bx-undo bx-lg"></i>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
 
-                        <!-- Returned Invoices Card -->
-                        <div class="col-sm-6 col-lg-3">
-                            <a href="{{ route('invoices.index', ['start_date' => '2024-01-01', 'end_date' => '2090-01-01', 'status' => 'returned']) }}"
-                                class="d-flex justify-content-between align-items-center card-widget-5 border-end pb-4 pb-sm-0">
-                                <div>
-                                    <h4 class="mb-0">{{ $returnedCount }}</h4>
-                                    <p class="mb-0">Returned Invoices</p>
+                    <!-- Returned Invoices Card -->
+                    <div class="col-md-6 col-lg-6">
+                        <a href="{{ route('invoices.index', ['start_date' => '2024-01-01', 'end_date' => '2090-01-01', 'status' => 'returned']) }}"
+                            class="text-decoration-none">
+                            <div class="card shadow-sm h-100">
+                                <div class="card-body d-flex align-items-center">
+                                    <div>
+                                        <h4 class="mb-0 text-dark">{{ $returnedCount }}</h4>
+                                        <p class="mb-0 fw-bold">Returned Invoices</p>
+                                    </div>
+                                    <div class="ms-auto avatar">
+                                        <span class="avatar-initial rounded-circle bg-dark text-white">
+                                            <i class="bx bx-check bx-lg"></i>
+                                        </span>
+                                    </div>
                                 </div>
-                                <div class="avatar me-sm-6">
-                                    <span class="avatar-initial rounded bg-label-secondary text-heading">
-                                        <i class="bx bx-error bx-26px"></i>
-                                    </span>
-                                </div>
-                            </a>
-                            <hr class="d-none d-sm-block d-lg-none">
-                        </div>
+                            </div>
+                        </a>
                     </div>
                 </div>
             </div>
         </div>
+    </div>
 @endsection

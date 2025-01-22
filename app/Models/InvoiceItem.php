@@ -79,6 +79,46 @@ class InvoiceItem extends Model
     /**
      * Process a return for this invoice item
      */
+    // public function processReturn($returnedQuantity, $returnDate)
+    // {
+    //     // Validate returned quantity
+    //     if ($returnedQuantity > ($this->quantity - $this->returned_quantity)) {
+    //         throw new \Exception("Returned quantity exceeds the remaining quantity.");
+    //     }
+
+    //     // Calculate days used
+    //     $usedDays = max(Carbon::parse($this->rental_start_date)->diffInDays($returnDate), 1);
+
+    //     // Calculate cost for the return
+    //     $usedCost = $this->calculateCost($returnedQuantity, $usedDays);
+
+    //     // Save the return details
+    //     ReturnDetail::create([
+    //         'invoice_item_id' => $this->id,
+    //         'returned_quantity' => $returnedQuantity,
+    //         'days_used' => $usedDays,
+    //         'cost' => $usedCost,
+    //         'return_date' => $returnDate->toDateString(),
+    //     ]);
+
+    //     // Update returned quantity
+    //     $this->returned_quantity += $returnedQuantity;
+
+    //     // If all quantities for this item are returned, update its status
+    //     if ($this->returned_quantity == $this->quantity) {
+    //         $this->status = 'returned';
+    //     }
+
+    //     $this->save();
+
+    //     // Trigger invoice status update
+    //     $this->invoice->checkAndUpdateStatus();
+
+    //     return [
+    //         'used_cost' => $usedCost,
+    //         'remaining_quantity' => $this->quantity - $this->returned_quantity,
+    //     ];
+    // }
     public function processReturn($returnedQuantity, $returnDate)
     {
         // Validate returned quantity
@@ -104,15 +144,11 @@ class InvoiceItem extends Model
         // Update returned quantity
         $this->returned_quantity += $returnedQuantity;
 
-        // If all quantities for this item are returned, update its status
-        if ($this->returned_quantity == $this->quantity) {
-            $this->status = 'returned';
-        }
-
+        // Save the updated invoice item
         $this->save();
 
-        // Trigger invoice status update
-        $this->invoice->checkAndUpdateStatus();
+        // Trigger dynamic invoice recalculations (if needed)
+        $this->invoice->recalculateTotals();
 
         return [
             'used_cost' => $usedCost,

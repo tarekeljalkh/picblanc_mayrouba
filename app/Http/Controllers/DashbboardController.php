@@ -29,13 +29,20 @@ class DashbboardController extends Controller
         $customersCount = Customer::count();
         $invoicesCount = Invoice::where('category_id', $category->id)->count();
 
-        // Use paid_amount and total_amount to determine statuses
         $totalPaid = Invoice::where('category_id', $category->id)
-            ->whereColumn('paid_amount', '>=', 'total_amount') // Fully paid invoices
+            ->get() // Fetch all invoices for the category
+            ->filter(fn($invoice) => $invoice->payment_status === 'fully_paid') // Filter fully paid invoices
             ->count();
 
+        $totalPartiallyPaid = Invoice::where('category_id', $category->id)
+            ->get() // Fetch all invoices for the category
+            ->filter(fn($invoice) => $invoice->payment_status === 'partially_paid') // Filter fully paid invoices
+            ->count();
+
+
         $totalUnpaid = Invoice::where('category_id', $category->id)
-            ->whereColumn('paid_amount', '<', 'total_amount') // Unpaid or partially paid invoices
+            ->get() // Fetch all invoices for the category
+            ->filter(fn($invoice) => $invoice->payment_status === 'unpaid') // Filter unpaid invoices
             ->count();
 
         $notReturnedCount = Invoice::where('category_id', $category->id)
@@ -77,6 +84,7 @@ class DashbboardController extends Controller
             'customersCount',
             'invoicesCount',
             'totalPaid',
+            'totalPartiallyPaid',
             'totalUnpaid',
             'notReturnedCount',
             'returnedCount',
@@ -114,10 +122,10 @@ class DashbboardController extends Controller
 
         // Fetch invoices based on the selected category and date range
         $invoices = Invoice::where('category_id', $category->id)
-        ->when($user->role !== 'admin', function ($query) use ($user) {
-            // Restrict to the authenticated user's invoices if not admin
-            $query->where('user_id', $user->id);
-        })
+            ->when($user->role !== 'admin', function ($query) use ($user) {
+                // Restrict to the authenticated user's invoices if not admin
+                $query->where('user_id', $user->id);
+            })
             ->when($isSeasonal, function ($query) use ($from, $to) {
                 // Filter by created_at for "season" category
                 $query->whereBetween('created_at', [$from, $to]);
@@ -128,8 +136,8 @@ class DashbboardController extends Controller
                     $query->whereBetween('rental_start_date', [$from, $to]) // Starts within range
                         ->orWhereBetween('rental_end_date', [$from, $to]) // Ends within range
                         ->orWhere(function ($subQuery) use ($from, $to) { // Fully overlaps range
-                            $subQuery->where('rental_start_date', '>=', $from)
-                                ->where('rental_end_date', '<>', $to);
+                            $subQuery->where('rental_start_date', '<=', $from)
+                                ->where('rental_end_date', '>=', $to);
                         });
                 });
             })
@@ -145,14 +153,17 @@ class DashbboardController extends Controller
             $totals = $invoice->calculateTotals();
 
             // Retrieve final total and refund for unused days
-            $finalTotal = $totals['finalTotal'];
-            $refundForUnusedDays = $totals['refundForUnusedDays'];
+            $finalTotal = $totals['finalTotal'] ?? 0;
+            $refundForUnusedDays = $totals['refundForUnusedDays'] ?? 0;
 
             // Total paid amount (including deposit)
             $paid = $invoice->paid_amount + $invoice->deposit;
 
-            // Calculate unpaid amount considering refund
-            $unpaid = max(0, $finalTotal - $paid - $refundForUnusedDays);
+            // Calculate unpaid amount considering refund and rounding issues
+            $unpaid = max(0, round($finalTotal - $paid - $refundForUnusedDays, 2));
+
+            // Debugging: Log invoice details
+            // \Log::info("Invoice {$invoice->id}: Final Total = $finalTotal, Paid = $paid, Unpaid = $unpaid");
 
             // Update totals
             $totalPaidInvoices += $paid; // Add the paid amount
@@ -313,4 +324,4 @@ class DashbboardController extends Controller
         // Return the view with only the quantities of rented products
         return view('trial-balance.products', compact('productBalances', 'fromDate', 'toDate'));
     }
-    }
+}

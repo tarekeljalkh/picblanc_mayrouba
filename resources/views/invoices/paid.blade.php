@@ -18,17 +18,14 @@
             </div>
             <div class="card-body">
                 <!-- Date Filter Form -->
-                <form method="GET" action="{{ route('invoices.overdue') }}" class="mb-3">
+                <form method="GET" action="{{ route('invoices.unpaid') }}" class="mb-3">
                     <div class="row">
                         <div class="col-md-3">
-                            <label for="start_date" class="form-label">Start Date</label>
-                            <input type="date" id="start_date" name="start_date" class="form-control"
-                                   value="{{ request('start_date', \Carbon\Carbon::today()->toDateString()) }}">
-                        </div>
-                        <div class="col-md-3">
-                            <label for="end_date" class="form-label">End Date</label>
-                            <input type="date" id="end_date" name="end_date" class="form-control"
-                                   value="{{ request('end_date', \Carbon\Carbon::today()->toDateString()) }}">
+                            <label for="category" class="form-label">Category</label>
+                            <select id="category" name="category" class="form-select">
+                                <option value="daily" {{ $selectedCategory === 'daily' ? 'selected' : '' }}>Daily</option>
+                                <option value="season" {{ $selectedCategory === 'season' ? 'selected' : '' }}>Season</option>
+                            </select>
                         </div>
                         <div class="col-md-3 align-self-end">
                             <button type="submit" class="btn btn-primary">Filter</button>
@@ -56,7 +53,11 @@
                                 <td>${{ $invoice->total_amount }}</td>
                                 <td>{{ $invoice->rental_end_date->format('Y-m-d') }}</td>
                                 <td>
-                                    <span class="badge bg-danger">Overdue</span>
+                                    <span class="badge
+                                        {{ $invoice->payment_status === 'fully_paid' ? 'bg-success' :
+                                        ($invoice->payment_status === 'partially_paid' ? 'bg-warning' : 'bg-danger') }}">
+                                        {{ ucfirst(str_replace('_', ' ', $invoice->payment_status)) }}
+                                    </span>
                                 </td>
                                 <td>
                                     <a href="{{ route('invoices.edit', $invoice->id) }}" class="btn btn-warning">Edit</a>

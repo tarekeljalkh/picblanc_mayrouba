@@ -45,8 +45,10 @@ Route::middleware('auth')->group(function () {
     Route::resource('products', ProductController::class);
 
     // Invoices
-    Route::get('/invoices/overdue', [InvoiceController::class, 'overdue'])->name('invoices.overdue');
-    Route::get('/invoices/returned', [InvoiceController::class, 'returned'])->name('invoices.returned');
+    Route::get('/invoices/unpaid', [InvoiceController::class, 'unpaid'])->name('invoices.unpaid');
+    Route::get('/invoices/paid', [InvoiceController::class, 'paid'])->name('invoices.paid');
+
+
 
     Route::resource('invoices', InvoiceController::class);
     Route::get('/invoices/{id}/print', [InvoiceController::class, 'print'])->name('invoices.print');

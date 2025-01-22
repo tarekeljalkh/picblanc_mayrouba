@@ -38,7 +38,8 @@
                             <label for="status" class="form-label">Status</label>
                             <select id="status" name="status" class="form-select">
                                 <option value="">All</option>
-                                <option value="not_returned" {{ request('status') === 'not_returned' ? 'selected' : '' }}>Not Returned</option>
+                                <option value="not_returned" {{ request('status') === 'not_returned' ? 'selected' : '' }}>
+                                    Not Returned</option>
                                 <option value="returned" {{ request('status') === 'returned' ? 'selected' : '' }}>Returned
                                 </option>
                                 <option value="draft" {{ request('status') === 'draft' ? 'selected' : '' }}>Draft</option>
@@ -90,9 +91,8 @@
 
                                 <!-- Payment Status -->
                                 <td>
-                                    <span class="badge
-                                        {{ $invoice->payment_status === 'fully_paid' ? 'bg-success' :
-                                        ($invoice->payment_status === 'partially_paid' ? 'bg-warning' : 'bg-danger') }}">
+                                    <span
+                                        class="badge {{ $invoice->payment_status === 'fully_paid' ? 'bg-success' : ($invoice->payment_status === 'partially_paid' ? 'bg-warning' : 'bg-danger') }}">
                                         {{ ucfirst(str_replace('_', ' ', $invoice->payment_status)) }}
                                     </span>
                                 </td>
@@ -103,14 +103,14 @@
                                     <td>{{ optional($invoice->rental_end_date)->format('d/m/Y h:i A') }}</td>
                                 @endif
 
-                                                <!-- Returned Status -->
-                <td>
-                    @if ($invoice->returned)
-                        <span class="badge bg-success">Yes</span>
-                    @else
-                        <span class="badge bg-danger">No</span>
-                    @endif
-                </td>
+                                <!-- Returned Status -->
+                                <td>
+                                    @if ($invoice->returned)
+                                        <span class="badge bg-success">Yes</span>
+                                    @else
+                                        <span class="badge bg-danger">No</span>
+                                    @endif
+                                </td>
 
 
                                 <!-- Actions -->
