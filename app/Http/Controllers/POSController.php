@@ -80,9 +80,11 @@ class POSController extends Controller
             foreach ($request->cart as $cartItem) {
                 $quantity = $cartItem['quantity'];
                 $price = $cartItem['price'];
-                $totalPrice = ($categoryName === 'daily')
-                    ? $quantity * $price * $request->rental_days
-                    : $quantity * $price;
+
+                // ✅ Adjusted Price Calculation
+                $totalPrice = ($categoryName === 'daily' && empty($cartItem['id']))
+                    ? $quantity * $price * $request->rental_days // For custom items
+                    : (($categoryName === 'daily') ? $quantity * $price * $request->rental_days : $quantity * $price); // For products
 
                 if (!empty($cartItem['id'])) {
                     $product = Product::findOrFail($cartItem['id']);
@@ -98,11 +100,15 @@ class POSController extends Controller
                         'added_quantity' => 0,
                     ]);
                 } else {
+                    // ✅ Custom Item with Rental Dates
                     $customItems[] = new CustomItem([
                         'name' => $cartItem['name'],
                         'description' => $cartItem['description'] ?? '',
                         'price' => $price,
                         'quantity' => $quantity,
+                        'rental_start_date' => $categoryName === 'daily' ? $request->rental_start_date : null,
+                        'rental_end_date' => $categoryName === 'daily' ? $request->rental_end_date : null,
+                        'days' => $categoryName === 'daily' ? $request->rental_days : null,
                     ]);
                 }
 
@@ -166,25 +172,25 @@ class POSController extends Controller
     }
 
 
-
     // public function checkout(Request $request)
     // {
     //     $categoryName = session('category', 'daily');
 
-    //     // Validation rules
     //     $rules = [
     //         'customer_id' => 'nullable|exists:customers,id',
     //         'customer_name' => 'nullable|string|max:255|required_without:customer_id',
     //         'customer_phone' => 'nullable|string|max:255|required_without:customer_id',
     //         'customer_address' => 'nullable|string|max:255|required_without:customer_id',
     //         'cart' => 'required|array|min:1',
-    //         'cart.*.id' => 'required|exists:products,id',
+    //         'cart.*.id' => 'nullable|exists:products,id',
     //         'cart.*.quantity' => 'required|integer|min:1',
+    //         'cart.*.price' => 'required|numeric|min:0',
+    //         'cart.*.name' => 'nullable|string|max:255',
     //         'total_discount' => 'nullable|numeric|min:0|max:100',
     //         'deposit' => 'nullable|numeric|min:0',
     //         'payment_amount' => 'nullable|numeric|min:0',
     //         'payment_method' => 'required|in:cash,credit_card',
-    //         'note' => 'nullable',
+    //         'note' => 'nullable|string|max:255',
     //     ];
 
     //     if ($categoryName === 'daily') {
@@ -198,75 +204,70 @@ class POSController extends Controller
     //     try {
     //         DB::beginTransaction();
 
-    //         // Handle Customer
-    //         if ($request->filled('customer_id')) {
-    //             $customer = Customer::findOrFail($request->customer_id);
-    //         } else {
-    //             $customer = Customer::create([
+    //         $customer = $request->filled('customer_id')
+    //             ? Customer::findOrFail($request->customer_id)
+    //             : Customer::create([
     //                 'name' => $request->customer_name,
     //                 'phone' => $request->customer_phone,
     //                 'address' => $request->customer_address,
     //             ]);
-    //         }
 
-    //         // Retrieve the selected category
     //         $category = Category::where('name', $categoryName)->firstOrFail();
 
-    //         // Calculate totals
     //         $subtotal = 0;
     //         $invoiceItems = [];
-    //         foreach ($request->cart as $cartItem) {
-    //             $product = Product::findOrFail($cartItem['id']);
-    //             $quantity = $cartItem['quantity'];
-    //             $price = $product->price;
+    //         $customItems = [];
 
+    //         foreach ($request->cart as $cartItem) {
+    //             $quantity = $cartItem['quantity'];
+    //             $price = $cartItem['price'];
     //             $totalPrice = ($categoryName === 'daily')
     //                 ? $quantity * $price * $request->rental_days
     //                 : $quantity * $price;
 
-    //             $invoiceItems[] = new InvoiceItem([
-    //                 'product_id' => $product->id,
-    //                 'quantity' => $quantity,
-    //                 'price' => $price,
-    //                 'total_price' => $totalPrice,
-    //                 'rental_start_date' => $categoryName === 'daily' ? $request->rental_start_date : null,
-    //                 'rental_end_date' => $categoryName === 'daily' ? $request->rental_end_date : null,
-    //                 'days' => $categoryName === 'daily' ? $request->rental_days : null,
-    //                 'returned_quantity' => 0,
-    //                 'added_quantity' => 0,
-    //             ]);
+    //             if (!empty($cartItem['id'])) {
+    //                 $product = Product::findOrFail($cartItem['id']);
+    //                 $invoiceItems[] = new InvoiceItem([
+    //                     'product_id' => $product->id,
+    //                     'quantity' => $quantity,
+    //                     'price' => $price,
+    //                     'total_price' => $totalPrice,
+    //                     'rental_start_date' => $categoryName === 'daily' ? $request->rental_start_date : null,
+    //                     'rental_end_date' => $categoryName === 'daily' ? $request->rental_end_date : null,
+    //                     'days' => $categoryName === 'daily' ? $request->rental_days : null,
+    //                     'returned_quantity' => 0,
+    //                     'added_quantity' => 0,
+    //                 ]);
+    //             } else {
+    //                 $customItems[] = new CustomItem([
+    //                     'name' => $cartItem['name'],
+    //                     'description' => $cartItem['description'] ?? '',
+    //                     'price' => $price,
+    //                     'quantity' => $quantity,
+    //                 ]);
+    //             }
 
     //             $subtotal += $totalPrice;
     //         }
 
-    //         // Discount calculations
     //         $totalDiscount = $request->total_discount ?? 0;
     //         $discountAmount = ($subtotal * $totalDiscount) / 100;
-
-    //         // Calculate the full total amount (before deposit)
     //         $totalAmount = $subtotal - $discountAmount;
-
-    //         // Track deposit and payment
     //         $deposit = $request->deposit ?? 0;
     //         $paymentAmount = $request->payment_amount ?? 0;
 
-    //         // Ensure payment and deposit do not exceed the total
     //         if ($deposit + $paymentAmount > $totalAmount) {
     //             return response()->json(['error' => 'Payment and deposit exceed total amount.'], 400);
     //         }
 
-    //         // Paid amount includes only additional payments beyond the deposit
-    //         $paidAmount = $paymentAmount;
-
-    //         // Create the Invoice
     //         $invoiceData = [
     //             'customer_id' => $customer->id,
     //             'user_id' => auth()->user()->id,
     //             'category_id' => $category->id,
     //             'total_discount' => $totalDiscount,
     //             'deposit' => $deposit,
-    //             'total_amount' => $totalAmount, // Full amount before subtracting deposit
-    //             'paid_amount' => $paidAmount, // Additional payments beyond deposit
+    //             'total_amount' => $totalAmount,
+    //             'paid_amount' => $paymentAmount,
     //             'payment_method' => $request->payment_method,
     //             'note' => $request->note,
     //         ];
@@ -279,8 +280,16 @@ class POSController extends Controller
 
     //         $invoice = Invoice::create($invoiceData);
 
-    //         // Attach items to the invoice
-    //         $invoice->items()->saveMany($invoiceItems);
+    //         if (!empty($invoiceItems)) {
+    //             $invoice->items()->saveMany($invoiceItems);
+    //         }
+
+    //         if (!empty($customItems)) {
+    //             foreach ($customItems as $item) {
+    //                 $item->invoice_id = $invoice->id;
+    //                 $item->save();
+    //             }
+    //         }
 
     //         DB::commit();
 
