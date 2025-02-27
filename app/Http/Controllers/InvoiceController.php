@@ -36,51 +36,51 @@ class InvoiceController extends Controller
         $startDate = $request->query('start_date');
         $endDate = $request->query('end_date');
 
-        // Default to today's date if no date filters are provided
-        if (!$startDate && !$endDate) {
-            $startDate = \Carbon\Carbon::today()->toDateString();
-            $endDate = \Carbon\Carbon::today()->toDateString();
+        // ✅ Default to today's date if no date filters are provided
+        if (!$startDate || !$endDate) {
+            $startDate = Carbon::today()->toDateString();
+            $endDate = Carbon::today()->toDateString();
         }
 
-        $invoices = Invoice::with(['customer', 'invoiceItems', 'customItems', 'additionalItems', 'returnDetails'])
+        // ✅ Convert to Carbon Dates for Proper Comparisons
+        $startDate = Carbon::parse($startDate)->startOfDay();
+        $endDate = Carbon::parse($endDate)->endOfDay();
+
+        // ✅ Fetch Invoices with Eager Loading
+        $invoices = Invoice::with(['customer', 'invoiceItems', 'customItems', 'additionalItems', 'returnDetails', 'payments'])
             ->whereHas('category', function ($query) use ($selectedCategory) {
                 $query->where('name', $selectedCategory);
-            })
-            ->when($selectedCategory === 'season', function ($query) use ($startDate, $endDate) {
-                // Filter by created_at for 'season' category
-                $query->whereBetween('created_at', [$startDate, $endDate]);
-            }, function ($query) use ($startDate, $endDate) {
-                // Filter by rental dates for other categories
-                $query->where(function ($query) use ($startDate, $endDate) {
-                    $query->whereBetween('rental_start_date', [$startDate, $endDate])
-                        ->orWhereBetween('rental_end_date', [$startDate, $endDate])
-                        ->orWhere(function ($query) use ($startDate, $endDate) {
-                            $query->where('rental_start_date', '>=', $startDate)
-                                ->where('rental_end_date', '<>', $endDate);
-                        });
-                });
-            })
-            ->get();
+            });
 
-        // Dynamic payment status filtering
-        if ($paymentStatus) {
-            $invoices = $invoices->filter(function ($invoice) use ($paymentStatus) {
-                // Calculate the paid amount and final total
-                $paidAmount = $invoice->payments->sum('amount') + $invoice->deposit;
-                $finalTotal = $invoice->calculateTotals()['finalTotal'] ?? 0;
-                $refundForUnusedDays = $invoice->calculateTotals()['refundForUnusedDays'] ?? 0;
-
-                // Calculate unpaid amount
-                $unpaidAmount = max(0, round($finalTotal - $paidAmount - $refundForUnusedDays, 2));
-
-                // Determine the status based on unpaid amount
-                $status = $unpaidAmount <= 0 ? 'fully_paid' : ($paidAmount < $finalTotal ? 'partially_paid' : 'unpaid');
-
-                return $status === $paymentStatus;
+        // ✅ Apply Date Filtering Based on Category Type
+        if ($selectedCategory === 'season') {
+            // ✅ Corrected `created_at` filter for Season Invoices
+            $invoices->whereBetween('created_at', [$startDate, $endDate]);
+        } else {
+            // ✅ Corrected filter for Daily Invoices
+            $invoices->where(function ($query) use ($startDate, $endDate) {
+                $query->whereBetween('rental_start_date', [$startDate, $endDate])
+                    ->orWhereBetween('rental_end_date', [$startDate, $endDate])
+                    ->orWhere(function ($query) use ($startDate, $endDate) {
+                        $query->where('rental_start_date', '<=', $endDate) // Include invoices that started **before or on** the end date
+                            ->where('rental_end_date', '>=', $startDate) // Ensure they end **on or after** the start date
+                            ->where(function ($q) use ($startDate, $endDate) {
+                                $q->where('rental_start_date', '>=', $startDate)
+                                    ->where('rental_end_date', '<=', $endDate); // Strictly between the filtered range
+                            });
+                    });
             });
         }
 
-        // Dynamic returned status filtering
+        // ✅ Fetch Filtered Invoices
+        $invoices = $invoices->get();
+
+        // ✅ Apply Payment Status Filtering Using Accessor
+        if ($paymentStatus) {
+            $invoices = $invoices->filter(fn($invoice) => $invoice->payment_status === $paymentStatus);
+        }
+
+        // ✅ Apply Returned / Not Returned Status Filtering
         if ($status === 'returned') {
             $invoices = $invoices->filter(fn($invoice) => $invoice->returned);
         } elseif ($status === 'not_returned') {
@@ -89,8 +89,6 @@ class InvoiceController extends Controller
 
         return view('invoices.index', compact('invoices', 'selectedCategory', 'status', 'paymentStatus', 'startDate', 'endDate'));
     }
-
-
     /**
      * Show the form for creating a new resource.
      */
@@ -448,10 +446,15 @@ class InvoiceController extends Controller
     {
         $invoice = Invoice::with(['invoiceItems', 'additionalItems', 'returnDetails'])->findOrFail($id);
         $customers = Customer::all();
-        $products = Product::all();
+        $categoryName = session('category', 'daily'); // Get category from session
+
+        // Fetch only products that belong to the selected category
+        $products = Product::whereHas('category', function ($query) use ($categoryName) {
+            $query->where('name', $categoryName);
+        })->get();
 
         // Determine if the mode is seasonal
-        $isSeasonal = session('category') === 'season'; // Replace 'category' logic as per your app rules
+        $isSeasonal = $categoryName === 'season';
 
         // Calculate totals
         $totals = $invoice->calculateTotals();

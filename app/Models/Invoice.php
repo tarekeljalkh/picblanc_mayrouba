@@ -182,12 +182,13 @@ class Invoice extends Model
     public function getBalanceDueAttribute()
     {
         $finalTotal = $this->total_price; // Dynamically calculated final total
-        $paidAmount = $this->deposit + $this->paid_amount; // Total paid so far
 
-        // Calculate Balance Due
-        return max(0, $finalTotal - $paidAmount);
+        // Fetch total payments made for this invoice
+        $totalPaid = $this->payments()->sum('amount');
+
+        // Calculate the balance due correctly
+        return max(0, $finalTotal - $totalPaid);
     }
-
 
     public function calculateTotals()
     {
@@ -403,11 +404,13 @@ class Invoice extends Model
 
     public function getPaymentStatusAttribute()
     {
-        $totals = $this->calculateTotals(); // Ensure this method provides accurate balance and total values
+        $totals = $this->calculateTotals(); // Ensure accurate totals calculation
         $balanceDue = $totals['balanceDue'];
-        $totalPaid = $this->paid_amount + $this->deposit;
 
-        // Check payment status based on the balance due and payments made
+        // Fetch total paid amount from the invoice_payments table
+        $totalPaid = $this->payments()->sum('amount');
+
+        // Determine the payment status based on actual payments
         if ($totalPaid <= 0 && $balanceDue > 0) {
             return 'unpaid';
         }
@@ -420,7 +423,7 @@ class Invoice extends Model
             return 'fully_paid';
         }
 
-        return 'unknown'; // Fallback for unexpected cases
+        return 'unknown'; // Fallback case
     }
 
 
