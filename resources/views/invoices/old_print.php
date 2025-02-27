@@ -57,7 +57,7 @@
                     </thead>
                     <tbody>
                         <!-- Regular Items -->
-                        @foreach ($invoice->items as $item)
+                        @foreach ($invoice->invoiceItems as $item)
                             <tr>
                                 <td>{{ $item->product->name }}</td>
                                 <td>${{ number_format($item->price, 2) }}</td>

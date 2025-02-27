@@ -78,7 +78,7 @@
                         </thead>
                         <tbody>
                             <!-- Regular Items -->
-                            @foreach ($invoice->items as $item)
+                            @foreach ($invoice->invoiceItems as $item)
                                 <tr>
                                     <td class="text-nowrap text-heading">{{ $item->product->name }}</td>
                                     <td>${{ number_format($item->price, 2) }}</td>
@@ -214,57 +214,61 @@
                     </div>
                 @endif
 
-                <!-- Invoice Summary -->
-                <div class="table-responsive">
-                    <table class="table m-0 table-borderless">
-                        <tbody>
-                            <tr>
-                                <td class="align-top pe-6 ps-0 py-6 text-body">
-                                    <p class="mb-1">
-                                        <span class="me-2 h6">Salesperson:</span>
-                                        <span>{{ $invoice->user->name ?? 'N/A' }}</span>
-                                    </p>
-                                    <!-- Note -->
-                                    @if ($invoice->note)
-                                        <p><strong>NOTE:</strong> {{ $invoice->note }}</p>
-                                    @endif
+<!-- Invoice Summary -->
+<div class="table-responsive">
+    <table class="table m-0 table-borderless">
+        <tbody>
+            <tr>
+                <td class="align-top pe-6 ps-0 py-6 text-body">
+                    <p class="mb-1">
+                        <span class="me-2 h6">Salesperson:</span>
+                        <span>{{ $invoice->user->name ?? 'N/A' }}</span>
+                    </p>
+                    <!-- Note -->
+                    @if ($invoice->note)
+                        <p><strong>NOTE:</strong> {{ $invoice->note }}</p>
+                    @endif
 
-                                    <div class="mb-3">
-                                        <span
-                                            class="badge {{ $invoice->payment_status === 'fully_paid' ? 'bg-success' : ($invoice->payment_status === 'partially_paid' ? 'bg-warning' : 'bg-danger') }}">
-                                            {{ ucfirst(str_replace('_', ' ', $invoice->payment_status)) }}
-                                        </span>
-                                    </div>
+                    <!-- Calculate Payment Status -->
+                    @php
+                        $totalPaid = $invoice->payments->sum('amount');
+                        $totalDue = $totals['finalTotal']; // Assuming 'finalTotal' is the total due for the invoice
+                        $paymentStatus = $totalPaid == $totalDue ? 'fully_paid' : ($totalPaid > 0 ? 'partially_paid' : 'unpaid');
+                    @endphp
 
-                                </td>
-                                <td class="px-0 py-3 w-px-200">
-                                    <p class="mb-2">Base Total (All Items):</p>
-                                    <p class="mb-2">Discount:</p>
-                                    <p class="mb-2">Additional Items Cost:</p> <!-- New Line for Additional Items -->
-                                    <p class="mb-2">Refund for Unused Days:</p>
-                                    <p class="mb-2">Deposit:</p>
-                                    <p class="mb-2">Final Total:</p>
-                                    <p class="mb-2">Paid Amount:</p>
-                                    <p class="mb-2 text-danger fw-bold">Balance Due:</p>
-                                </td>
-                                <td class="text-end px-0 py-6 w-px-100 fw-medium text-heading">
-                                    <p class="fw-medium mb-2">${{ number_format($totals['subtotalForDiscount'], 2) }}</p>
-                                    <p class="fw-medium mb-2">- ${{ number_format($totals['discountAmount'], 2) }}</p>
-                                    <p class="fw-medium mb-2">${{ number_format($totals['additionalItemsCost'], 2) }}</p>
-                                    <!-- Display Value -->
-                                    <p class="fw-medium mb-2">- ${{ number_format($totals['refundForUnusedDays'], 2) }}</p>
-                                    <p class="fw-medium mb-2">${{ number_format($invoice->deposit, 2) }}</p>
-                                    <p class="fw-medium mb-2">${{ number_format($totals['finalTotal'], 2) }}</p>
-                                    <p class="fw-medium mb-2">${{ number_format($invoice->paid_amount, 2) }}</p>
-                                    <p class="fw-medium mb-0 text-danger">${{ number_format($totals['balanceDue'], 2) }}
-                                    </p>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
+                    <div class="mb-3">
+                        <span class="badge
+                            {{ $paymentStatus === 'fully_paid' ? 'bg-success' : ($paymentStatus === 'partially_paid' ? 'bg-warning' : 'bg-danger') }}">
+                            {{ ucfirst(str_replace('_', ' ', $paymentStatus)) }}
+                        </span>
+                    </div>
 
-
+                </td>
+                <td class="px-0 py-3 w-px-200">
+                    <p class="mb-2">Base Total (All Items):</p>
+                    <p class="mb-2">Discount:</p>
+                    <p class="mb-2">Additional Items Cost:</p> <!-- New Line for Additional Items -->
+                    <p class="mb-2">Refund for Unused Days:</p>
+                    <p class="mb-2">Deposit:</p>
+                    <p class="mb-2">Final Total:</p>
+                    <p class="mb-2">Paid Amount:</p>
+                    <p class="mb-2 text-danger fw-bold">Balance Due:</p>
+                </td>
+                <td class="text-end px-0 py-6 w-px-100 fw-medium text-heading">
+                    <p class="fw-medium mb-2">${{ number_format($totals['subtotalForDiscount'], 2) }}</p>
+                    <p class="fw-medium mb-2">- ${{ number_format($totals['discountAmount'], 2) }}</p>
+                    <p class="fw-medium mb-2">${{ number_format($totals['additionalItemsCost'], 2) }}</p>
+                    <!-- Display Value -->
+                    <p class="fw-medium mb-2">- ${{ number_format($totals['refundForUnusedDays'], 2) }}</p>
+                    <p class="fw-medium mb-2">${{ number_format($invoice->deposit, 2) }}</p>
+                    <p class="fw-medium mb-2">${{ number_format($totals['finalTotal'], 2) }}</p>
+                    <p class="fw-medium mb-2">${{ number_format($invoice->payments->sum('amount'), 2) }}</p>
+                    <p class="fw-medium mb-0 text-danger">${{ number_format($totals['balanceDue'], 2) }}</p>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
                 <hr class="mt-0 mb-6">
                 <div class="card-body p-0">
                     <div class="row">

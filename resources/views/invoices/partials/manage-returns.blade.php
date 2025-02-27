@@ -17,7 +17,7 @@
             </thead>
             <tbody>
                 <!-- Original Items -->
-                @foreach ($invoice->items as $item)
+                @foreach ($invoice->invoiceItems as $item)
                     @if ($item->quantity - $item->returned_quantity > 0)
                         <tr>
                             <td>

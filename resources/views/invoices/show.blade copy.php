@@ -68,7 +68,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach ($invoice->items as $item)
+                            @foreach ($invoice->invoiceItems as $item)
                                 <tr>
                                     <td class="text-nowrap text-heading">{{ $item->product->name }}</td>
                                     <td>${{ number_format($item->price, 2) }}</td>
@@ -99,7 +99,7 @@
                                 <td class="text-end px-0 py-6 w-px-100 fw-medium text-heading">
                                     @php
                                         // Calculate subtotal based on the sum of all item totals
-                                        $subtotal = $invoice->items->sum(fn($item) => $item->price * $item->quantity);
+                                        $subtotal = $invoice->invoiceItems->sum(fn($item) => $item->price * $item->quantity);
                                         // Get Days
                                         $days = $invoice->days;
 

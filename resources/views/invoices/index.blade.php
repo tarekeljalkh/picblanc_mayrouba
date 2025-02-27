@@ -38,7 +38,8 @@
                             <label for="status" class="form-label">Status</label>
                             <select id="status" name="status" class="form-select">
                                 <option value="">All</option>
-                                <option value="not_returned" {{ request('status') === 'not_returned' ? 'selected' : '' }}>Not Returned</option>
+                                <option value="not_returned" {{ request('status') === 'not_returned' ? 'selected' : '' }}>
+                                    Not Returned</option>
                                 <option value="returned" {{ request('status') === 'returned' ? 'selected' : '' }}>Returned
                                 </option>
                                 <option value="draft" {{ request('status') === 'draft' ? 'selected' : '' }}>Draft</option>
@@ -88,29 +89,51 @@
                                 <!-- Customer Name -->
                                 <td>{{ $invoice->customer->name }}</td>
 
-                                <!-- Payment Status -->
-                                <td>
-                                    <span class="badge
-                                        {{ $invoice->payment_status === 'fully_paid' ? 'bg-success' :
-                                        ($invoice->payment_status === 'partially_paid' ? 'bg-warning' : 'bg-danger') }}">
-                                        {{ ucfirst(str_replace('_', ' ', $invoice->payment_status)) }}
-                                    </span>
-                                </td>
+<!-- Payment Status -->
+<td>
+    @php
+        // Get the total paid amount
+        $totalPaid = $invoice->payments->sum('amount') + $invoice->deposit;
 
+        // Get the final total (total due for the invoice)
+        $totals = $invoice->calculateTotals();
+        $totalDue = $totals['finalTotal'] ?? 0; // Default to 0 if no finalTotal exists
+
+        // Determine the payment status
+        $paymentStatus = $totalPaid == $totalDue
+            ? 'fully_paid'
+            : ($totalPaid > 0
+                ? 'partially_paid'
+                : 'unpaid');
+    @endphp
+
+    <span class="badge
+        {{ $paymentStatus == 'fully_paid'
+            ? 'bg-success' // Fully paid
+            : ($paymentStatus == 'partially_paid'
+                ? 'bg-warning' // Partially paid
+                : 'bg-danger') }}">
+        {{ $paymentStatus == 'fully_paid'
+            ? 'Fully Paid'
+            : ($paymentStatus == 'partially_paid'
+                ? 'Partially Paid'
+                : 'Unpaid') }}
+    </span>
+</td>
                                 <!-- Rental Dates (Daily Category Only) -->
                                 @if (session('category') === 'daily')
                                     <td>{{ optional($invoice->rental_start_date)->format('d/m/Y h:i A') }}</td>
                                     <td>{{ optional($invoice->rental_end_date)->format('d/m/Y h:i A') }}</td>
                                 @endif
 
-                                                <!-- Returned Status -->
-                <td>
-                    @if ($invoice->returned)
-                        <span class="badge bg-success">Yes</span>
-                    @else
-                        <span class="badge bg-danger">No</span>
-                    @endif
-                </td>
+                                <!-- Returned Status -->
+                                <td>
+                                    @if ($invoice->returned)
+                                        <span class="badge bg-success">Yes</span>
+                                    @else
+                                        <span class="badge bg-danger">No</span>
+                                    @endif
+                                </td>
 
 
                                 <!-- Actions -->
