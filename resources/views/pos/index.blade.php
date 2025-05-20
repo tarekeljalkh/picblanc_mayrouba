@@ -231,10 +231,9 @@
                 const category = '{{ session('category', 'daily') }}'; // Retrieve the category from the session
                 if (category === 'daily') {
                     flatpickr("#rental-start-date, #rental-end-date", {
-                        enableTime: true,
-                        dateFormat: "Y-m-d H:i",
+                        dateFormat: "Y-m-d",
                         altInput: true,
-                        altFormat: "F j, Y h:i K",
+                        altFormat: "F j, Y",
                         allowInput: true,
                         onChange: function() {
                             calculateDays();
