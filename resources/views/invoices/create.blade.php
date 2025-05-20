@@ -154,7 +154,7 @@
                         </div>
 
 
-                        {{-- Days and Total Amount --}}
+                        {{-- Days --}}
                         @if (session('category') === 'daily')
                             <div class="mb-4 row">
                                 <label for="days" class="col-md-2 col-form-label">Days</label>
@@ -179,7 +179,7 @@
                             <label for="total_amount" class="col-md-2 col-form-label">Total Amount</label>
                             <div class="col-md-10">
                                 <input type="text" class="form-control" id="total_amount" name="total_amount"
-                                    value="0.00" readonly />
+                                    value="0.00"/>
                             </div>
                         </div>
 
@@ -275,10 +275,9 @@
         // Initialize date pickers for rental start and end dates
         if (category === 'daily') {
             flatpickr("#rental_start_date, #rental_end_date", {
-                enableTime: true,
-                dateFormat: "Y-m-d H:i",
+                dateFormat: "Y-m-d",
                 altInput: true,
-                altFormat: "F j, Y h:i K",
+                altFormat: "F j, Y",
                 allowInput: true,
                 onChange: function() {
                     updateDaysFromDates();

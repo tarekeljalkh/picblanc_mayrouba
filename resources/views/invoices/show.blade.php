@@ -34,8 +34,8 @@
                             <br>
                             <div class="text-heading">
                                 @if ($invoice->category->name === 'daily')
-                                    <p>Rental Start: {{ $invoice->rental_start_date->format('d/m/Y h:i A') }}</p>
-                                    <p>Rental End: {{ $invoice->rental_end_date->format('d/m/Y h:i A') }}</p>
+                                    <p>Rental Start: {{ $invoice->rental_start_date->format('d/m/Y') }}</p>
+                                    <p>Rental End: {{ $invoice->rental_end_date->format('d/m/Y') }}</p>
                                     <p>Rental Days: {{ $invoice->days }} day(s)</p>
                                 @else
                                     <p>Category: Season</p>
@@ -85,8 +85,8 @@
                                     <td>{{ $item->quantity }}</td>
                                     <td>${{ number_format($item->total_price, 2) }}</td>
                                     @if ($invoice->category->name === 'daily')
-                                        <td>{{ optional($item->rental_start_date)->format('d/m/Y h:i A') }}</td>
-                                        <td>{{ optional($item->rental_end_date)->format('d/m/Y h:i A') }}</td>
+                                        <td>{{ optional($item->rental_start_date)->format('d/m/Y') }}</td>
+                                        <td>{{ optional($item->rental_end_date)->format('d/m/Y') }}</td>
                                         <td>{{ $item->days }}</td>
                                     @endif
                                 </tr>
@@ -106,9 +106,9 @@
 
                                     {{-- ✅ Display rental dates for "daily" category --}}
                                     @if ($invoice->category->name === 'daily')
-                                        <td>{{ $invoice->rental_start_date->format('d/m/Y h:i A') }}</td>
+                                        <td>{{ $invoice->rental_start_date->format('d/m/Y') }}</td>
                                         {{-- From Date --}}
-                                        <td>{{ $invoice->rental_end_date->format('d/m/Y h:i A') }}</td>
+                                        <td>{{ $invoice->rental_end_date->format('d/m/Y') }}</td>
                                         {{-- To Date --}}
                                         <td>{{ $invoice->days }}</td> {{-- Total Days --}}
                                     @endif
@@ -145,8 +145,8 @@
                                         <td>{{ $addedItem->quantity }}</td>
                                         <td>${{ number_format($addedItem->total_price, 2) }}</td>
                                         @if ($invoice->category->name === 'daily')
-                                            <td>{{ optional($addedItem->rental_start_date)->format('d/m/Y h:i A') }}</td>
-                                            <td>{{ optional($addedItem->rental_end_date)->format('d/m/Y h:i A') }}</td>
+                                            <td>{{ optional($addedItem->rental_start_date)->format('d/m/Y') }}</td>
+                                            <td>{{ optional($addedItem->rental_end_date)->format('d/m/Y') }}</td>
                                             <td>{{ $addedItem->days }}</td>
                                         @endif
                                     </tr>
@@ -206,9 +206,9 @@
                                         <td>{{ $return->returned_quantity }}</td>
                                         <td>${{ number_format($cost, 2) }}</td>
                                         @if ($invoice->category->name === 'daily')
-                                            <td>{{ optional($rentalStartDate)->format('d/m/Y h:i A') }}</td>
+                                            <td>{{ optional($rentalStartDate)->format('d/m/Y') }}</td>
                                         @endif
-                                        <td>{{ optional($return->return_date)->format('d/m/Y h:i A') }}</td>
+                                        <td>{{ optional($return->return_date)->format('d/m/Y') }}</td>
                                         @if ($invoice->category->name === 'daily')
                                             <td>{{ $return->days_used }}</td>
                                         @endif

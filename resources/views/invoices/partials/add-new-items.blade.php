@@ -192,8 +192,7 @@
         function initializeFlatpickr() {
             if (!isSeasonal) {
                 flatpickr('.rental-start-date, .rental-end-date', {
-                    enableTime: true,
-                    dateFormat: "Y-m-d H:i",
+                    dateFormat: "Y-m-d",
                 });
             }
         }

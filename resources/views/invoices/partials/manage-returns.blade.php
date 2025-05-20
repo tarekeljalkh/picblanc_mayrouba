@@ -149,8 +149,7 @@
                     const startDate = input.getAttribute('data-start-date');
 
                     flatpickr(input, {
-                        enableTime: true,
-                        dateFormat: 'Y-m-d H:i',
+                        dateFormat: 'Y-m-d',
                         minDate: startDate || null, // ✅ Fallback to current date if undefined
                         onChange: function() {
                             calculateDaysOfUse(input);
@@ -176,8 +175,7 @@
                         }
 
                         flatpickr(dateInput, {
-                            enableTime: true,
-                            dateFormat: 'Y-m-d H:i',
+                            dateFormat: 'Y-m-d',
                             minDate: dateInput.getAttribute('data-start-date') ||
                             null, // ✅ Add fallback
                             onChange: function() {

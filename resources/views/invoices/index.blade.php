@@ -89,41 +89,43 @@
                                 <!-- Customer Name -->
                                 <td>{{ $invoice->customer->name }}</td>
 
-<!-- Payment Status -->
-<td>
-    @php
-        // Get the total paid amount
-        $totalPaid = $invoice->payments->sum('amount') + $invoice->deposit;
+                                <!-- Payment Status -->
+                                <td>
+                                    @php
+                                        // Get the total paid amount
+                                        $totalPaid = $invoice->payments->sum('amount') + $invoice->deposit;
 
-        // Get the final total (total due for the invoice)
-        $totals = $invoice->calculateTotals();
-        $totalDue = $totals['finalTotal'] ?? 0; // Default to 0 if no finalTotal exists
+                                        // Get the final total (total due for the invoice)
+                                        $totals = $invoice->calculateTotals();
+                                        $totalDue = $totals['finalTotal'] ?? 0; // Default to 0 if no finalTotal exists
 
-        // Determine the payment status
-        $paymentStatus = $totalPaid == $totalDue
-            ? 'fully_paid'
-            : ($totalPaid > 0
-                ? 'partially_paid'
-                : 'unpaid');
-    @endphp
+                                        // Determine the payment status
+                                        $paymentStatus =
+                                            $totalPaid == $totalDue
+                                                ? 'fully_paid'
+                                                : ($totalPaid > 0
+                                                    ? 'partially_paid'
+                                                    : 'unpaid');
+                                    @endphp
 
-    <span class="badge
+                                    <span
+                                        class="badge
         {{ $paymentStatus == 'fully_paid'
             ? 'bg-success' // Fully paid
             : ($paymentStatus == 'partially_paid'
                 ? 'bg-warning' // Partially paid
                 : 'bg-danger') }}">
-        {{ $paymentStatus == 'fully_paid'
-            ? 'Fully Paid'
-            : ($paymentStatus == 'partially_paid'
-                ? 'Partially Paid'
-                : 'Unpaid') }}
-    </span>
-</td>
+                                        {{ $paymentStatus == 'fully_paid'
+                                            ? 'Fully Paid'
+                                            : ($paymentStatus == 'partially_paid'
+                                                ? 'Partially Paid'
+                                                : 'Unpaid') }}
+                                    </span>
+                                </td>
                                 <!-- Rental Dates (Daily Category Only) -->
                                 @if (session('category') === 'daily')
-                                    <td>{{ optional($invoice->rental_start_date)->format('d/m/Y h:i A') }}</td>
-                                    <td>{{ optional($invoice->rental_end_date)->format('d/m/Y h:i A') }}</td>
+                                    <td>{{ optional($invoice->rental_start_date)->format('d/m/Y') }}</td>
+                                    <td>{{ optional($invoice->rental_end_date)->format('d/m/Y') }}</td>
                                 @endif
 
                                 <!-- Returned Status -->
