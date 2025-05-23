@@ -230,6 +230,23 @@
                                         <span class="me-2 h6">Salesperson:</span>
                                         <span>{{ $invoice->user->name ?? 'N/A' }}</span>
                                     </p>
+
+                                    <!-- Payment Type -->
+                                    @if ($invoice->payments && $invoice->payments->count())
+                                        <p><strong>Payment By:</strong>
+                                            {{ $invoice->payments->groupBy('payment_method')->map(function ($group, $method) {
+                                                    $total = $group->sum('amount');
+                                                    return ucwords(str_replace('_', ' ', $method)) . ' ($' . number_format($total, 2) . ')';
+                                                })->values()->join(', ') }}
+                                        </p>
+                                    @endif
+
+                                    {{-- @if ($invoice->payments && $invoice->payments->count())
+                                        <p><strong>Payment By:</strong>
+                                            {{ $invoice->payments->pluck('payment_method')->unique()->join(', ') }}
+                                        </p>
+                                    @endif --}}
+
                                     <!-- Note -->
                                     @if ($invoice->note)
                                         <p><strong>NOTE:</strong> {{ $invoice->note }}</p>

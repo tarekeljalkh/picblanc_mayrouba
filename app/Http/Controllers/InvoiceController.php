@@ -45,7 +45,17 @@ class InvoiceController extends Controller
         }
 
         // ✅ Fetch Invoices with Eager Loading
-        $invoices = Invoice::with(['customer', 'invoiceItems', 'customItems', 'additionalItems', 'returnDetails', 'payments'])
+        $invoices = Invoice::with([
+            'customer',
+            'invoiceItems',
+            'customItems',
+            'additionalItems',
+            'payments',
+            'category',
+            'returnDetails.invoiceItem',
+            'returnDetails.additionalItem',
+            'returnDetails.customItem',
+        ])
             ->whereHas('category', function ($query) use ($selectedCategory) {
                 $query->where('name', $selectedCategory);
             });

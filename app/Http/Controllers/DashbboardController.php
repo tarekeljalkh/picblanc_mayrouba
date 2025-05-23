@@ -114,6 +114,7 @@ class DashbboardController extends Controller
     public function trialBalance(Request $request)
     {
         $user = auth()->user();
+        $isAdmin = $user->role === 'admin';
         $selectedCategory = session('category', 'daily');
 
         $fromDate = $request->input('from_date', Carbon::today()->toDateString());
@@ -126,9 +127,13 @@ class DashbboardController extends Controller
         $totalPaidByCreditCard = 0;
         $totalUnpaidInvoices = 0;
 
-        // ✅ Fetch Payments by Category + Date Range
-        $invoicePayments = InvoicePayment::whereHas('invoice', function ($query) use ($selectedCategory, $from, $to) {
+        // 🧾 Get all payments in the scope
+        $invoicePayments = InvoicePayment::whereHas('invoice', function ($query) use ($selectedCategory, $from, $to, $isAdmin, $user) {
             $query->whereHas('category', fn($q) => $q->where('name', $selectedCategory));
+
+            if (!$isAdmin) {
+                $query->where('user_id', $user->id);
+            }
 
             if ($selectedCategory === 'season') {
                 $query->whereBetween('created_at', [$from, $to]);
@@ -138,7 +143,7 @@ class DashbboardController extends Controller
             }
         })->get();
 
-        // ✅ Sum payments by method
+        // 💳 Sum by method
         foreach ($invoicePayments as $payment) {
             if ($payment->payment_method === 'cash') {
                 $totalPaidByCash += $payment->amount;
@@ -147,8 +152,19 @@ class DashbboardController extends Controller
             }
         }
 
-        // ✅ Fetch invoices by Category + Date Range
-        $invoices = Invoice::with('payments')->whereHas('category', fn($q) => $q->where('name', $selectedCategory))
+        // 🧮 Sum balanceDue from invoices
+        $invoices = Invoice::with([
+            'payments',
+            'category',
+            'invoiceItems',
+            'customItems',
+            'additionalItems',
+            'returnDetails.invoiceItem',
+            'returnDetails.additionalItem',
+            'returnDetails.customItem',
+        ])
+            ->whereHas('category', fn($q) => $q->where('name', $selectedCategory))
+            ->when(!$isAdmin, fn($q) => $q->where('user_id', $user->id))
             ->when($selectedCategory === 'season', function ($query) use ($from, $to) {
                 $query->whereBetween('created_at', [$from, $to]);
             }, function ($query) use ($from, $to) {
@@ -157,22 +173,22 @@ class DashbboardController extends Controller
             })
             ->get();
 
-        // ✅ Calculate unpaid balances from model method
         foreach ($invoices as $invoice) {
             $totals = $invoice->calculateTotals();
-            $totalUnpaidInvoices += $totals['balanceDue'] ?? 0;
+            $balanceDue = $totals['balanceDue'] ?? 0;
+
+            $totalUnpaidInvoices += $balanceDue;
         }
 
-        // ✅ Trial balance summary
+        // ✅ Final output: only 3 fields
         $trialBalanceData = [
             ['description' => 'Total Paid Invoices (Cash)', 'amount' => round($totalPaidByCash, 2)],
-            ['description' => 'Total Unpaid Invoices', 'amount' => round($totalUnpaidInvoices, 2)],
             ['description' => 'Total Paid by Credit Card', 'amount' => round($totalPaidByCreditCard, 2)],
+            ['description' => 'Total Unpaid Invoices', 'amount' => round($totalUnpaidInvoices, 2)],
         ];
 
         return view('trial-balance.index', compact('trialBalanceData', 'fromDate', 'toDate', 'selectedCategory'));
     }
-
 
     // public function trialBalance(Request $request)
     // {
