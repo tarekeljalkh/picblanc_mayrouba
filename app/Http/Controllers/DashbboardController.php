@@ -25,49 +25,75 @@ class DashbboardController extends Controller
             abort(404, 'Category not found.');
         }
 
-        // Fetch total counts for customers, invoices, and statuses for the selected category
+        // Fetch total counts
         $customersCount = Customer::count();
         $invoicesCount = Invoice::where('category_id', $category->id)->count();
 
-        // ✅ Use PHP to Filter Payments Instead of SQL
-        $invoices = Invoice::where('category_id', $category->id)->with('payments')->get();
+        // ✅ Load invoices with payments
+        // $invoices = Invoice::where('category_id', $category->id)->with('payments')->get();
+        $invoices = Invoice::where('category_id', $category->id)
+            ->with([
+                'customer',
+                'category',
+                'invoiceItems',
+                'customItems.invoice',          // in case you reference customItem->invoice
+                'additionalItems.invoice',      // same here
+                'payments',
+                'returnDetails.invoiceItem',
+                'returnDetails.additionalItem',
+                'returnDetails.customItem',
+            ])
+            ->where('category_id', $category->id)
+            ->get();
 
-        $totalPaid = $invoices->filter(fn($invoice) => $invoice->payments->sum('amount') >= $invoice->calculateTotals()['finalTotal'])->count();
-        $totalPartiallyPaid = $invoices->filter(fn($invoice) => $invoice->payments->sum('amount') > 0 && $invoice->payments->sum('amount') < $invoice->calculateTotals()['finalTotal'])->count();
-        $totalUnpaid = $invoices->filter(fn($invoice) => $invoice->payments->sum('amount') <= 0)->count();
+        // ✅ Use payment_status accessor for accurate classification
+        $totalPaid = $invoices->filter(fn($invoice) => $invoice->payment_status === 'fully_paid')->count();
+        $totalPartiallyPaid = $invoices->filter(fn($invoice) => $invoice->payment_status === 'partially_paid')->count();
+        $totalUnpaid = $invoices->filter(fn($invoice) => $invoice->payment_status === 'unpaid')->count();
 
+        // Not Returned
         $notReturnedCount = Invoice::where('category_id', $category->id)
-        ->where(function ($query) {
-            $query->whereHas('invoiceItems', fn($q) => $q->whereColumn('quantity', '>', 'returned_quantity'))
-                  ->orWhereHas('additionalItems', fn($q) => $q->whereColumn('quantity', '>', 'returned_quantity'))
-                  ->orWhereHas('customItems', fn($q) => $q->whereColumn('quantity', '>', 'returned_quantity'));
-        })
-        ->distinct() // Ensure no duplicate counts
-        ->count();
+            ->where(function ($query) {
+                $query->whereHas('invoiceItems', fn($q) => $q->whereColumn('quantity', '>', 'returned_quantity'))
+                    ->orWhereHas('additionalItems', fn($q) => $q->whereColumn('quantity', '>', 'returned_quantity'))
+                    ->orWhereHas('customItems', fn($q) => $q->whereColumn('quantity', '>', 'returned_quantity'));
+            })
+            ->distinct()
+            ->count();
 
+        // Returned
         $returnedCount = Invoice::where('category_id', $category->id)
             ->whereDoesntHave('invoiceItems', fn($query) => $query->whereColumn('quantity', '>', 'returned_quantity'))
             ->whereDoesntHave('additionalItems', fn($query) => $query->whereColumn('quantity', '>', 'returned_quantity'))
             ->whereDoesntHave('customItems', fn($query) => $query->whereColumn('quantity', '>', 'returned_quantity'))
             ->count();
 
-        // ✅ Fix Overdue Count Using Payments Table
-        $overdueCount = $invoices->filter(fn($invoice) => $invoice->rental_end_date < now() && $invoice->payments->sum('amount') < $invoice->calculateTotals()['finalTotal'])->count();
+        // Overdue Count
+        $overdueCount = $invoices->filter(function ($invoice) {
+            $totals = $invoice->calculateTotals();
+            $paid = round($invoice->payments->sum('amount'), 2);
+            $due = round($totals['finalTotal'] ?? 0, 2);
+            return $invoice->rental_end_date < now() && ($due - $paid) > 1.00;
+        })->count();
 
-        // ✅ Fix Revenue Calculation (Use `invoice_payments` Instead of `paid_amount`)
+        // Total revenue
         $totalRevenue = InvoicePayment::whereHas('invoice', fn($query) => $query->where('category_id', $category->id))->sum('amount');
 
-        // ✅ Fix Overdue Revenue Calculation
-        $overdueRevenue = $invoices->sum(fn($invoice) => max(0, $invoice->calculateTotals()['finalTotal'] - $invoice->payments->sum('amount')));
+        // Overdue revenue
+        $overdueRevenue = $invoices->sum(function ($invoice) {
+            $totals = $invoice->calculateTotals();
+            $paid = round($invoice->payments->sum('amount'), 2);
+            $due = round($totals['finalTotal'] ?? 0, 2);
+            return max(0, $due - $paid);
+        });
 
-        // Fetch latest invoices for the selected category
+        // Paginate latest invoices
         $invoices = Invoice::with('customer')
             ->where('category_id', $category->id)
             ->where('status', '!=', 'returned')
             ->orderBy('created_at', 'desc')
             ->paginate(10);
 
-        // Pass the data to the view
         return view('dashboard', compact(
             'customersCount',
             'invoicesCount',
@@ -87,38 +113,32 @@ class DashbboardController extends Controller
 
     public function trialBalance(Request $request)
     {
-        $user = auth()->user(); // Get the authenticated user
-        $selectedCategory = session('category', 'daily'); // Get category from session
+        $user = auth()->user();
+        $selectedCategory = session('category', 'daily');
 
-        // Retrieve date range from the request or default to today's date
         $fromDate = $request->input('from_date', Carbon::today()->toDateString());
         $toDate = $request->input('to_date', Carbon::today()->toDateString());
 
-        // Parse the dates for strict filtering
         $from = Carbon::parse($fromDate)->startOfDay();
         $to = Carbon::parse($toDate)->endOfDay();
 
-        // Initialize totals
         $totalPaidByCash = 0;
         $totalPaidByCreditCard = 0;
         $totalUnpaidInvoices = 0;
 
-        // **Fetch Payments (Strict Filtering by Category & Date)**
+        // ✅ Fetch Payments by Category + Date Range
         $invoicePayments = InvoicePayment::whereHas('invoice', function ($query) use ($selectedCategory, $from, $to) {
-                $query->whereHas('category', function ($q) use ($selectedCategory) {
-                    $q->where('name', $selectedCategory);
-                });
+            $query->whereHas('category', fn($q) => $q->where('name', $selectedCategory));
 
-                if ($selectedCategory === 'season') {
-                    $query->whereBetween('created_at', [$from, $to]); // Strict for season
-                } else {
-                    $query->where('rental_start_date', '>=', $from)
-                          ->where('rental_end_date', '<=', $to); // ✅ Strict date enforcement
-                }
-            })
-            ->get();
+            if ($selectedCategory === 'season') {
+                $query->whereBetween('created_at', [$from, $to]);
+            } else {
+                $query->where('rental_start_date', '>=', $from)
+                    ->where('rental_end_date', '<=', $to);
+            }
+        })->get();
 
-        // **Loop Through Payments & Calculate Totals**
+        // ✅ Sum payments by method
         foreach ($invoicePayments as $payment) {
             if ($payment->payment_method === 'cash') {
                 $totalPaidByCash += $payment->amount;
@@ -127,44 +147,31 @@ class DashbboardController extends Controller
             }
         }
 
-        // **Fetch Invoices Based on Strict Category & Date Filtering**
-        $invoices = Invoice::whereHas('category', function ($query) use ($selectedCategory) {
-                $query->where('name', $selectedCategory);
-            })
+        // ✅ Fetch invoices by Category + Date Range
+        $invoices = Invoice::with('payments')->whereHas('category', fn($q) => $q->where('name', $selectedCategory))
             ->when($selectedCategory === 'season', function ($query) use ($from, $to) {
-                $query->whereBetween('created_at', [$from, $to]); // Strict date for season invoices
+                $query->whereBetween('created_at', [$from, $to]);
             }, function ($query) use ($from, $to) {
                 $query->where('rental_start_date', '>=', $from)
-                      ->where('rental_end_date', '<=', $to); // ✅ Strictly inside date range
+                    ->where('rental_end_date', '<=', $to);
             })
             ->get();
 
-        // **Calculate Unpaid Invoices**
+        // ✅ Calculate unpaid balances from model method
         foreach ($invoices as $invoice) {
             $totals = $invoice->calculateTotals();
-
-            $finalTotal = $totals['finalTotal'] ?? 0;
-            $refundForUnusedDays = $totals['refundForUnusedDays'] ?? 0;
-            $paid = $invoice->payments->sum('amount');
-
-            $unpaid = max(0, round($finalTotal - $paid - $refundForUnusedDays, 2));
-            $totalUnpaidInvoices += $unpaid;
+            $totalUnpaidInvoices += $totals['balanceDue'] ?? 0;
         }
 
-        // ✅ Keep the same structure, but now it's **strictly filtered by category & date**
-        $totalPaidInvoices = $totalPaidByCash; // Only count cash payments
-
-        // **Prepare trial balance data**
+        // ✅ Trial balance summary
         $trialBalanceData = [
-            ['description' => 'Total Paid Invoices (Cash)', 'amount' => $totalPaidInvoices],
-            ['description' => 'Total Unpaid Invoices', 'amount' => $totalUnpaidInvoices],
-            ['description' => 'Total Paid by Credit Card', 'amount' => $totalPaidByCreditCard],
+            ['description' => 'Total Paid Invoices (Cash)', 'amount' => round($totalPaidByCash, 2)],
+            ['description' => 'Total Unpaid Invoices', 'amount' => round($totalUnpaidInvoices, 2)],
+            ['description' => 'Total Paid by Credit Card', 'amount' => round($totalPaidByCreditCard, 2)],
         ];
 
-        // **Return the view with trial balance data**
         return view('trial-balance.index', compact('trialBalanceData', 'fromDate', 'toDate', 'selectedCategory'));
     }
-
 
 
     // public function trialBalance(Request $request)

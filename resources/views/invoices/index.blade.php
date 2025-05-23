@@ -25,12 +25,12 @@
                         <div class="col-md-3">
                             <label for="start_date" class="form-label">Start Date</label>
                             <input type="date" id="start_date" name="start_date" class="form-control"
-                                value="{{ request('start_date', \Carbon\Carbon::today()->toDateString()) }}">
+                                value="{{ request('start_date') }}">
                         </div>
                         <div class="col-md-3">
                             <label for="end_date" class="form-label">End Date</label>
                             <input type="date" id="end_date" name="end_date" class="form-control"
-                                value="{{ request('end_date', \Carbon\Carbon::today()->toDateString()) }}">
+                                value="{{ request('end_date') }}">
                         </div>
 
                         <!-- Status Filter -->
@@ -61,10 +61,16 @@
                             </select>
                         </div>
 
-                        <!-- Submit Button -->
                         <div class="col-md-2 align-self-end">
+
+                            <!-- Clear Dates Button -->
+                            <button type="button" class="btn btn-secondary" id="clearDates">Clear</button>
+
+                            <!-- Submit Button -->
                             <button type="submit" class="btn btn-primary">Filter</button>
+
                         </div>
+
                     </div>
                 </form>
 
@@ -92,34 +98,18 @@
                                 <!-- Payment Status -->
                                 <td>
                                     @php
-                                        // Get the total paid amount
-                                        $totalPaid = $invoice->payments->sum('amount') + $invoice->deposit;
+                                        $paymentStatus = $invoice->payment_status;
 
-                                        // Get the final total (total due for the invoice)
-                                        $totals = $invoice->calculateTotals();
-                                        $totalDue = $totals['finalTotal'] ?? 0; // Default to 0 if no finalTotal exists
-
-                                        // Determine the payment status
-                                        $paymentStatus =
-                                            $totalPaid == $totalDue
-                                                ? 'fully_paid'
-                                                : ($totalPaid > 0
-                                                    ? 'partially_paid'
-                                                    : 'unpaid');
+                                        $badgeClass = match ($paymentStatus) {
+                                            'fully_paid' => 'bg-success',
+                                            'partially_paid' => 'bg-warning',
+                                            'unpaid' => 'bg-danger',
+                                            default => 'bg-secondary',
+                                        };
                                     @endphp
 
-                                    <span
-                                        class="badge
-        {{ $paymentStatus == 'fully_paid'
-            ? 'bg-success' // Fully paid
-            : ($paymentStatus == 'partially_paid'
-                ? 'bg-warning' // Partially paid
-                : 'bg-danger') }}">
-                                        {{ $paymentStatus == 'fully_paid'
-                                            ? 'Fully Paid'
-                                            : ($paymentStatus == 'partially_paid'
-                                                ? 'Partially Paid'
-                                                : 'Unpaid') }}
+                                    <span class="badge {{ $badgeClass }}">
+                                        {{ ucfirst(str_replace('_', ' ', $paymentStatus)) }}
                                     </span>
                                 </td>
                                 <!-- Rental Dates (Daily Category Only) -->
@@ -169,6 +159,13 @@
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'],
                 responsive: true
             });
+
+            // Clear date fields on button click
+            $('#clearDates').on('click', function() {
+                $('#start_date').val('');
+                $('#end_date').val('');
+            });
+
         });
     </script>
 @endpush

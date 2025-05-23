@@ -36,15 +36,13 @@ class InvoiceController extends Controller
         $startDate = $request->query('start_date');
         $endDate = $request->query('end_date');
 
-        // ✅ Default to today's date if no date filters are provided
-        if (!$startDate || !$endDate) {
-            $startDate = Carbon::today()->toDateString();
-            $endDate = Carbon::today()->toDateString();
-        }
+        $hasDateFilter = $startDate && $endDate;
 
-        // ✅ Convert to Carbon Dates for Proper Comparisons
-        $startDate = Carbon::parse($startDate)->startOfDay();
-        $endDate = Carbon::parse($endDate)->endOfDay();
+        // ✅ Convert to Carbon Dates only if provided
+        if ($hasDateFilter) {
+            $startDate = Carbon::parse($startDate)->startOfDay();
+            $endDate = Carbon::parse($endDate)->endOfDay();
+        }
 
         // ✅ Fetch Invoices with Eager Loading
         $invoices = Invoice::with(['customer', 'invoiceItems', 'customItems', 'additionalItems', 'returnDetails', 'payments'])
@@ -53,23 +51,23 @@ class InvoiceController extends Controller
             });
 
         // ✅ Apply Date Filtering Based on Category Type
-        if ($selectedCategory === 'season') {
-            // ✅ Corrected `created_at` filter for Season Invoices
-            $invoices->whereBetween('created_at', [$startDate, $endDate]);
-        } else {
-            // ✅ Corrected filter for Daily Invoices
-            $invoices->where(function ($query) use ($startDate, $endDate) {
-                $query->whereBetween('rental_start_date', [$startDate, $endDate])
-                    ->orWhereBetween('rental_end_date', [$startDate, $endDate])
-                    ->orWhere(function ($query) use ($startDate, $endDate) {
-                        $query->where('rental_start_date', '<=', $endDate) // Include invoices that started **before or on** the end date
-                            ->where('rental_end_date', '>=', $startDate) // Ensure they end **on or after** the start date
-                            ->where(function ($q) use ($startDate, $endDate) {
-                                $q->where('rental_start_date', '>=', $startDate)
-                                    ->where('rental_end_date', '<=', $endDate); // Strictly between the filtered range
-                            });
-                    });
-            });
+        if ($hasDateFilter) {
+            if ($selectedCategory === 'season') {
+                $invoices->whereBetween('created_at', [$startDate, $endDate]);
+            } else {
+                $invoices->where(function ($query) use ($startDate, $endDate) {
+                    $query->whereBetween('rental_start_date', [$startDate, $endDate])
+                        ->orWhereBetween('rental_end_date', [$startDate, $endDate])
+                        ->orWhere(function ($query) use ($startDate, $endDate) {
+                            $query->where('rental_start_date', '<=', $endDate)
+                                ->where('rental_end_date', '>=', $startDate)
+                                ->where(function ($q) use ($startDate, $endDate) {
+                                    $q->where('rental_start_date', '>=', $startDate)
+                                        ->where('rental_end_date', '<=', $endDate);
+                                });
+                        });
+                });
+            }
         }
 
         // ✅ Fetch Filtered Invoices
@@ -77,7 +75,9 @@ class InvoiceController extends Controller
 
         // ✅ Apply Payment Status Filtering Using Accessor
         if ($paymentStatus) {
-            $invoices = $invoices->filter(fn($invoice) => $invoice->payment_status === $paymentStatus);
+            $invoices = $invoices->filter(function ($invoice) use ($paymentStatus) {
+                return $invoice->payment_status === $paymentStatus;
+            })->values(); // Reset keys
         }
 
         // ✅ Apply Returned / Not Returned Status Filtering
@@ -87,8 +87,16 @@ class InvoiceController extends Controller
             $invoices = $invoices->filter(fn($invoice) => !$invoice->returned);
         }
 
-        return view('invoices.index', compact('invoices', 'selectedCategory', 'status', 'paymentStatus', 'startDate', 'endDate'));
+        return view('invoices.index', compact(
+            'invoices',
+            'selectedCategory',
+            'status',
+            'paymentStatus',
+            'startDate',
+            'endDate'
+        ));
     }
+
     /**
      * Show the form for creating a new resource.
      */
