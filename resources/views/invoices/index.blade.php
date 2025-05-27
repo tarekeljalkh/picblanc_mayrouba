@@ -79,7 +79,7 @@
                     style="width:100%">
                     <thead>
                         <tr>
-                            <th>Invoice ID</th>
+                            <th>Invoice</th>
                             <th>Customer</th>
                             <th>Payment Status</th>
                             @if (session('category') === 'daily')
