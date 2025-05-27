@@ -85,10 +85,10 @@
                     </div>
                 @endif
 
-                    <button class="btn btn-primary w-100 mt-3" data-bs-toggle="modal" data-bs-target="#addCustomItemModal">
-                        Add Custom Product
-                    </button>
-                    <br><br>
+                <button class="btn btn-primary w-100 mt-3" data-bs-toggle="modal" data-bs-target="#addCustomItemModal">
+                    Add Custom Product
+                </button>
+                <br><br>
 
                 <!-- Discount, and Total Amount -->
                 <div class="mb-3">
@@ -438,7 +438,7 @@
                                         </div>
                                         <div class="col">
                                             <label>Price</label>
-                                            <input type="text" class="form-control form-control-sm price" value="${(item.price * item.quantity).toFixed(2)}" readonly />
+            <input type="number" class="form-control form-control-sm price" data-index="${index}" value="${item.price.toFixed(2)}" step="0.01" min="0" />
                                         </div>
                                     </div>
                                 </div>
@@ -461,6 +461,13 @@
                         cart[index].quantity = parseFloat($(this).val()) || 1;
                         renderCart();
                         validateCheckoutButton();
+                    });
+
+                    $('.price').on('input', function() {
+                        const index = $(this).data('index');
+                        const newPrice = parseFloat($(this).val()) || 0;
+                        cart[index].price = newPrice;
+                        calculateTotalAmount(); // Recalculate totals
                     });
 
                     $('.remove-from-cart').on('click', function() {
