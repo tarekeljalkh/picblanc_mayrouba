@@ -561,7 +561,13 @@ class InvoiceController extends Controller
 
     public function print($id)
     {
-        $invoice = Invoice::with(['items.product', 'additionalItems', 'returnDetails.invoiceItem.product'])->findOrFail($id);
+        $invoice = Invoice::with([
+            'invoiceItems.product',
+            'additionalItems',
+            'returnDetails.invoiceItem.product',
+            'returnDetails.additionalItem',
+            'returnDetails.customItem'
+        ])->findOrFail($id);
 
         // Ensure totals are calculated using the revised logic
         $totals = $invoice->calculateTotals();
