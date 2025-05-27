@@ -79,6 +79,7 @@
                     style="width:100%">
                     <thead>
                         <tr>
+                            <th>Invoice ID</th>
                             <th>Customer</th>
                             <th>Payment Status</th>
                             @if (session('category') === 'daily')
@@ -92,6 +93,8 @@
                     <tbody>
                         @foreach ($invoices as $invoice)
                             <tr>
+                                <td>{{ $invoice->id }}</td>
+
                                 <!-- Customer Name -->
                                 <td>{{ $invoice->customer->name }}</td>
 
