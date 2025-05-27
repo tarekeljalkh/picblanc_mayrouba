@@ -1,5 +1,11 @@
 <form action="{{ route('invoices.process-returns', $invoice->id) }}" method="POST">
     @csrf
+
+    <div class="mb-2">
+    <input type="checkbox" id="return-all-checkbox" class="form-check-input me-1">
+    <label for="return-all-checkbox" class="form-check-label">Return All Items</label>
+</div>
+
     <div class="table-responsive">
         <table class="table table-bordered">
             <thead class="table-light">
@@ -211,5 +217,37 @@
                 }
             }
         });
+
+        // "Return All" checkbox logic
+document.getElementById('return-all-checkbox').addEventListener('change', function () {
+    const isChecked = this.checked;
+
+    document.querySelectorAll('.return-checkbox').forEach(checkbox => {
+        if (!checkbox.disabled) {
+            checkbox.checked = isChecked;
+            checkbox.dispatchEvent(new Event('change'));
+
+            const row = checkbox.closest('tr');
+            const quantityInput = row.querySelector('.return-quantity');
+            const maxQuantity = quantityInput.getAttribute('max');
+            quantityInput.value = isChecked ? maxQuantity : '';
+
+            const dateInput = row.querySelector('.return-date');
+            if (isChecked && dateInput) {
+                const today = new Date().toISOString().split('T')[0];
+                dateInput.value = today;
+                dateInput.dispatchEvent(new Event('change'));
+            }
+
+            const daysOfUseInput = row.querySelector('.days-of-use');
+            if (isChecked && daysOfUseInput) {
+                daysOfUseInput.value = 1;
+            } else if (daysOfUseInput) {
+                daysOfUseInput.value = '';
+            }
+        }
+    });
+});
+
     </script>
 @endpush
