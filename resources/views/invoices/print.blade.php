@@ -4,6 +4,32 @@
 
 @push('styles')
     <link rel="stylesheet" href="{{ asset('assets/vendor/css/pages/app-invoice.css') }}" />
+
+    <style>
+        @media print {
+            body {
+                margin: 0;
+                padding: 0;
+            }
+
+            .print-invoice {
+                width: 80mm;
+                font-family: monospace;
+                /* Looks cleaner on thermal printers */
+                font-size: 12px;
+                margin: 0 auto;
+            }
+
+            @page {
+                size: 80mm auto;
+                margin: 0;
+            }
+
+            .no-break {
+                page-break-inside: avoid;
+            }
+        }
+    </style>
 @endpush
 
 @section('content')
