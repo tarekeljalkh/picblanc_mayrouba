@@ -8,7 +8,7 @@
 
 @section('content')
 
-    <div class="invoice-preview" style="width: 80mm; margin: auto; font-size: 12px;">
+    <div class="invoice-preview" style="width: 72mm; margin: 0 auto; font-size: 10px; line-height: 1.2;">
         <!-- Invoice -->
         <div class="mb-6">
             <div class="invoice-preview-card">
@@ -80,7 +80,7 @@
 
                 <!-- Additional Items -->
                 @if ($invoice->additionalItems->isNotEmpty())
-                    <div style="margin-top: 10px;">
+                    <div style="margin-top: 4px;">
                         <h6>Additional Items:</h6>
                         <table class="table" style="width: 100%; border-collapse: collapse;">
                             <thead>
@@ -105,7 +105,7 @@
 
                 <!-- Returned Items -->
                 @if ($invoice->returnDetails->isNotEmpty())
-                    <div style="margin-top: 10px;">
+                    <div style="margin-top: 4px;">
                         <h6>Returned Items:</h6>
                         <table class="table" style="width: 100%; border-collapse: collapse;">
                             <thead>
@@ -136,7 +136,7 @@
                 @endif
 
                 <!-- Summary -->
-                <div style="margin-top: 10px;">
+                <div style="margin-top: 4px;">
                     <table style="width: 100%; border-collapse: collapse;">
                         <tbody>
                             <tr>
