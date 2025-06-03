@@ -127,29 +127,17 @@ public function trialBalance(Request $request)
     $totalPaidByCreditCard = 0;
     $totalUnpaidInvoices = 0;
 
-    // 🧾 Get all payments in the scope
-    $invoicePayments = InvoicePayment::whereHas('invoice', function ($query) use ($selectedCategory, $from, $to, $isAdmin, $user) {
-        $query->whereHas('category', fn($q) => $q->where('name', $selectedCategory));
+    // 🧾 Get payments based on actual payment_date
+    $invoicePayments = InvoicePayment::whereBetween('payment_date', [$from, $to])
+        ->whereHas('invoice', function ($query) use ($selectedCategory, $isAdmin, $user) {
+            $query->whereHas('category', fn($q) => $q->where('name', $selectedCategory));
+            if (!$isAdmin) {
+                $query->where('user_id', $user->id);
+            }
+        })
+        ->get();
 
-        if (!$isAdmin) {
-            $query->where('user_id', $user->id);
-        }
-
-        if ($selectedCategory === 'season') {
-            $query->whereBetween('created_at', [$from, $to]);
-        } else {
-            $query->where(function ($q) use ($from, $to) {
-                $q->whereBetween('rental_start_date', [$from, $to])
-                  ->orWhereBetween('rental_end_date', [$from, $to])
-                  ->orWhere(function ($q2) use ($from, $to) {
-                      $q2->where('rental_start_date', '<=', $from)
-                         ->where('rental_end_date', '>=', $to);
-                  });
-            });
-        }
-    })->get();
-
-    // 💳 Sum by method
+    // 💳 Sum payments by method
     foreach ($invoicePayments as $payment) {
         if ($payment->payment_method === 'cash') {
             $totalPaidByCash += $payment->amount;
@@ -158,7 +146,7 @@ public function trialBalance(Request $request)
         }
     }
 
-    // 🧮 Sum balanceDue from invoices
+    // 🧮 Calculate unpaid balances (based on invoice date ranges as before)
     $invoices = Invoice::with([
         'payments',
         'category',
@@ -192,7 +180,7 @@ public function trialBalance(Request $request)
         $totalUnpaidInvoices += $balanceDue;
     }
 
-    // ✅ Final output: only 3 fields
+    // ✅ Final trial balance data
     $trialBalanceData = [
         ['description' => 'Total Paid Invoices (Cash)', 'amount' => round($totalPaidByCash, 2)],
         ['description' => 'Total Paid by Credit Card', 'amount' => round($totalPaidByCreditCard, 2)],
