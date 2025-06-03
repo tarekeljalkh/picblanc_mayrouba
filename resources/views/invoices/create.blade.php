@@ -315,7 +315,7 @@
 
             if (!isNaN(startDate) && !isNaN(endDate) && startDate <= endDate) {
                 const diffTime = Math.abs(endDate - startDate);
-                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
                 $('#days').val(diffDays);
             }
         }

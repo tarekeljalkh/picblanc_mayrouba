@@ -367,7 +367,7 @@
                     if (!isNaN(startDate) && !isNaN(endDate) && startDate <= endDate) {
                         const diffTime = endDate - startDate;
                         const totalHours = diffTime / (1000 * 60 * 60);
-                        days = Math.ceil(totalHours / 24); // Round up to ensure partial days count
+                        days = Math.ceil(totalHours / 24) + 1; // Round up to ensure partial days count
                         days = Math.max(1, days); // Ensure at least 1 day
                     }
 
