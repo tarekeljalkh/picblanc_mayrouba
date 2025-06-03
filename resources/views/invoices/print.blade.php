@@ -4,54 +4,11 @@
 
 @push('styles')
     <link rel="stylesheet" href="{{ asset('assets/vendor/css/pages/app-invoice.css') }}" />
-
-    <style>
-        @media print {
-            body {
-                margin: 0;
-                padding: 0;
-                font-size: 11px;
-            }
-
-            .invoice-preview {
-                width: 80mm;
-                margin: 0 auto;
-                font-family: monospace;
-            }
-
-            table {
-                width: 100%;
-                border-collapse: collapse;
-            }
-
-            th,
-            td {
-                padding: 2px;
-                text-align: left;
-            }
-
-            .table th,
-            .table td {
-                border: none;
-            }
-
-            .btn,
-            .breadcrumb,
-            .card-header {
-                display: none !important;
-            }
-
-            @page {
-                size: 80mm auto;
-                margin: 0;
-            }
-        }
-    </style>
 @endpush
 
 @section('content')
 
-    <div class="invoice-preview" style="width: 80mm; margin: auto; font-size: 11px; font-family: monospace;">
+    <div class="invoice-preview" style="width: 80mm; margin: auto; font-size: 12px;">
         <!-- Invoice -->
         <div class="mb-6">
             <div class="invoice-preview-card">
