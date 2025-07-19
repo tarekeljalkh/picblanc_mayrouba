@@ -81,6 +81,7 @@
                         <tr>
                             <th>Invoice</th>
                             <th>Customer</th>
+                            <th>Phone</th>
                             <th>Payment Status</th>
                             @if (session('category') === 'daily')
                                 <th>From</th>
@@ -97,6 +98,13 @@
 
                                 <!-- Customer Name -->
                                 <td>{{ $invoice->customer->name }}</td>
+
+                                <!-- Customer Phone -->
+                                <td> {{ $invoice->customer->phone }}
+                                    @if (!empty($invoice->customer->phone2))
+                                        <br>{{ $invoice->customer->phone2 }}
+                                    @endif
+                                </td>
 
                                 <!-- Payment Status -->
                                 <td>
