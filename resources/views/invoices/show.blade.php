@@ -248,9 +248,19 @@
                                     @endif --}}
 
                                     <!-- Note -->
-                                    @if ($invoice->note)
-                                        <p><strong>NOTE:</strong> {{ $invoice->note }}</p>
-                                    @endif
+                                    <form action="{{ route('invoices.updateNote', $invoice->id) }}" method="POST"
+                                        class="d-flex align-items-center gap-2 mb-3">
+                                        @csrf
+                                        @method('PUT')
+
+                                        <label for="note" class="me-2 mb-0"><strong>Note:</strong></label>
+
+                                        <input type="text" name="note" id="note" class="form-control"
+                                            value="{{ $invoice->note }}" placeholder="Enter a note..."
+                                            style="max-width: 300px;" />
+
+                                        <button type="submit" class="btn btn-success">Update</button>
+                                    </form>
 
                                     <!-- Calculate Payment Status -->
                                     @php

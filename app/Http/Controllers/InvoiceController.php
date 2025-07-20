@@ -1036,4 +1036,15 @@ class InvoiceController extends Controller
     //         ->with('success', 'Payment added successfully.');
     // }
 
+    public function updateNote(Request $request, Invoice $invoice)
+    {
+        $request->validate([
+            'note' => 'nullable|string|max:1000',
+        ]);
+
+        $invoice->note = $request->note;
+        $invoice->save();
+
+        return redirect()->back()->with('success', 'Note updated successfully.');
+    }
 }

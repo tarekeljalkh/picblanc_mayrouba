@@ -47,6 +47,7 @@ Route::middleware('auth')->group(function () {
     // Invoices
     Route::get('/invoices/unpaid', [InvoiceController::class, 'unpaid'])->name('invoices.unpaid');
     Route::get('/invoices/paid', [InvoiceController::class, 'paid'])->name('invoices.paid');
+    Route::put('/invoices/{invoice}/note', [InvoiceController::class, 'updateNote'])->name('invoices.updateNote');
 
 
 
