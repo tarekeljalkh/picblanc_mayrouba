@@ -5,36 +5,54 @@
 @push('styles')
     <link rel="stylesheet" href="{{ asset('assets/vendor/css/pages/app-invoice.css') }}" />
 
-    <style>
-        @media print {
-            body {
-                margin: 0;
-                padding: 0;
-            }
-
-            .print-invoice {
-                width: 80mm;
-                font-family: monospace;
-                /* Looks cleaner on thermal printers */
-                font-size: 12px;
-                margin: 0 auto;
-            }
-
-            @page {
-                size: 80mm auto;
-                margin: 0;
-            }
-
-            .no-break {
-                page-break-inside: avoid;
-            }
+<style>
+    @media print {
+        html, body {
+            width: 80mm;
+            margin: 0;
+            padding: 0;
+            font-family: monospace;
+            font-size: 11px; /* slightly smaller for more content to fit */
+            line-height: 1.1;
         }
-    </style>
+
+        .print-invoice {
+            width: 80mm;
+            margin: 0 auto;
+            max-height: 280mm; /* prevent content from spilling onto second page */
+            overflow: hidden;
+        }
+
+        @page {
+            size: 80mm auto;
+            margin: 0;
+        }
+
+        .no-break,
+        .print-invoice,
+        .invoice-preview-card,
+        table,
+        tr, td, th {
+            page-break-inside: avoid;
+            break-inside: avoid;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        td, th {
+            padding: 2px 0;
+            font-size: 10px;
+        }
+    }
+</style>
 @endpush
 
 @section('content')
 
-    <div class="invoice-preview" style="width: 72mm; margin: 0 auto; font-size: 10px; line-height: 1.2;">
+    <div class="invoice-preview" style="width: 72mm; margin: 0 auto; font-size: 10px; line-height: 1.1;">
         <!-- Invoice -->
         <div class="mb-6">
             <div class="invoice-preview-card">
@@ -76,7 +94,7 @@
                 </div>
 
                 <!-- Invoice Items -->
-                <div class="table-responsive" style="margin-top: 10px;">
+                <div class="table-responsive" style="margin-top: 4px;">
                     <table class="table" style="width: 100%; border-collapse: collapse;">
                         <thead>
                             <tr>
