@@ -52,7 +52,7 @@
 
 @section('content')
 
-    <div class="invoice-preview" style="width: 72mm; margin: 0 auto; font-size: 10px; line-height: 1.1;">
+    <div class="invoice-preview" style="width: 72mm; margin: 0 auto; font-size: 12px; line-height: 1.1;">
         <!-- Invoice -->
         <div class="mb-6">
             <div class="invoice-preview-card">
