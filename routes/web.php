@@ -62,7 +62,11 @@ Route::middleware('auth')->group(function () {
     Route::post('/invoices/{invoice}/process-returns', [InvoiceController::class, 'processReturns'])->name('invoices.process-returns');
     // Add new items
     Route::post('/invoices/{invoice}/add-items', [InvoiceController::class, 'addItems'])->name('invoices.add-items');
-
+    //Remove items
+    Route::get('/invoices/{invoice}/remove-items', [InvoiceController::class, 'showRemoveItems'])->name('invoices.removeItems');
+    Route::delete('/invoice-items/{item}', [InvoiceController::class, 'destroyItem'])->name('invoice-items.destroyItem');
+    Route::delete('/custom-items/{id}', [InvoiceController::class, 'destroyCustom'])->name('custom-items.destroy');
+    Route::delete('/additional-items/{id}', [InvoiceController::class, 'destroyAdditional'])->name('additional-items.destroy');
 
     // Drafts
     Route::resource('drafts', DraftController::class);

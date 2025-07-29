@@ -1047,4 +1047,31 @@ class InvoiceController extends Controller
 
         return redirect()->back()->with('success', 'Note updated successfully.');
     }
+
+    public function showRemoveItems($invoiceId)
+    {
+        $invoice = Invoice::with(['invoiceItems.product', 'customItems', 'additionalItems.product'])->findOrFail($invoiceId);
+        return view('invoices.remove-items', compact('invoice'));
+    }
+
+    public function destroyItem($id)
+    {
+        $item = InvoiceItem::findOrFail($id);
+        $item->delete();
+
+        return redirect()->back()->with('success', 'Item removed successfully.');
+    }
+
+    public function destroyCustom($id) {
+    $customItem = CustomItem::findOrFail($id);
+    $customItem->delete();
+    return redirect()->back()->with('success', 'Custom item deleted.');
+}
+
+public function destroyAdditional($id) {
+    $additionalItem = AdditionalItem::findOrFail($id);
+    $additionalItem->delete();
+    return redirect()->back()->with('success', 'Additional item deleted.');
+}
+
 }
