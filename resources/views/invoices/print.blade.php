@@ -12,7 +12,7 @@
             margin: 0;
             padding: 0;
             font-family: monospace;
-            font-size: 11px; /* slightly smaller for more content to fit */
+            font-size: 14px; /* slightly smaller for more content to fit */
             line-height: 1.1;
         }
 

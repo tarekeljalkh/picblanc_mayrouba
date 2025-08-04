@@ -2,9 +2,9 @@
     @csrf
 
     <div class="mb-2">
-    <input type="checkbox" id="return-all-checkbox" class="form-check-input me-1">
-    <label for="return-all-checkbox" class="form-check-label">Return All Items</label>
-</div>
+        <input type="checkbox" id="return-all-checkbox" class="form-check-input me-1">
+        <label for="return-all-checkbox" class="form-check-label">Return All Items</label>
+    </div>
 
     <div class="table-responsive">
         <table class="table table-bordered">
@@ -176,25 +176,44 @@
                     if (this.checked) {
                         quantityInput.removeAttribute('disabled');
                         dateInput.removeAttribute('disabled');
+
+                        if (!dateInput.value) {
+                            // ✅ Set today's date with time 00:00 to match datetime-local format
+                            const now = new Date();
+                            const year = now.getFullYear();
+                            const month = String(now.getMonth() + 1).padStart(2, '0');
+                            const day = String(now.getDate()).padStart(2, '0');
+                            const todayDateTime = `${year}-${month}-${day}T00:00`;
+
+                            dateInput.value = todayDateTime;
+                            dateInput.dispatchEvent(new Event('change'));
+                        }
+
                         if (daysOfUseInput) {
                             daysOfUseInput.removeAttribute('disabled');
+                            if (!daysOfUseInput.value) {
+                                daysOfUseInput.value = 1;
+                            }
                         }
 
                         flatpickr(dateInput, {
+                            enableTime: false,
                             dateFormat: 'Y-m-d',
-                            minDate: dateInput.getAttribute('data-start-date') ||
-                            null, // ✅ Add fallback
+                            minDate: dateInput.getAttribute('data-start-date') || null,
                             onChange: function() {
                                 calculateDaysOfUse(dateInput);
                             },
                         });
+
                     } else {
-                        quantityInput.setAttribute('disabled', 'true');
+                        quantityInput.setAttribute('disabled', true);
                         quantityInput.value = '';
-                        dateInput.setAttribute('disabled', 'true');
+
+                        dateInput.setAttribute('disabled', true);
                         dateInput.value = '';
+
                         if (daysOfUseInput) {
-                            daysOfUseInput.setAttribute('disabled', 'true');
+                            daysOfUseInput.setAttribute('disabled', true);
                             daysOfUseInput.value = '';
                         }
                     }
@@ -219,35 +238,34 @@
         });
 
         // "Return All" checkbox logic
-document.getElementById('return-all-checkbox').addEventListener('change', function () {
-    const isChecked = this.checked;
+        document.getElementById('return-all-checkbox').addEventListener('change', function() {
+            const isChecked = this.checked;
 
-    document.querySelectorAll('.return-checkbox').forEach(checkbox => {
-        if (!checkbox.disabled) {
-            checkbox.checked = isChecked;
-            checkbox.dispatchEvent(new Event('change'));
+            document.querySelectorAll('.return-checkbox').forEach(checkbox => {
+                if (!checkbox.disabled) {
+                    checkbox.checked = isChecked;
+                    checkbox.dispatchEvent(new Event('change'));
 
-            const row = checkbox.closest('tr');
-            const quantityInput = row.querySelector('.return-quantity');
-            const maxQuantity = quantityInput.getAttribute('max');
-            quantityInput.value = isChecked ? maxQuantity : '';
+                    const row = checkbox.closest('tr');
+                    const quantityInput = row.querySelector('.return-quantity');
+                    const maxQuantity = quantityInput.getAttribute('max');
+                    quantityInput.value = isChecked ? maxQuantity : '';
 
-            const dateInput = row.querySelector('.return-date');
-            if (isChecked && dateInput) {
-                const today = new Date().toISOString().split('T')[0];
-                dateInput.value = today;
-                dateInput.dispatchEvent(new Event('change'));
-            }
+                    const dateInput = row.querySelector('.return-date');
+                    if (isChecked && dateInput) {
+                        const today = new Date().toISOString().split('T')[0];
+                        dateInput.value = today;
+                        dateInput.dispatchEvent(new Event('change'));
+                    }
 
-            const daysOfUseInput = row.querySelector('.days-of-use');
-            if (isChecked && daysOfUseInput) {
-                daysOfUseInput.value = 1;
-            } else if (daysOfUseInput) {
-                daysOfUseInput.value = '';
-            }
-        }
-    });
-});
-
+                    const daysOfUseInput = row.querySelector('.days-of-use');
+                    if (isChecked && daysOfUseInput) {
+                        daysOfUseInput.value = 1;
+                    } else if (daysOfUseInput) {
+                        daysOfUseInput.value = '';
+                    }
+                }
+            });
+        });
     </script>
 @endpush
