@@ -29,6 +29,7 @@
                             <td>
                                 <input type="checkbox" class="form-check-input return-checkbox"
                                     name="returns[original][{{ $item->id }}][selected]" value="1"
+                                    data-rental-end-date="{{ optional($item->rental_end_date)->format('Y-m-d') }}"
                                     {{ old("returns.original.{$item->id}.selected") ? 'checked' : '' }}>
                             </td>
                             <td>{{ $item->product->name }}</td>
@@ -43,7 +44,7 @@
                             </td>
                             @if (session('category') === 'daily')
                                 <td>
-                                    <input type="datetime-local" class="form-control return-date"
+                                    <input type="date" class="form-control return-date"
                                         name="returns[original][{{ $item->id }}][return_date]"
                                         data-start-date="{{ $item->rental_start_date }}"
                                         value="{{ old("returns.original.{$item->id}.return_date") }}"
@@ -67,6 +68,7 @@
                             <td>
                                 <input type="checkbox" class="form-check-input return-checkbox"
                                     name="returns[additional][{{ $addedItem->id }}][selected]" value="1"
+                                    data-rental-end-date="{{ optional($addedItem->rental_end_date)->format('Y-m-d') }}"
                                     {{ old("returns.additional.{$addedItem->id}.selected") ? 'checked' : '' }}>
                             </td>
                             <td>{{ $addedItem->product->name }}</td>
@@ -81,7 +83,7 @@
                             </td>
                             @if (session('category') === 'daily')
                                 <td>
-                                    <input type="datetime-local" class="form-control return-date"
+                                    <input type="date" class="form-control return-date"
                                         name="returns[additional][{{ $addedItem->id }}][return_date]"
                                         data-start-date="{{ $addedItem->rental_start_date }}"
                                         value="{{ old("returns.additional.{$addedItem->id}.return_date") }}"
@@ -105,6 +107,7 @@
                             <td>
                                 <input type="checkbox" class="form-check-input return-checkbox"
                                     name="returns[custom][{{ $customItem->id }}][selected]" value="1"
+                                    data-rental-end-date="{{ optional($customItem->rental_end_date ?? $invoice->rental_end_date)->format('Y-m-d') }}"
                                     {{ old("returns.custom.{$customItem->id}.selected") ? 'checked' : '' }}>
                             </td>
                             <td>{{ $customItem->name }}</td>
@@ -119,7 +122,7 @@
                             </td>
                             @if (session('category') === 'daily')
                                 <td>
-                                    <input type="datetime-local" class="form-control return-date"
+                                    <input type="date" class="form-control return-date"
                                         name="returns[custom][{{ $customItem->id }}][return_date]"
                                         data-start-date="{{ $customItem->rental_start_date ?? $invoice->rental_start_date }}"
                                         value="{{ old("returns.custom.{$customItem->id}.return_date") }}"
@@ -166,55 +169,57 @@
 
             initializeFlatpickr();
 
-            document.querySelectorAll('.return-checkbox').forEach(checkbox => {
-                checkbox.addEventListener('change', function() {
-                    const row = this.closest('tr');
-                    const quantityInput = row.querySelector('.return-quantity');
-                    const dateInput = row.querySelector('.return-date');
-                    const daysOfUseInput = row.querySelector('.days-of-use');
+            document.getElementById('return-all-checkbox').addEventListener('change', function() {
+                const isChecked = this.checked;
 
-                    if (this.checked) {
-                        quantityInput.removeAttribute('disabled');
-                        dateInput.removeAttribute('disabled');
+                document.querySelectorAll('.return-checkbox').forEach(cb => {
+                    if (!cb.disabled) {
+                        cb.checked = isChecked;
 
-                        if (!dateInput.value) {
-                            // ✅ Set today's date with time 00:00 to match datetime-local format
-                            const now = new Date();
-                            const year = now.getFullYear();
-                            const month = String(now.getMonth() + 1).padStart(2, '0');
-                            const day = String(now.getDate()).padStart(2, '0');
-                            const todayDateTime = `${year}-${month}-${day}T00:00`;
+                        const row = cb.closest('tr');
+                        const quantityInput = row.querySelector('.return-quantity');
+                        const dateInput = row.querySelector('.return-date');
+                        const daysOfUseInput = row.querySelector('.days-of-use');
+                        const rentalEndDate = cb.dataset.rentalEndDate;
 
-                            dateInput.value = todayDateTime;
-                            dateInput.dispatchEvent(new Event('change'));
-                        }
+                        if (isChecked) {
+                            quantityInput.removeAttribute('disabled');
+                            dateInput.removeAttribute('disabled');
+                            daysOfUseInput?.removeAttribute('disabled');
 
-                        if (daysOfUseInput) {
-                            daysOfUseInput.removeAttribute('disabled');
-                            if (!daysOfUseInput.value) {
+                            quantityInput.value = quantityInput.getAttribute('max');
+
+                            const formattedDate = rentalEndDate || new Date().toISOString().split(
+                                'T')[0];
+                            dateInput.value = formattedDate;
+                            calculateDaysOfUse(dateInput);
+
+                            flatpickr(dateInput, {
+                                enableTime: false,
+                                dateFormat: 'Y-m-d',
+                                minDate: dateInput.getAttribute('data-start-date') || null,
+                                onChange: function() {
+                                    calculateDaysOfUse(dateInput);
+                                },
+                            });
+
+                            if (daysOfUseInput && !daysOfUseInput.value) {
                                 daysOfUseInput.value = 1;
                             }
-                        }
 
-                        flatpickr(dateInput, {
-                            enableTime: false,
-                            dateFormat: 'Y-m-d',
-                            minDate: dateInput.getAttribute('data-start-date') || null,
-                            onChange: function() {
-                                calculateDaysOfUse(dateInput);
-                            },
-                        });
+                        } else {
+                            cb.checked = false;
 
-                    } else {
-                        quantityInput.setAttribute('disabled', true);
-                        quantityInput.value = '';
+                            quantityInput.setAttribute('disabled', true);
+                            quantityInput.value = '';
 
-                        dateInput.setAttribute('disabled', true);
-                        dateInput.value = '';
+                            dateInput.setAttribute('disabled', true);
+                            dateInput.value = '';
 
-                        if (daysOfUseInput) {
-                            daysOfUseInput.setAttribute('disabled', true);
-                            daysOfUseInput.value = '';
+                            if (daysOfUseInput) {
+                                daysOfUseInput.setAttribute('disabled', true);
+                                daysOfUseInput.value = '';
+                            }
                         }
                     }
                 });
@@ -232,30 +237,34 @@
                     const daysUsed = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
                     daysOfUseInput.value = Math.max(1, daysUsed);
                 } else {
-                    daysOfUseInput.value = ''; // Clear if invalid
+                    daysOfUseInput.value = '';
                 }
             }
+
         });
 
         // "Return All" checkbox logic
         document.getElementById('return-all-checkbox').addEventListener('change', function() {
             const isChecked = this.checked;
 
-            document.querySelectorAll('.return-checkbox').forEach(checkbox => {
-                if (!checkbox.disabled) {
-                    checkbox.checked = isChecked;
-                    checkbox.dispatchEvent(new Event('change'));
+            document.querySelectorAll('.return-checkbox').forEach(cb => {
+                if (!cb.disabled) {
+                    cb.checked = isChecked;
+                    cb.dispatchEvent(new Event('change'));
 
-                    const row = checkbox.closest('tr');
+                    const row = cb.closest('tr');
                     const quantityInput = row.querySelector('.return-quantity');
                     const maxQuantity = quantityInput.getAttribute('max');
                     quantityInput.value = isChecked ? maxQuantity : '';
 
                     const dateInput = row.querySelector('.return-date');
+                    const rentalEndDate = cb.dataset.rentalEndDate; // ✅ Correct now
+
                     if (isChecked && dateInput) {
-                        const today = new Date().toISOString().split('T')[0];
-                        dateInput.value = today;
-                        dateInput.dispatchEvent(new Event('change'));
+                        const formatted = rentalEndDate ? rentalEndDate : new Date().toISOString().split(
+                            'T')[0];
+                        dateInput.value = formatted;
+                        calculateDaysOfUse(dateInput);
                     }
 
                     const daysOfUseInput = row.querySelector('.days-of-use');
