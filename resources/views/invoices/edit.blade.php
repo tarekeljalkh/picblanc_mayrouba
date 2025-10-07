@@ -33,6 +33,13 @@
                                 Returns</button>
                         </li>
                         <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="date-additions-tab" data-bs-toggle="tab"
+                                data-bs-target="#date-additions" type="button" role="tab"
+                                aria-controls="date-additions" aria-selected="false">
+                                Add New Date
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
                             <button class="nav-link" id="additions-tab" data-bs-toggle="tab" data-bs-target="#additions"
                                 type="button" role="tab" aria-controls="additions" aria-selected="false">Add New
                                 Items</button>
@@ -57,6 +64,11 @@
                         {{-- Manage Returns Tab --}}
                         <div class="tab-pane fade show active" id="returns" role="tabpanel" aria-labelledby="returns-tab">
                             @include('invoices.partials.manage-returns')
+                        </div>
+
+                        {{-- Invoice Dates Tab --}}
+                        <div class="tab-pane fade" id="date-additions" role="tabpanel" aria-labelledby="dates-tab">
+                            @include('invoices.partials.add-new-dates')
                         </div>
 
                         {{-- Add New Items Tab --}}
