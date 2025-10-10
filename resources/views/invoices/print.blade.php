@@ -5,49 +5,56 @@
 @push('styles')
     <link rel="stylesheet" href="{{ asset('assets/vendor/css/pages/app-invoice.css') }}" />
 
-<style>
-    @media print {
-        html, body {
-            width: 80mm;
-            margin: 0;
-            padding: 0;
-            font-family: monospace;
-            font-size: 14px; /* slightly smaller for more content to fit */
-            line-height: 1.1;
-        }
+    <style>
+        @media print {
 
-        .print-invoice {
-            width: 80mm;
-            margin: 0 auto;
-            max-height: 280mm; /* prevent content from spilling onto second page */
-            overflow: hidden;
-        }
+            html,
+            body {
+                width: 80mm;
+                margin: 0;
+                padding: 0;
+                font-family: monospace;
+                font-size: 14px;
+                /* slightly smaller for more content to fit */
+                line-height: 1.1;
+            }
 
-        @page {
-            size: 80mm auto;
-            margin: 0;
-        }
+            .print-invoice {
+                width: 80mm;
+                margin: 0 auto;
+                max-height: 280mm;
+                /* prevent content from spilling onto second page */
+                overflow: hidden;
+            }
 
-        .no-break,
-        .print-invoice,
-        .invoice-preview-card,
-        table,
-        tr, td, th {
-            page-break-inside: avoid;
-            break-inside: avoid;
-        }
+            @page {
+                size: 80mm auto;
+                margin: 0;
+            }
 
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
+            .no-break,
+            .print-invoice,
+            .invoice-preview-card,
+            table,
+            tr,
+            td,
+            th {
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
 
-        td, th {
-            padding: 2px 0;
-            font-size: 10px;
+            table {
+                width: 100%;
+                border-collapse: collapse;
+            }
+
+            td,
+            th {
+                padding: 2px 0;
+                font-size: 10px;
+            }
         }
-    }
-</style>
+    </style>
 @endpush
 
 @section('content')
@@ -206,7 +213,7 @@
                             </tr>
                             <tr>
                                 <td>Final Total:</td>
-                                <td style="text-align: right;">${{ number_format($totals['finalTotalCustom'], 2) }}</td>
+                                <td style="text-align: right;">${{ number_format($totals['finalTotal'], 2) }}</td>
                             </tr>
                             <tr>
                                 <td>Paid Amount:</td>

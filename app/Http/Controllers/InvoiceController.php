@@ -446,14 +446,42 @@ class InvoiceController extends Controller
             'returnDetails.additionalItem.product',
         ])->findOrFail($id);
 
-        $totals = $invoice->calculateTotals();
+        // Calculate totals dynamically based on Unit Price × Quantity × Days
+        $subtotal = 0;
+        foreach ($invoice->invoiceItems as $item) {
+            $days = $item->rental_start_date && $item->rental_end_date
+                ? \Carbon\Carbon::parse($item->rental_end_date)->diffInDays($item->rental_start_date) + 1
+                : 1;
+            $subtotal += $item->price * $item->quantity * $days;
+        }
 
-        // Pass the returned cost, added cost, and discount amount to the view
-        $invoiceReturnedCost = $invoice->returned_cost; // Return Cost
-        $invoiceAddedCost = $invoice->added_cost; // Additional Cost
-        $invoiceDiscountAmount = $invoice->discount_amount; // Discount Amount
+        $additionalCost = 0;
+        foreach ($invoice->additionalItems as $item) {
+            $days = $item->rental_start_date && $item->rental_end_date
+                ? \Carbon\Carbon::parse($item->rental_end_date)->diffInDays($item->rental_start_date) + 1
+                : 1;
+            $additionalCost += $item->price * $item->quantity * $days;
+        }
 
-        return view('invoices.show', compact('invoice', 'totals', 'invoiceReturnedCost', 'invoiceAddedCost', 'invoiceDiscountAmount'));
+        $discount = $invoice->discount_amount ?? 0;
+        $refund = $invoice->returned_cost ?? 0;
+        $deposit = $invoice->deposit ?? 0;
+
+        $finalTotal = $subtotal + $additionalCost - $discount - $refund + $deposit;
+        $paidAmount = $invoice->payments->sum('amount');
+        $balanceDue = max(0, $finalTotal - $paidAmount);
+
+        $totals = [
+            'subtotalForDiscount' => $subtotal,
+            'discountAmount' => $discount,
+            'additionalItemsCost' => $additionalCost,
+            'refundForUnusedDays' => $refund,
+            'finalTotal' => $finalTotal,
+            'balanceDue' => $balanceDue,
+        ];
+
+        // Only pass $invoice and $totals
+        return view('invoices.show', compact('invoice', 'totals'));
     }
 
 
@@ -580,7 +608,14 @@ class InvoiceController extends Controller
      */
     public function download($id)
     {
-        $invoice = Invoice::with('items.product', 'additionalItems', 'returnDetails')->findOrFail($id);
+        $invoice = Invoice::with([
+            'invoiceItems.product',
+            'additionalItems',
+            'customItems',
+            'returnDetails.invoiceItem.product',
+            'returnDetails.additionalItem.product',
+            'returnDetails.customItem'
+        ])->findOrFail($id);
 
         $totals = $invoice->calculateTotals();
 
@@ -588,6 +623,7 @@ class InvoiceController extends Controller
 
         return $pdf->download("invoice-{$invoice->id}.pdf");
     }
+
 
 
     public function processReturns(Request $request, $invoiceId)
@@ -695,6 +731,75 @@ class InvoiceController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             return redirect()->back()->with('error', 'Failed to process returns: ' . $e->getMessage());
+        }
+    }
+
+
+    public function addDates(Request $request, $invoiceId)
+    {
+        $messages = [
+            'returns.required' => 'You must provide at least one item.',
+            'returns.*.*.from.required_if' => 'The From Date is required when an item is selected.',
+            'returns.*.*.from.date' => 'The From Date must be a valid date.',
+            'returns.*.*.to.required_if' => 'The To Date is required when an item is selected.',
+            'returns.*.*.to.date' => 'The To Date must be a valid date.',
+            'returns.*.*.to.after_or_equal' => 'The To Date must be after or equal to the From Date.',
+        ];
+
+        $rules = [
+            'returns' => 'required|array',
+            'returns.*.*.selected' => 'sometimes|required|boolean',
+            'returns.*.*.from' => 'required_if:returns.*.*.selected,1|date',
+            'returns.*.*.to' => 'required_if:returns.*.*.selected,1|date|after_or_equal:returns.*.*.from',
+        ];
+
+        $validated = $request->validate($rules, $messages);
+
+        $invoice = Invoice::findOrFail($invoiceId);
+
+        DB::beginTransaction();
+
+        try {
+            foreach ($validated['returns'] as $type => $items) {
+                foreach ($items as $id => $item) {
+                    if (empty($item['selected'])) {
+                        continue;
+                    }
+
+                    $model = match ($type) {
+                        'original' => InvoiceItem::findOrFail($id),
+                        'additional' => AdditionalItem::findOrFail($id),
+                        'custom' => CustomItem::findOrFail($id),
+                        default => throw new \Exception('Invalid item type.'),
+                    };
+
+                    $fromDate = Carbon::parse($item['from']);
+                    $toDate = Carbon::parse($item['to']);
+
+                    // Save the dates in the model (or a separate table if multiple ranges)
+                    $model->rental_start_date = $fromDate;
+                    $model->rental_end_date = $toDate;
+                    $model->save();
+
+                    // Optional: save to ReturnDetail table if you want a separate log
+                    // ReturnDetail::create([
+                    //     'invoice_id' => $invoice->id,
+                    //     'invoice_item_id' => $type === 'original' ? $model->id : null,
+                    //     'additional_item_id' => $type === 'additional' ? $model->id : null,
+                    //     'custom_item_id' => $type === 'custom' ? $model->id : null,
+                    //     'from_date' => $fromDate,
+                    //     'to_date' => $toDate,
+                    // ]);
+                }
+            }
+
+            DB::commit();
+
+            return redirect()->route('invoices.show', $invoice->id)
+                ->with('success', 'Dates added/updated successfully.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->back()->with('error', 'Failed to add dates: ' . $e->getMessage());
         }
     }
 
@@ -1062,16 +1167,17 @@ class InvoiceController extends Controller
         return redirect()->back()->with('success', 'Item removed successfully.');
     }
 
-    public function destroyCustom($id) {
-    $customItem = CustomItem::findOrFail($id);
-    $customItem->delete();
-    return redirect()->back()->with('success', 'Custom item deleted.');
-}
+    public function destroyCustom($id)
+    {
+        $customItem = CustomItem::findOrFail($id);
+        $customItem->delete();
+        return redirect()->back()->with('success', 'Custom item deleted.');
+    }
 
-public function destroyAdditional($id) {
-    $additionalItem = AdditionalItem::findOrFail($id);
-    $additionalItem->delete();
-    return redirect()->back()->with('success', 'Additional item deleted.');
-}
-
+    public function destroyAdditional($id)
+    {
+        $additionalItem = AdditionalItem::findOrFail($id);
+        $additionalItem->delete();
+        return redirect()->back()->with('success', 'Additional item deleted.');
+    }
 }

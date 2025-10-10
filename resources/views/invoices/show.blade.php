@@ -83,14 +83,20 @@
                                     <td class="text-nowrap text-heading">{{ $item->product->name }}</td>
                                     <td>${{ number_format($item->price, 2) }}</td>
                                     <td>{{ $item->quantity }}</td>
-                                    <td>${{ number_format($item->total_price, 2) }}</td>
+                                    @php
+                                        $from = $item->rental_start_date ? \Carbon\Carbon::parse($item->rental_start_date) : null;
+                                        $to = $item->rental_end_date ? \Carbon\Carbon::parse($item->rental_end_date) : null;
+                                        $days = $from && $to ? $to->diffInDays($from) + 1 : 0;
+                                        $totalPrice = $item->price * $item->quantity * $days;
+                                    @endphp
+                                    <td>${{ number_format($totalPrice, 2) }}</td>
                                     @if ($invoice->category->name === 'daily')
                                         <td>{{ optional($item->rental_start_date)->format('d/m/Y') }}</td>
                                         <td>{{ optional($item->rental_end_date)->format('d/m/Y') }}</td>
-                                        <td>{{ $item->days }}</td>
+                                        <td>{{ $days }}</td>
                                     @endif
                                 </tr>
-                            @endforeach
+                                @endforeach
 
                             <!-- Custom Items -->
                             @foreach ($invoice->customItems as $customItem)

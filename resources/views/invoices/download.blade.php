@@ -118,7 +118,21 @@
                         <td>{{ $item->product->name }}</td>
                         <td>${{ number_format($item->price, 2) }}</td>
                         <td>{{ $item->quantity }}</td>
-                        <td>${{ number_format($item->price * $item->quantity * ($invoice->category->name === 'daily' ? $item->days : 1), 2) }}
+                        @php
+                            $days = 1;
+                            if (
+                                $invoice->category->name === 'daily' &&
+                                $item->rental_start_date &&
+                                $item->rental_end_date
+                            ) {
+                                $days =
+                                    \Carbon\Carbon::parse($item->rental_end_date)->diffInDays(
+                                        \Carbon\Carbon::parse($item->rental_start_date),
+                                    ) + 1;
+                            }
+                            $totalPrice = $item->price * $item->quantity * $days;
+                        @endphp
+                        <td>${{ number_format($totalPrice, 2) }}</td>
                         </td>
                         @if ($invoice->category->name === 'daily')
                             <td>{{ optional($item->rental_start_date)->format('d/m/Y h:i A') }}</td>
@@ -161,7 +175,7 @@
                 $subtotalForDiscount = $totals['subtotalForDiscount'];
                 $additionalItemsCost = $totals['additionalItemsCost'];
                 $refundForUnusedDays = $totals['refundForUnusedDays'];
-                $finalTotalCustom = $totals['finalTotalCustom'];
+                $finalTotal = $totals['finalTotal'];
                 $balanceDue = $totals['balanceDue'];
             @endphp
             <tr>
@@ -178,7 +192,7 @@
             </tr>
             <tr>
                 <td><strong>Final Total:</strong></td>
-                <td class="text-end">${{ number_format($finalTotalCustom, 2) }}</td>
+                <td class="text-end">${{ number_format($finalTotal, 2) }}</td>
             </tr>
             <tr>
                 <td class="text-danger"><strong>Balance Due:</strong></td>
@@ -208,9 +222,9 @@
         <!-- Conditions -->
         <p><strong>CONDITION:</strong> I declare having received the merchandise mentioned above in good condition and
             agree to return it on time. I will reimburse the value of any missing, damaged, or broken article.</p>
-                            <p>Mayrouba - Tel: 03715757</p>
-                <p>Warde - Tel: 70100015</p>
-                <p>Mzaar Intercontinental Hotel - Tel: 03788733</p>
+        <p>Mayrouba - Tel: 03715757</p>
+        <p>Warde - Tel: 70100015</p>
+        <p>Mzaar Intercontinental Hotel - Tel: 03788733</p>
 
     </div>
 </body>

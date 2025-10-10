@@ -68,7 +68,7 @@ Route::middleware('auth')->group(function () {
     Route::delete('/custom-items/{id}', [InvoiceController::class, 'destroyCustom'])->name('custom-items.destroy');
     Route::delete('/additional-items/{id}', [InvoiceController::class, 'destroyAdditional'])->name('additional-items.destroy');
     //Add new dates
-    Route::put('/invoices/{invoice}/add-dates', [InvoiceController::class, 'addDates'])->name('invoices.add-dates');
+    Route::post('/invoices/{invoice}/add-dates', [InvoiceController::class, 'addDates'])->name('invoices.add-dates');
 
     // Drafts
     Route::resource('drafts', DraftController::class);
