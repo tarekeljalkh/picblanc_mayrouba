@@ -2,19 +2,19 @@
     @csrf
 
     @php
-        // Get calculated totals from the model
-        $totals = $invoice->calculateTotals();
+        // Get calculated totals safely
+        $totals = $invoice->calculateTotals() ?? [];
 
-        // Extract individual totals for clarity
-        $finalTotal = $totals['finalTotal'];
-        $discountAmount = $totals['discountAmount'];
-        $finalTotalCustom = $totals['finalTotalCustom'];
-        $returnedItemsCost = $totals['returnedItemsCost'];
-        $remainingBalance = $totals['balanceDue'];
+        // Use null coalescing to avoid undefined key errors
+        $finalTotal = $totals['finalTotal'] ?? 0;
+        $discountAmount = $totals['discountAmount'] ?? 0;
+        $finalTotalCustom = $totals['finalTotalCustom'] ?? $finalTotal; // fallback to finalTotal
+        $returnedItemsCost = $totals['returnedItemsCost'] ?? 0;
+        $remainingBalance = $totals['balanceDue'] ?? 0;
 
         // Include previous payments in paid amount calculation
-        $previousPayments = $invoice->payments->sum('amount'); // Sum of all previous payments
-        $paidAmount = $previousPayments + $invoice->deposit + $invoice->paid_amount + $discountAmount;
+        $previousPayments = $invoice->payments->sum('amount');
+        $paidAmount = $previousPayments + ($invoice->deposit ?? 0) + ($invoice->paid_amount ?? 0) + $discountAmount;
     @endphp
 
     <!-- Total Amount -->
@@ -42,7 +42,8 @@
         <ul class="list-group">
             @foreach ($invoice->payments as $payment)
                 <li class="list-group-item">
-                    <strong>{{ $payment->payment_method }}</strong>: ${{ number_format($payment->amount, 2) }}
+                    <strong>{{ $payment->payment_method }}</strong>:
+                    ${{ number_format($payment->amount, 2) }}
                     ({{ \Carbon\Carbon::parse($payment->payment_date)->format('d/m/Y h:i A') }})
                 </li>
             @endforeach
@@ -55,38 +56,35 @@
             This invoice is fully paid. No further payments are required.
         </div>
 
-        <!-- Payment Method Selection (Cash or Credit Card) -->
         <div class="mb-3">
             <label for="paymentMethod" class="form-label">Payment Method</label>
             <select name="payment_method" id="paymentMethod" class="form-control" disabled>
+                <option value="cash">Cash</option>
+                <option value="credit_card">Credit Card</option>
+            </select>
+        </div>
+
+        <div class="mb-3">
+            <label for="newPayment" class="form-label">New Payment Amount ($)</label>
+            <input type="number" id="newPayment" name="new_payment" class="form-control" disabled>
+        </div>
+
+        <button type="submit" class="btn btn-success" disabled>Add Payment</button>
+    @else
+        <div class="mb-3">
+            <label for="paymentMethod" class="form-label">Payment Method</label>
+            <select name="payment_method" id="paymentMethod" class="form-control" required>
                 <option value="cash" @if (old('payment_method', 'cash') == 'cash') selected @endif>Cash</option>
                 <option value="credit_card" @if (old('payment_method', 'credit_card') == 'credit_card') selected @endif>Credit Card</option>
             </select>
         </div>
 
-        <!-- Payment Input -->
         <div class="mb-3">
             <label for="newPayment" class="form-label">New Payment Amount ($)</label>
-            <input type="number" id="newPayment" name="new_payment" class="form-control" disabled>
+            <input type="number" id="newPayment" name="new_payment" class="form-control"
+                min="0" max="{{ $remainingBalance }}" required>
         </div>
-        <button type="submit" class="btn btn-success" disabled>Add Payment</button>
-    @else
 
-            <!-- Payment Method Selection (Cash or Credit Card) -->
-            <div class="mb-3">
-                <label for="paymentMethod" class="form-label">Payment Method</label>
-                <select name="payment_method" id="paymentMethod" class="form-control" required>
-                    <option value="cash" @if (old('payment_method', 'cash') == 'cash') selected @endif>Cash</option>
-                    <option value="credit_card" @if (old('payment_method', 'credit_card') == 'credit_card') selected @endif>Credit Card</option>
-                </select>
-            </div>
-
-
-        <div class="mb-3">
-            <label for="newPayment" class="form-label">New Payment Amount ($)</label>
-            <input type="number" id="newPayment" name="new_payment" class="form-control" min="0"
-                max="{{ $remainingBalance }}" required>
-        </div>
         <button type="submit" class="btn btn-success">Add Payment</button>
     @endif
 </form>
