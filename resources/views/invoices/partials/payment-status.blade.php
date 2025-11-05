@@ -82,7 +82,7 @@
         <div class="mb-3">
             <label for="newPayment" class="form-label">New Payment Amount ($)</label>
             <input type="number" id="newPayment" name="new_payment" class="form-control"
-                min="0" max="{{ $remainingBalance }}" required>
+                min="0" step="0.01" max="{{ $remainingBalance }}" required>
         </div>
 
         <button type="submit" class="btn btn-success">Add Payment</button>
