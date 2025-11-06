@@ -5,56 +5,80 @@
 @push('styles')
     <link rel="stylesheet" href="{{ asset('assets/vendor/css/pages/app-invoice.css') }}" />
 
-    <style>
-        @media print {
-
-            html,
-            body {
-                width: 80mm;
-                margin: 0;
-                padding: 0;
-                font-family: monospace;
-                font-size: 16px;
-                /* slightly smaller for more content to fit */
-                line-height: 1.1;
-            }
-
-            .print-invoice {
-                width: 80mm;
-                margin: 0 auto;
-                max-height: 280mm;
-                /* prevent content from spilling onto second page */
-                overflow: hidden;
-            }
-
-            @page {
-                size: 80mm auto;
-                margin: 0;
-            }
-
-            .no-break,
-            .print-invoice,
-            .invoice-preview-card,
-            table,
-            tr,
-            td,
-            th {
-                page-break-inside: avoid;
-                break-inside: avoid;
-            }
-
-            table {
-                width: 100%;
-                border-collapse: collapse;
-            }
-
-            td,
-            th {
-                padding: 2px 0;
-                font-size: 10px;
-            }
+<style>
+    @media print {
+        html,
+        body {
+            width: 80mm;
+            margin: 0;
+            padding: 0;
+            font-family: "Courier New", monospace;
+            font-size: 14px; /* increased from 12–16px */
+            line-height: 1.3;
         }
-    </style>
+
+        .print-invoice {
+            width: 80mm;
+            margin: 0 auto;
+            max-height: none;
+            overflow: visible;
+        }
+
+        @page {
+            size: 80mm auto;
+            margin: 0;
+        }
+
+        .no-break,
+        .print-invoice,
+        .invoice-preview-card,
+        table,
+        tr,
+        td,
+        th {
+            page-break-inside: avoid;
+            break-inside: avoid;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        td,
+        th {
+            padding: 3px 0;
+            font-size: 13px; /* bump up text for better printer visibility */
+        }
+
+        h5, h6, p {
+            font-size: 14px;
+            margin: 2px 0;
+        }
+
+        .invoice-preview-header img {
+            width: 120px !important; /* slightly larger logo */
+        }
+
+        /* optional: stronger separation between sections */
+        .table, table {
+            border-top: 1px dashed #000;
+        }
+
+        .invoice-preview-card {
+            padding-bottom: 10px;
+        }
+    }
+
+    /* also improve screen preview */
+    .invoice-preview {
+        width: 80mm;
+        margin: 0 auto;
+        font-size: 14px;
+        line-height: 1.3;
+    }
+</style>
+
 @endpush
 
 @section('content')
