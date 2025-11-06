@@ -225,7 +225,13 @@ class Invoice extends Model
         });
 
         $totalSubtotal = $subtotalForDiscount + $additionalItemsCost;
-        $finalTotal = $totalSubtotal - $discountAmount - $refundForUnusedDays + ($this->deposit ?? 0);
+
+        // ❌ old (adds deposit to total)
+        // $finalTotal = $totalSubtotal - $discountAmount - $refundForUnusedDays + ($this->deposit ?? 0);
+
+        // ✅ correct (deposit reduces total)
+        $finalTotal = $totalSubtotal - $discountAmount - $refundForUnusedDays - ($this->deposit ?? 0);
+
         $paidAmount = $this->payments->sum('amount');
         $balanceDue = max(0, $finalTotal - $paidAmount);
 

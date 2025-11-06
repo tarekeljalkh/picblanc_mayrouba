@@ -84,8 +84,12 @@
                                     <td>${{ number_format($item->price, 2) }}</td>
                                     <td>{{ $item->quantity }}</td>
                                     @php
-                                        $from = $item->rental_start_date ? \Carbon\Carbon::parse($item->rental_start_date) : null;
-                                        $to = $item->rental_end_date ? \Carbon\Carbon::parse($item->rental_end_date) : null;
+                                        $from = $item->rental_start_date
+                                            ? \Carbon\Carbon::parse($item->rental_start_date)
+                                            : null;
+                                        $to = $item->rental_end_date
+                                            ? \Carbon\Carbon::parse($item->rental_end_date)
+                                            : null;
                                         $days = $from && $to ? $to->diffInDays($from) + 1 : 0;
                                         $totalPrice = $item->price * $item->quantity * $days;
                                     @endphp
@@ -96,7 +100,7 @@
                                         <td>{{ $days }}</td>
                                     @endif
                                 </tr>
-                                @endforeach
+                            @endforeach
 
                             <!-- Custom Items -->
                             @foreach ($invoice->customItems as $customItem)
@@ -268,23 +272,15 @@
                                         <button type="submit" class="btn btn-success">Update</button>
                                     </form>
 
-                                    <!-- Calculate Payment Status -->
-                                    @php
-                                        $totalPaid = $invoice->payments->sum('amount');
-                                        $totalDue = $totals['finalTotal']; // Assuming 'finalTotal' is the total due for the invoice
-                                        $paymentStatus =
-                                            $totalPaid == $totalDue
-                                                ? 'fully_paid'
-                                                : ($totalPaid > 0
-                                                    ? 'partially_paid'
-                                                    : 'unpaid');
-                                    @endphp
-
                                     <div class="mb-3">
                                         <span
                                             class="badge
-                            {{ $paymentStatus === 'fully_paid' ? 'bg-success' : ($paymentStatus === 'partially_paid' ? 'bg-warning' : 'bg-danger') }}">
-                                            {{ ucfirst(str_replace('_', ' ', $paymentStatus)) }}
+            {{ $invoice->payment_status === 'fully_paid'
+                ? 'bg-success'
+                : ($invoice->payment_status === 'partially_paid'
+                    ? 'bg-warning'
+                    : 'bg-danger') }}">
+                                            {{ ucfirst(str_replace('_', ' ', $invoice->payment_status)) }}
                                         </span>
                                     </div>
 

@@ -444,46 +444,12 @@ class InvoiceController extends Controller
             'customItems',
             'returnDetails.invoiceItem.product',
             'returnDetails.additionalItem.product',
+            'payments', // make sure payments are eager loaded too
         ])->findOrFail($id);
 
-        // Calculate totals dynamically based on Unit Price × Quantity × Days
-        $subtotal = 0;
-        foreach ($invoice->invoiceItems as $item) {
-            $days = $item->rental_start_date && $item->rental_end_date
-                ? \Carbon\Carbon::parse($item->rental_end_date)->diffInDays($item->rental_start_date) + 1
-                : 1;
-            $subtotal += $item->price * $item->quantity * $days;
-        }
-
-        $additionalCost = 0;
-        foreach ($invoice->additionalItems as $item) {
-            $days = $item->rental_start_date && $item->rental_end_date
-                ? \Carbon\Carbon::parse($item->rental_end_date)->diffInDays($item->rental_start_date) + 1
-                : 1;
-            $additionalCost += $item->price * $item->quantity * $days;
-        }
-
-        $discount = $invoice->discount_amount ?? 0;
-        $refund = $invoice->returned_cost ?? 0;
-        $deposit = $invoice->deposit ?? 0;
-
-        $finalTotal = $subtotal + $additionalCost - $discount - $refund + $deposit;
-        $paidAmount = $invoice->payments->sum('amount');
-        $balanceDue = max(0, $finalTotal - $paidAmount);
-
-        $totals = [
-            'subtotalForDiscount' => $subtotal,
-            'discountAmount' => $discount,
-            'additionalItemsCost' => $additionalCost,
-            'refundForUnusedDays' => $refund,
-            'finalTotal' => $finalTotal,
-            'balanceDue' => $balanceDue,
-        ];
-
-        // Only pass $invoice and $totals
+$totals = $invoice->calculateTotals();
         return view('invoices.show', compact('invoice', 'totals'));
     }
-
 
     /**
      * Show the form for editing the specified resource.
