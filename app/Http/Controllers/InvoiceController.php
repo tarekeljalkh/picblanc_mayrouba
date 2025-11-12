@@ -447,7 +447,7 @@ class InvoiceController extends Controller
             'payments', // make sure payments are eager loaded too
         ])->findOrFail($id);
 
-$totals = $invoice->calculateTotals();
+        $totals = $invoice->calculateTotals();
         return view('invoices.show', compact('invoice', 'totals'));
     }
 
