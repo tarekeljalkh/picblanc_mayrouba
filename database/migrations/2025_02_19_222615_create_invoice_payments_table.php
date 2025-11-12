@@ -16,7 +16,7 @@ return new class extends Migration
             $table->foreignId('invoice_id')->constrained()->onDelete('cascade'); // Links to invoices table
             $table->decimal('amount', 10, 2); // Payment amount
             $table->enum('payment_method', ['cash', 'credit_card'])->default('cash'); // Payment method
-            $table->dateTime('payment_date')->default(now()); // Date of payment
+            $table->dateTime('payment_date')->useCurrent(); // Date of payment
             $table->timestamps();
         });
     }

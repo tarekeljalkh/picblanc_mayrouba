@@ -112,137 +112,137 @@ class DashbboardController extends Controller
 
 
     public function trialBalance(Request $request)
-{
-    $user = auth()->user();
-    $isAdmin = $user->role === 'admin';
-    $selectedCategory = session('category', 'daily');
+    {
+        $user = auth()->user();
+        $isAdmin = $user->role === 'admin';
+        $selectedCategory = session('category', 'daily');
 
-    $fromDate = $request->input('from_date', Carbon::today()->toDateString());
-    $toDate = $request->input('to_date', Carbon::today()->toDateString());
+        $fromDate = $request->input('from_date', Carbon::today()->toDateString());
+        $toDate = $request->input('to_date', Carbon::today()->toDateString());
 
-    $from = Carbon::parse($fromDate)->startOfDay();
-    $to = Carbon::parse($toDate)->endOfDay();
+        $from = Carbon::parse($fromDate)->startOfDay();
+        $to = Carbon::parse($toDate)->endOfDay();
 
-    // 🧾 Sum all payments grouped by method (using payment_date)
-    $paymentSums = InvoicePayment::whereBetween('payment_date', [$from, $to])
-        ->whereHas('invoice', function ($query) use ($selectedCategory, $isAdmin, $user) {
-            $query->whereHas('category', fn($q) => $q->where('name', $selectedCategory));
-            if (!$isAdmin) {
-                $query->where('user_id', $user->id);
+        // 🧾 Sum all payments grouped by method (using payment_date)
+        $paymentSums = InvoicePayment::whereBetween('payment_date', [$from, $to])
+            ->whereHas('invoice', function ($query) use ($selectedCategory, $isAdmin, $user) {
+                $query->whereHas('category', fn($q) => $q->where('name', $selectedCategory));
+                if (!$isAdmin) {
+                    $query->where('user_id', $user->id);
+                }
+            })
+            ->selectRaw('payment_method, SUM(amount) as total')
+            ->groupBy('payment_method')
+            ->pluck('total', 'payment_method');
+
+        $totalPaidByCash = $paymentSums['cash'] ?? 0;
+        $totalPaidByCreditCard = $paymentSums['credit_card'] ?? 0;
+
+        // 🧮 Unpaid balances
+        $invoices = Invoice::with(['payments', 'category', 'invoiceItems', 'customItems', 'additionalItems', 'returnDetails'])
+            ->whereHas('category', fn($q) => $q->where('name', $selectedCategory))
+            ->when(!$isAdmin, fn($q) => $q->where('user_id', $user->id))
+            ->get();
+
+        $totalUnpaidInvoices = 0;
+
+        foreach ($invoices as $invoice) {
+            $totals = $invoice->calculateTotals();
+            $balanceDue = $totals['balanceDue'] ?? 0;
+
+            if ($balanceDue > 0) {
+                $totalUnpaidInvoices += $balanceDue;
             }
-        })
-        ->selectRaw('payment_method, SUM(amount) as total')
-        ->groupBy('payment_method')
-        ->pluck('total', 'payment_method');
-
-    $totalPaidByCash = $paymentSums['cash'] ?? 0;
-    $totalPaidByCreditCard = $paymentSums['credit_card'] ?? 0;
-
-    // 🧮 Unpaid balances
-    $invoices = Invoice::with(['payments', 'category', 'invoiceItems', 'customItems', 'additionalItems', 'returnDetails'])
-        ->whereHas('category', fn($q) => $q->where('name', $selectedCategory))
-        ->when(!$isAdmin, fn($q) => $q->where('user_id', $user->id))
-        ->get();
-
-    $totalUnpaidInvoices = 0;
-
-    foreach ($invoices as $invoice) {
-        $totals = $invoice->calculateTotals();
-        $balanceDue = $totals['balanceDue'] ?? 0;
-
-        if ($balanceDue > 0) {
-            $totalUnpaidInvoices += $balanceDue;
         }
+
+        // ✅ Final data
+        $trialBalanceData = [
+            ['description' => 'Total Paid Invoices (Cash)', 'amount' => round($totalPaidByCash, 2)],
+            ['description' => 'Total Paid by Credit Card', 'amount' => round($totalPaidByCreditCard, 2)],
+            ['description' => 'Total Unpaid Invoices', 'amount' => round($totalUnpaidInvoices, 2)],
+        ];
+
+        return view('trial-balance.index', compact('trialBalanceData', 'fromDate', 'toDate', 'selectedCategory'));
     }
 
-    // ✅ Final data
-    $trialBalanceData = [
-        ['description' => 'Total Paid Invoices (Cash)', 'amount' => round($totalPaidByCash, 2)],
-        ['description' => 'Total Paid by Credit Card', 'amount' => round($totalPaidByCreditCard, 2)],
-        ['description' => 'Total Unpaid Invoices', 'amount' => round($totalUnpaidInvoices, 2)],
-    ];
+    // public function trialBalance(Request $request)
+    // {
+    //     $user = auth()->user();
+    //     $isAdmin = $user->role === 'admin';
+    //     $selectedCategory = session('category', 'daily');
 
-    return view('trial-balance.index', compact('trialBalanceData', 'fromDate', 'toDate', 'selectedCategory'));
-}
+    //     $fromDate = $request->input('from_date', Carbon::today()->toDateString());
+    //     $toDate = $request->input('to_date', Carbon::today()->toDateString());
 
-// public function trialBalance(Request $request)
-// {
-//     $user = auth()->user();
-//     $isAdmin = $user->role === 'admin';
-//     $selectedCategory = session('category', 'daily');
+    //     $from = Carbon::parse($fromDate)->startOfDay();
+    //     $to = Carbon::parse($toDate)->endOfDay();
 
-//     $fromDate = $request->input('from_date', Carbon::today()->toDateString());
-//     $toDate = $request->input('to_date', Carbon::today()->toDateString());
+    //     $totalPaidByCash = 0;
+    //     $totalPaidByCreditCard = 0;
+    //     $totalUnpaidInvoices = 0;
 
-//     $from = Carbon::parse($fromDate)->startOfDay();
-//     $to = Carbon::parse($toDate)->endOfDay();
+    //     // 🧾 Get payments based on actual payment_date
+    //     $invoicePayments = InvoicePayment::whereBetween('payment_date', [$from, $to])
+    //         ->whereHas('invoice', function ($query) use ($selectedCategory, $isAdmin, $user) {
+    //             $query->whereHas('category', fn($q) => $q->where('name', $selectedCategory));
+    //             if (!$isAdmin) {
+    //                 $query->where('user_id', $user->id);
+    //             }
+    //         })
+    //         ->get();
 
-//     $totalPaidByCash = 0;
-//     $totalPaidByCreditCard = 0;
-//     $totalUnpaidInvoices = 0;
+    //     // 💳 Sum payments by method
+    //     foreach ($invoicePayments as $payment) {
+    //         if ($payment->payment_method === 'cash') {
+    //             $totalPaidByCash += $payment->amount;
+    //         } elseif ($payment->payment_method === 'credit_card') {
+    //             $totalPaidByCreditCard += $payment->amount;
+    //         }
+    //     }
 
-//     // 🧾 Get payments based on actual payment_date
-//     $invoicePayments = InvoicePayment::whereBetween('payment_date', [$from, $to])
-//         ->whereHas('invoice', function ($query) use ($selectedCategory, $isAdmin, $user) {
-//             $query->whereHas('category', fn($q) => $q->where('name', $selectedCategory));
-//             if (!$isAdmin) {
-//                 $query->where('user_id', $user->id);
-//             }
-//         })
-//         ->get();
+    //     // 🧮 Calculate unpaid balances (based on invoice date ranges as before)
+    //     $invoices = Invoice::with([
+    //         'payments',
+    //         'category',
+    //         'invoiceItems',
+    //         'customItems',
+    //         'additionalItems',
+    //         'returnDetails.invoiceItem',
+    //         'returnDetails.additionalItem',
+    //         'returnDetails.customItem',
+    //     ])
+    //         ->whereHas('category', fn($q) => $q->where('name', $selectedCategory))
+    //         ->when(!$isAdmin, fn($q) => $q->where('user_id', $user->id))
+    //         ->when($selectedCategory === 'season', function ($query) use ($from, $to) {
+    //             $query->whereBetween('created_at', [$from, $to]);
+    //         }, function ($query) use ($from, $to) {
+    //             $query->where(function ($q) use ($from, $to) {
+    //                 $q->whereBetween('rental_start_date', [$from, $to])
+    //                   ->orWhereBetween('rental_end_date', [$from, $to])
+    //                   ->orWhere(function ($q2) use ($from, $to) {
+    //                       $q2->where('rental_start_date', '<=', $from)
+    //                          ->where('rental_end_date', '>=', $to);
+    //                   });
+    //             });
+    //         })
+    //         ->get();
 
-//     // 💳 Sum payments by method
-//     foreach ($invoicePayments as $payment) {
-//         if ($payment->payment_method === 'cash') {
-//             $totalPaidByCash += $payment->amount;
-//         } elseif ($payment->payment_method === 'credit_card') {
-//             $totalPaidByCreditCard += $payment->amount;
-//         }
-//     }
+    //     foreach ($invoices as $invoice) {
+    //         $totals = $invoice->calculateTotals();
+    //         $balanceDue = $totals['balanceDue'] ?? 0;
 
-//     // 🧮 Calculate unpaid balances (based on invoice date ranges as before)
-//     $invoices = Invoice::with([
-//         'payments',
-//         'category',
-//         'invoiceItems',
-//         'customItems',
-//         'additionalItems',
-//         'returnDetails.invoiceItem',
-//         'returnDetails.additionalItem',
-//         'returnDetails.customItem',
-//     ])
-//         ->whereHas('category', fn($q) => $q->where('name', $selectedCategory))
-//         ->when(!$isAdmin, fn($q) => $q->where('user_id', $user->id))
-//         ->when($selectedCategory === 'season', function ($query) use ($from, $to) {
-//             $query->whereBetween('created_at', [$from, $to]);
-//         }, function ($query) use ($from, $to) {
-//             $query->where(function ($q) use ($from, $to) {
-//                 $q->whereBetween('rental_start_date', [$from, $to])
-//                   ->orWhereBetween('rental_end_date', [$from, $to])
-//                   ->orWhere(function ($q2) use ($from, $to) {
-//                       $q2->where('rental_start_date', '<=', $from)
-//                          ->where('rental_end_date', '>=', $to);
-//                   });
-//             });
-//         })
-//         ->get();
+    //         $totalUnpaidInvoices += $balanceDue;
+    //     }
 
-//     foreach ($invoices as $invoice) {
-//         $totals = $invoice->calculateTotals();
-//         $balanceDue = $totals['balanceDue'] ?? 0;
+    //     // ✅ Final trial balance data
+    //     $trialBalanceData = [
+    //         ['description' => 'Total Paid Invoices (Cash)', 'amount' => round($totalPaidByCash, 2)],
+    //         ['description' => 'Total Paid by Credit Card', 'amount' => round($totalPaidByCreditCard, 2)],
+    //         ['description' => 'Total Unpaid Invoices', 'amount' => round($totalUnpaidInvoices, 2)],
+    //     ];
 
-//         $totalUnpaidInvoices += $balanceDue;
-//     }
-
-//     // ✅ Final trial balance data
-//     $trialBalanceData = [
-//         ['description' => 'Total Paid Invoices (Cash)', 'amount' => round($totalPaidByCash, 2)],
-//         ['description' => 'Total Paid by Credit Card', 'amount' => round($totalPaidByCreditCard, 2)],
-//         ['description' => 'Total Unpaid Invoices', 'amount' => round($totalUnpaidInvoices, 2)],
-//     ];
-
-//     return view('trial-balance.index', compact('trialBalanceData', 'fromDate', 'toDate', 'selectedCategory'));
-// }
+    //     return view('trial-balance.index', compact('trialBalanceData', 'fromDate', 'toDate', 'selectedCategory'));
+    // }
 
 
     public function trialBalanceByProducts(Request $request)
