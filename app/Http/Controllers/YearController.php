@@ -15,6 +15,7 @@ class YearController extends Controller
 
         $cookie = cookie('active_year', $year, 60 * 24 * 365); // 1 year
 
-        return back()->withCookie($cookie);
+        // redirect user to dashboard
+        return redirect()->route('dashboard')->withCookie($cookie);
     }
 }
