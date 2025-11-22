@@ -28,25 +28,31 @@
 
         <ul class="navbar-nav flex-row align-items-center ms-auto">
 
-                {{-- Year Switcher --}}
-<li class="nav-item me-3">
-    @php
-        $years = getAvailableYears();  // 🔥 dynamic list from phpMyAdmin
-        $activeYear = request()->cookie('active_year', date('Y'));
-    @endphp
+            {{-- Year Switcher --}}
+            <li class="nav-item dropdown me-4 pe-3">
 
-    <select class="form-select border-0 shadow-none"
-            style="background: transparent; cursor:pointer;"
-            onchange="window.location='{{ url('switch-year') }}/'+this.value">
+                @php
+                    $years = getAvailableYears();
+                    $activeYear = request()->cookie('active_year', date('Y'));
+                @endphp
 
-        @foreach($years as $year)
-            <option value="{{ $year }}" {{ $activeYear == $year ? 'selected' : '' }}>
-                {{ $year }}
-            </option>
-        @endforeach
+                <button class="btn btn-outline-primary dropdown-toggle py-1 px-3" type="button" id="yearSwitcherBtn"
+                    data-bs-toggle="dropdown" aria-expanded="false" style="border-radius: 8px;">
+                    <i class="bx bx-calendar me-1"></i> {{ $activeYear }}
+                </button>
 
-    </select>
-</li>
+                <ul class="dropdown-menu" aria-labelledby="yearSwitcherBtn" style="cursor:pointer;">
+                    @foreach ($years as $year)
+                        <li>
+                            <a class="dropdown-item year-option {{ $activeYear == $year ? 'active' : '' }}"
+                                data-year="{{ $year }}">
+                                {{ $year }}
+                            </a>
+                        </li>
+                    @endforeach
+                </ul>
+
+            </li>
 
 
             <!-- User -->
@@ -62,8 +68,7 @@
                             <div class="d-flex">
                                 <div class="flex-shrink-0 me-3">
                                     <div class="avatar avatar-online">
-                                        <img src="{{ asset('logo.png') }}" alt
-                                            class="w-px-40 h-auto rounded-circle">
+                                        <img src="{{ asset('logo.png') }}" alt class="w-px-40 h-auto rounded-circle">
                                     </div>
                                 </div>
                                 <div class="flex-grow-1">
@@ -85,7 +90,8 @@
                         <div class="dropdown-divider my-1"></div>
                     </li>
                     <li>
-                        <a class="dropdown-item" href="javascript:void(0);" onclick="document.getElementById('logout-form').submit();">
+                        <a class="dropdown-item" href="javascript:void(0);"
+                            onclick="document.getElementById('logout-form').submit();">
                             <i class="bx bx-power-off bx-md me-3"></i><span>Log Out</span>
                         </a>
                         <form id="logout-form" method="POST" action="{{ route('logout') }}" class="d-none">
