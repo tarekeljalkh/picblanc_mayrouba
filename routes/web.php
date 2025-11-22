@@ -11,6 +11,7 @@ use App\Http\Controllers\POSController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\YearController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -25,6 +26,10 @@ Route::get('/export-db', [DiskController::class, 'exportDatabase'])->name('admin
 Route::get('/dashboard', [DashbboardController::class, 'index'])->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
+
+        // Switch active year database (cookie based)
+    Route::get('/switch-year/{year}', [YearController::class, 'switch'])
+        ->name('switch.year');
 
     // Category
     Route::post('/set-category', [CategoryController::class, 'setCategory'])->name('set.category');

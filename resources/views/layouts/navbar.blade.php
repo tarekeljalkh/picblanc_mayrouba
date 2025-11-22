@@ -28,6 +28,27 @@
 
         <ul class="navbar-nav flex-row align-items-center ms-auto">
 
+                {{-- Year Switcher --}}
+<li class="nav-item me-3">
+    @php
+        $years = getAvailableYears();  // 🔥 dynamic list from phpMyAdmin
+        $activeYear = request()->cookie('active_year', date('Y'));
+    @endphp
+
+    <select class="form-select border-0 shadow-none"
+            style="background: transparent; cursor:pointer;"
+            onchange="window.location='{{ url('switch-year') }}/'+this.value">
+
+        @foreach($years as $year)
+            <option value="{{ $year }}" {{ $activeYear == $year ? 'selected' : '' }}>
+                {{ $year }}
+            </option>
+        @endforeach
+
+    </select>
+</li>
+
+
             <!-- User -->
             <li class="nav-item navbar-dropdown dropdown-user dropdown">
                 <a class="nav-link dropdown-toggle hide-arrow p-0" href="javascript:void(0);" data-bs-toggle="dropdown">
