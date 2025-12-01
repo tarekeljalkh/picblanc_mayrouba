@@ -38,7 +38,7 @@ class YearController extends Controller
         ]);
 
         $year = (int) $request->year;
-        $prefix = env('DB_YEAR_PREFIX'); // e.g., picblanc_mayroub_
+        $prefix = env('DB_YEAR_PREFIX'); // e.g., picblanc_mayrouba_
         $newDb = $prefix . $year;
 
         // Check if database already exists
