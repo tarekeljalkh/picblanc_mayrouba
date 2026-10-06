@@ -37,7 +37,7 @@
                                 <td>{{ $customer->address }}</td>
                                 <td>
                                     <!-- Display if customer has rentals -->
-                                    @if ($customer->hasRentals())
+                                    @if ($customer->invoices_exists)
                                         <span class="badge bg-success">Yes</span>
                                     @else
                                         <span class="badge bg-danger">No</span>
@@ -45,7 +45,7 @@
                                 </td>
                                 <td>
                                     <!-- Only show the 'View Rentals' button if the customer has rentals -->
-                                    @if ($customer->hasRentals())
+                                    @if ($customer->invoices_exists)
                                         <a href="{{ route('customers.rentalDetails', $customer->id) }}"
                                             class="btn btn-sm btn-info">View Rentals</a>
                                     @endif

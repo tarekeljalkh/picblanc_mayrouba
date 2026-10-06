@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Services\NewYearService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class YearController extends Controller
@@ -54,6 +55,7 @@ class YearController extends Controller
         // Create (copy current DB → new DB) + truncate (invoices, payments, returns...)
         try {
             $service->createNewYear($year);
+            Cache::forget('available_year_databases');
         } catch (\Exception $e) {
             return redirect()->back()->with('error', "Error creating database: " . $e->getMessage());
         }

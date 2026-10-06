@@ -106,8 +106,12 @@ class DashbboardController extends Controller
         $isAdmin = $user->role === 'admin';
         $selectedCategory = session('category', 'daily');
 
-        $fromDate = $request->input('from_date', Carbon::today()->toDateString());
-        $toDate = $request->input('to_date', Carbon::today()->toDateString());
+        $dateFilters = $request->validate([
+            'from_date' => 'nullable|date',
+            'to_date' => 'nullable|date|after_or_equal:from_date',
+        ]);
+        $fromDate = $dateFilters['from_date'] ?? Carbon::today()->toDateString();
+        $toDate = $dateFilters['to_date'] ?? Carbon::today()->toDateString();
 
         $from = Carbon::parse($fromDate)->startOfDay();
         $to = Carbon::parse($toDate)->endOfDay();
@@ -128,7 +132,16 @@ class DashbboardController extends Controller
         $totalPaidByCreditCard = $paymentSums['credit_card'] ?? 0;
 
         // 🧮 Unpaid balances
-        $invoices = Invoice::with(['payments', 'category', 'invoiceItems', 'customItems', 'additionalItems', 'returnDetails'])
+        $invoices = Invoice::with([
+            'payments',
+            'category',
+            'invoiceItems',
+            'customItems',
+            'additionalItems',
+            'returnDetails.invoiceItem',
+            'returnDetails.additionalItem',
+            'returnDetails.customItem',
+        ])
             ->whereHas('category', fn($q) => $q->where('name', $selectedCategory))
             ->when(!$isAdmin, fn($q) => $q->where('user_id', $user->id))
             ->get();
@@ -239,8 +252,12 @@ class DashbboardController extends Controller
         $user = auth()->user(); // Get the authenticated user
 
         // Set default "from" and "to" dates to today if not provided
-        $fromDate = $request->input('from_date', Carbon::today()->toDateString());
-        $toDate = $request->input('to_date', Carbon::today()->toDateString());
+        $dateFilters = $request->validate([
+            'from_date' => 'nullable|date',
+            'to_date' => 'nullable|date|after_or_equal:from_date',
+        ]);
+        $fromDate = $dateFilters['from_date'] ?? Carbon::today()->toDateString();
+        $toDate = $dateFilters['to_date'] ?? Carbon::today()->toDateString();
 
         // Parse the dates using Carbon
         $from = Carbon::parse($fromDate)->startOfDay();
@@ -307,6 +324,7 @@ class DashbboardController extends Controller
 
         // Fetch invoices that contain custom items within the date range
         $invoices = Invoice::where('category_id', $category->id)
+            ->when($user->role !== 'admin', fn($query) => $query->where('user_id', $user->id))
             ->where(function ($query) use ($from, $to, $isSeasonal) {
                 if ($isSeasonal) {
                     $query->whereBetween('created_at', [$from, $to]);

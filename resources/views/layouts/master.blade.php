@@ -20,6 +20,13 @@
             'products.index',
             'users.index',
         );
+        $loadsFlatpickrStyles = request()->routeIs(
+            'invoices.edit',
+            'drafts.edit',
+            'trialbalance.index',
+            'trialbalance.products',
+        );
+        $loadsFlatpickrScript = request()->routeIs('trialbalance.index', 'trialbalance.products');
     @endphp
 
     <meta name="description" content="" />
@@ -39,7 +46,9 @@
     <!-- Vendors CSS -->
     <link rel="stylesheet" href="{{ asset('assets/vendor/libs/perfect-scrollbar/perfect-scrollbar.css') }}" />
     <link rel="stylesheet" href="{{ asset('assets/vendor/libs/typeahead-js/typeahead.css') }}" />
-    <link rel="stylesheet" href="{{ asset('assets/vendor/libs/flatpickr/flatpickr.css') }}" />
+    @if ($loadsFlatpickrStyles)
+        <link rel="stylesheet" href="{{ asset('assets/vendor/libs/flatpickr/flatpickr.css') }}" />
+    @endif
     @if ($loadsDataTables)
         <!-- DataTables CSS -->
         <link rel="stylesheet" href="{{ asset('assets/datatable/css/jquery.dataTables.min.css') }}">
@@ -116,7 +125,9 @@
     <!-- endbuild -->
 
     <!-- Vendors JS -->
-    <script src="{{ asset('assets/vendor/libs/flatpickr/flatpickr.js') }}"></script>
+    @if ($loadsFlatpickrScript)
+        <script src="{{ asset('assets/vendor/libs/flatpickr/flatpickr.js') }}"></script>
+    @endif
 
     @if ($loadsDataTables)
         <!-- DataTables JS -->

@@ -21,7 +21,15 @@ class ProductController extends Controller
         $category = Category::where('name', $selectedCategory)->firstOrFail();
 
         // Fetch products that belong to the selected category
-        $products = Product::where('category_id', $category->id)->get();
+        $products = Product::where('category_id', $category->id)
+            ->withSum([
+                'invoiceItems as rented_quantity' => function ($query) {
+                    $query->whereHas('invoice', function ($invoiceQuery) {
+                        $invoiceQuery->where('status', 'active');
+                    });
+                },
+            ], 'quantity')
+            ->get();
 
         // Pass the products and selected category to the view
         return view('products.index', compact('products'));
@@ -125,11 +133,12 @@ class ProductController extends Controller
 
     public function rentalDetails($id)
     {
-        // Fetch the product
-        $product = Product::with(['rentals.invoice.customer'])->findOrFail($id);
+        $product = Product::with([
+            'invoiceItems.invoice.customer',
+            'invoiceItems.returnDetails',
+        ])->findOrFail($id);
 
-        // Get the rentals (invoice items) for this product with related invoice and customer
-        $rentals = $product->rentals()->with('invoice.customer')->get();
+        $rentals = $product->invoiceItems;
 
         return view('products.rental-details', compact('product', 'rentals'));
     }

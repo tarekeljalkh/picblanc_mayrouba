@@ -82,7 +82,6 @@
 </form>
 
 @push('scripts')
-    <script src="{{ asset('assets/vendor/libs/flatpickr/flatpickr.js') }}"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             let rowIndex = 1;

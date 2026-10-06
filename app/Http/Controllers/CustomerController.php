@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\DataTables\CustomerDataTable;
 use App\Models\Customer;
 use App\Models\Invoice;
 use App\Traits\FileUploadTrait;
@@ -16,10 +15,9 @@ class CustomerController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index(CustomerDataTable $dataTable)
+    public function index()
     {
-        //return $dataTable->render('customers.index');
-        $customers = Customer::all();
+        $customers = Customer::withExists('invoices')->get();
         return view('customers.index', compact('customers'));
     }
 
@@ -113,7 +111,7 @@ class CustomerController extends Controller
         $customer = Customer::findOrFail($id);
 
         // Handle image file upload, replace old file if a new one is uploaded
-        $filePath = $this->uploadImage($request, 'deposit_card', $customer->file, '/uploads/customers');
+        $filePath = $this->uploadImage($request, 'deposit_card', $customer->deposit_card, '/uploads/customers');
 
         // Update customer details
         $customer->name = $request->name;
@@ -151,6 +149,11 @@ class CustomerController extends Controller
 
     public function rentalDetails(Request $request, $id)
     {
+        $dateFilters = $request->validate([
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date|after_or_equal:start_date',
+        ]);
+
         // Find the customer by ID
         $customer = Customer::findOrFail($id);
 
@@ -164,9 +167,9 @@ class CustomerController extends Controller
             ]);
 
         // Apply date filtering based on rental period, not `created_at`
-        if ($request->has('start_date') && $request->has('end_date')) {
-            $startDate = Carbon::parse($request->input('start_date'))->startOfDay();
-            $endDate = Carbon::parse($request->input('end_date'))->endOfDay();
+        if (!empty($dateFilters['start_date']) && !empty($dateFilters['end_date'])) {
+            $startDate = Carbon::parse($dateFilters['start_date'])->startOfDay();
+            $endDate = Carbon::parse($dateFilters['end_date'])->endOfDay();
 
             $invoicesQuery->where(function ($query) use ($startDate, $endDate) {
                 $query->whereBetween('rental_start_date', [$startDate, $endDate])

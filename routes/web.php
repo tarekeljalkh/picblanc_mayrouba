@@ -6,7 +6,6 @@ use App\Http\Controllers\DashbboardController;
 use App\Http\Controllers\DiskController;
 use App\Http\Controllers\DraftController;
 use App\Http\Controllers\InvoiceController;
-use App\Http\Controllers\InvoiceDraftController;
 use App\Http\Controllers\POSController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProfileController;
@@ -19,7 +18,9 @@ Route::get('/', function () {
 });
 
 // Backup Database
-Route::get('/export-db', [DiskController::class, 'exportDatabase'])->name('admin.exportDatabase');
+Route::get('/export-db', [DiskController::class, 'exportDatabase'])
+    ->middleware(['auth', 'admin'])
+    ->name('admin.exportDatabase');
 
 
 
@@ -93,7 +94,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/trial-balance/products', [DashbboardController::class, 'trialBalanceByProducts'])->name('trialbalance.products');
 
     // Users
-    Route::resource('users', UserController::class);
+    Route::resource('users', UserController::class)->middleware('admin');
 });
 
 require __DIR__ . '/auth.php';

@@ -36,7 +36,7 @@
                                 <td>{{ $product->price }}</td>
                                 <td>
                                     <!-- Conditional Button for Rental Details -->
-                                    @if ($product->rentedQuantity() > 0)
+                                    @if ($product->rented_quantity > 0)
                                         <a href="{{ route('products.rentalDetails', $product->id) }}"
                                             class="btn btn-sm btn-info">View Rental Details</a>
                                     @endif
