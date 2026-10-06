@@ -125,11 +125,12 @@ class ProductController extends Controller
 
     public function rentalDetails($id)
     {
-        // Fetch the product
-        $product = Product::with(['rentals.invoice.customer'])->findOrFail($id);
+        $product = Product::with([
+            'invoiceItems.invoice.customer',
+            'invoiceItems.returnDetails',
+        ])->findOrFail($id);
 
-        // Get the rentals (invoice items) for this product with related invoice and customer
-        $rentals = $product->rentals()->with('invoice.customer')->get();
+        $rentals = $product->invoiceItems;
 
         return view('products.rental-details', compact('product', 'rentals'));
     }
