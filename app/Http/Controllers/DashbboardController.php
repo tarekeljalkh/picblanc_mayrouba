@@ -9,7 +9,6 @@ use App\Models\InvoicePayment;
 use App\Models\Product;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 class DashbboardController extends Controller
 {
@@ -33,23 +32,38 @@ class DashbboardController extends Controller
         // $invoices = Invoice::where('category_id', $category->id)->with('payments')->get();
         $invoices = Invoice::where('category_id', $category->id)
             ->with([
-                'customer',
                 'category',
                 'invoiceItems',
-                'customItems.invoice',          // in case you reference customItem->invoice
-                'additionalItems.invoice',      // same here
+                'customItems',
+                'additionalItems',
                 'payments',
                 'returnDetails.invoiceItem',
                 'returnDetails.additionalItem',
                 'returnDetails.customItem',
             ])
-            ->where('category_id', $category->id)
             ->get();
 
-        // ✅ Use payment_status accessor for accurate classification
-        $totalPaid = $invoices->filter(fn($invoice) => $invoice->payment_status === 'fully_paid')->count();
-        $totalPartiallyPaid = $invoices->filter(fn($invoice) => $invoice->payment_status === 'partially_paid')->count();
-        $totalUnpaid = $invoices->filter(fn($invoice) => $invoice->payment_status === 'unpaid')->count();
+        $totalPaid = 0;
+        $totalPartiallyPaid = 0;
+        $totalUnpaid = 0;
+        $overdueCount = 0;
+        $now = now();
+
+        foreach ($invoices as $invoice) {
+            $paymentStatus = $invoice->payment_status;
+
+            if ($paymentStatus === 'fully_paid') {
+                $totalPaid++;
+            } elseif ($paymentStatus === 'partially_paid') {
+                $totalPartiallyPaid++;
+            } elseif ($paymentStatus === 'unpaid') {
+                $totalUnpaid++;
+            }
+
+            if ($invoice->rental_end_date < $now && $paymentStatus !== 'fully_paid') {
+                $overdueCount++;
+            }
+        }
 
         // Not Returned
         $notReturnedCount = Invoice::where('category_id', $category->id)
@@ -68,31 +82,8 @@ class DashbboardController extends Controller
             ->whereDoesntHave('customItems', fn($query) => $query->whereColumn('quantity', '>', 'returned_quantity'))
             ->count();
 
-        // Overdue Count
-        $overdueCount = $invoices->filter(function ($invoice) {
-            $totals = $invoice->calculateTotals();
-            $paid = round($invoice->payments->sum('amount'), 2);
-            $due = round($totals['finalTotal'] ?? 0, 2);
-            return $invoice->rental_end_date < now() && ($due - $paid) > 1.00;
-        })->count();
-
         // Total revenue
         $totalRevenue = InvoicePayment::whereHas('invoice', fn($query) => $query->where('category_id', $category->id))->sum('amount');
-
-        // Overdue revenue
-        $overdueRevenue = $invoices->sum(function ($invoice) {
-            $totals = $invoice->calculateTotals();
-            $paid = round($invoice->payments->sum('amount'), 2);
-            $due = round($totals['finalTotal'] ?? 0, 2);
-            return max(0, $due - $paid);
-        });
-
-        // Paginate latest invoices
-        $invoices = Invoice::with('customer')
-            ->where('category_id', $category->id)
-            ->where('status', '!=', 'returned')
-            ->orderBy('created_at', 'desc')
-            ->paginate(10);
 
         return view('dashboard', compact(
             'customersCount',
@@ -104,8 +95,6 @@ class DashbboardController extends Controller
             'returnedCount',
             'overdueCount',
             'totalRevenue',
-            'overdueRevenue',
-            'invoices',
             'categoryName'
         ));
     }

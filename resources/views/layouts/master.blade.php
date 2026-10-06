@@ -9,6 +9,19 @@
 
     <title>@yield('title', 'PicBlanc')</title>
 
+    @php
+        $loadsDataTables = request()->routeIs(
+            'customers.index',
+            'customers.rentalDetails',
+            'drafts.index',
+            'invoices.index',
+            'invoices.unpaid',
+            'invoices.paid',
+            'products.index',
+            'users.index',
+        );
+    @endphp
+
     <meta name="description" content="" />
 
     <!-- Favicon -->
@@ -27,13 +40,12 @@
     <link rel="stylesheet" href="{{ asset('assets/vendor/libs/perfect-scrollbar/perfect-scrollbar.css') }}" />
     <link rel="stylesheet" href="{{ asset('assets/vendor/libs/typeahead-js/typeahead.css') }}" />
     <link rel="stylesheet" href="{{ asset('assets/vendor/libs/flatpickr/flatpickr.css') }}" />
-    <link rel="stylesheet" href="{{ asset('assets/vendor/libs/apex-charts/apex-charts.css') }}" />
-
-
-    <!-- DataTables CSS -->
-    <link rel="stylesheet" href="{{ asset('assets/datatable/css/jquery.dataTables.min.css') }}">
-    <link rel="stylesheet" href="{{ asset('assets/datatable/css/buttons.dataTables.min.css') }}">
-    <link rel="stylesheet" href="{{ asset('assets/datatable/css/responsive.dataTables.min.css') }}">
+    @if ($loadsDataTables)
+        <!-- DataTables CSS -->
+        <link rel="stylesheet" href="{{ asset('assets/datatable/css/jquery.dataTables.min.css') }}">
+        <link rel="stylesheet" href="{{ asset('assets/datatable/css/buttons.dataTables.min.css') }}">
+        <link rel="stylesheet" href="{{ asset('assets/datatable/css/responsive.dataTables.min.css') }}">
+    @endif
 
     <!-- Toastr CSS -->
     <link rel="stylesheet" href="{{ asset('assets/css/toastr.min.css') }}">
@@ -104,21 +116,19 @@
     <!-- endbuild -->
 
     <!-- Vendors JS -->
-    <script src="{{ asset('assets/vendor/libs/apex-charts/apexcharts.js') }}"></script>
     <script src="{{ asset('assets/vendor/libs/flatpickr/flatpickr.js') }}"></script>
-    <script src="{{ asset('assets/vendor/libs/cleavejs/cleave.js') }}"></script>
-    <script src="{{ asset('assets/vendor/libs/cleavejs/cleave-phone.js') }}"></script>
-    <script src="{{ asset('assets/vendor/libs/jquery-repeater/jquery-repeater.js') }}"></script>
 
-    <!-- DataTables JS -->
-    <script src="{{ asset('assets/datatable/js/jquery.dataTables.min.js') }}"></script>
-    <script src="{{ asset('assets/datatable/js/dataTables.buttons.min.js') }}"></script>
-    <script src="{{ asset('assets/datatable/js/jszip.min.js') }}"></script>
-    <script src="{{ asset('assets/datatable/js/pdfmake.min.js') }}"></script>
-    <script src="{{ asset('assets/datatable/js/vfs_fonts.js') }}"></script>
-    <script src="{{ asset('assets/datatable/js/buttons.html5.min.js') }}"></script>
-    <script src="{{ asset('assets/datatable/js/buttons.print.min.js') }}"></script>
-    <script src="{{ asset('assets/datatable/js/dataTables.responsive.min.js') }}"></script>
+    @if ($loadsDataTables)
+        <!-- DataTables JS -->
+        <script src="{{ asset('assets/datatable/js/jquery.dataTables.min.js') }}"></script>
+        <script src="{{ asset('assets/datatable/js/dataTables.buttons.min.js') }}"></script>
+        <script src="{{ asset('assets/datatable/js/jszip.min.js') }}"></script>
+        <script src="{{ asset('assets/datatable/js/pdfmake.min.js') }}"></script>
+        <script src="{{ asset('assets/datatable/js/vfs_fonts.js') }}"></script>
+        <script src="{{ asset('assets/datatable/js/buttons.html5.min.js') }}"></script>
+        <script src="{{ asset('assets/datatable/js/buttons.print.min.js') }}"></script>
+        <script src="{{ asset('assets/datatable/js/dataTables.responsive.min.js') }}"></script>
+    @endif
 
 
     <!-- Toastr JS -->
@@ -214,7 +224,6 @@
     <!-- Page-specific JS -->
     @stack('scripts')
 
-    <script src="{{ asset('/sw.js') }}"></script>
     <script>
         if ("serviceWorker" in navigator) {
             // Register a service worker hosted at the root of the
