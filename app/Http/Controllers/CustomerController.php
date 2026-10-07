@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Customer;
 use App\Models\Invoice;
 use App\Traits\FileUploadTrait;
+use App\DataTables\CustomerDataTable;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 
@@ -15,10 +16,11 @@ class CustomerController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(CustomerDataTable $dataTable)
     {
-        $customers = Customer::withExists('invoices')->get();
-        return view('customers.index', compact('customers'));
+        return $dataTable->render('customers.index', [
+            'customerCount' => Customer::count(),
+        ]);
     }
 
     public function getCustomer($id)

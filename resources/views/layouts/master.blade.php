@@ -12,12 +12,12 @@
     @php
         $loadsDataTables = request()->routeIs(
             'customers.index',
+            'products.index',
             'customers.rentalDetails',
             'drafts.index',
             'invoices.index',
             'invoices.unpaid',
             'invoices.paid',
-            'products.index',
             'users.index',
         );
         $loadsFlatpickrStyles = request()->routeIs(

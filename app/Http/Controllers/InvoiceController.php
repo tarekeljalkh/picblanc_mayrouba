@@ -16,6 +16,7 @@ use Illuminate\Http\Request;
 use Carbon\Carbon;
 use Barryvdh\DomPDF\Facade\Pdf;
 use App\Traits\FileUploadTrait;
+use App\DataTables\InvoicesDataTable;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -29,79 +30,16 @@ class InvoiceController extends Controller
      * Display a listing of the resource.
      */
 
-    public function index(Request $request)
+    public function index(Request $request, InvoicesDataTable $dataTable)
     {
-        $selectedCategory = session('category', 'daily');
-        $status = $request->query('status');
-        $paymentStatus = $request->query('payment_status');
-        $dateFilters = $request->validate([
+        $request->validate([
             'start_date' => 'nullable|date',
             'end_date' => 'nullable|date|after_or_equal:start_date',
+            'status' => 'nullable|in:draft,returned,not_returned',
+            'payment_status' => 'nullable|in:fully_paid,partially_paid,unpaid',
         ]);
-        $startDate = $dateFilters['start_date'] ?? null;
-        $endDate = $dateFilters['end_date'] ?? null;
 
-        $hasDateFilter = $startDate && $endDate;
-
-        // ✅ Convert to Carbon Dates only if provided
-        if ($hasDateFilter) {
-            $startDate = Carbon::parse($startDate)->startOfDay();
-            $endDate = Carbon::parse($endDate)->endOfDay();
-        }
-
-        // ✅ Fetch Invoices with Eager Loading
-        $invoices = Invoice::with([
-            'customer',
-            'invoiceItems',
-            'customItems',
-            'additionalItems',
-            'payments',
-            'category',
-            'returnDetails.invoiceItem',
-            'returnDetails.additionalItem',
-            'returnDetails.customItem',
-        ])
-            ->whereHas('category', function ($query) use ($selectedCategory) {
-                $query->where('name', $selectedCategory);
-            });
-
-        // ✅ Apply Date Filtering Based on Category Type
-        if ($hasDateFilter) {
-            if ($selectedCategory === 'season') {
-                $invoices->whereBetween('created_at', [$startDate, $endDate]);
-            } else {
-                $invoices->where(function ($query) use ($startDate, $endDate) {
-                    $query->where('rental_start_date', '<=', $endDate)
-                        ->where('rental_end_date', '>=', $startDate);
-                });
-            }
-        }
-
-        // ✅ Fetch Filtered Invoices
-        $invoices = $invoices->get();
-
-        // ✅ Apply Payment Status Filtering Using Accessor
-        if ($paymentStatus) {
-            $invoices = $invoices->filter(function ($invoice) use ($paymentStatus) {
-                return $invoice->payment_status === $paymentStatus;
-            })->values(); // Reset keys
-        }
-
-        // ✅ Apply Returned / Not Returned Status Filtering
-        if ($status === 'returned') {
-            $invoices = $invoices->filter(fn($invoice) => $invoice->returned);
-        } elseif ($status === 'not_returned') {
-            $invoices = $invoices->filter(fn($invoice) => !$invoice->returned);
-        }
-
-        return view('invoices.index', compact(
-            'invoices',
-            'selectedCategory',
-            'status',
-            'paymentStatus',
-            'startDate',
-            'endDate'
-        ));
+        return $dataTable->render('invoices.index');
     }
 
     /**
