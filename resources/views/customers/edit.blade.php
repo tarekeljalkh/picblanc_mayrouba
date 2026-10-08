@@ -69,7 +69,7 @@
                             <label for="address" class="col-md-2 col-form-label">Address</label>
                             <div class="col-md-10">
                                 <input class="form-control" type="text" id="address" name="address"
-                                    value="{{ old('address', $customer->address) }}" required />
+                                    value="{{ old('address', $customer->address) }}" />
                             </div>
                         </div>
                         {{-- End Address --}}
