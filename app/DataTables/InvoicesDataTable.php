@@ -3,6 +3,7 @@
 namespace App\DataTables;
 
 use App\Models\Invoice;
+use App\Services\InvoicePaymentStatusQuery;
 use Illuminate\Database\Eloquent\Builder as QueryBuilder;
 use Illuminate\Support\Collection;
 use Yajra\DataTables\Facades\DataTables;
@@ -123,16 +124,30 @@ class InvoicesDataTable extends DataTable
             $query->where('invoices.status', 'draft');
         }
 
-        // These statuses are model accessors based on item/payment relations.
-        // Keep their existing semantics; Yajra still handles the result table.
-        if ($paymentStatus || in_array($status, ['returned', 'not_returned'], true)) {
-            $invoices = $query->get();
+        // Payment status used to be filtered by loading every invoice and all of
+        // its relations into PHP. MySQL can evaluate the same calculation while
+        // preserving server-side pagination.
+        if ($paymentStatus && app(InvoicePaymentStatusQuery::class)->supportsSql()) {
+            app(InvoicePaymentStatusQuery::class)->applyStatus($query, $paymentStatus, $selectedCategory);
+        }
 
-            if ($paymentStatus) {
-                $invoices = $invoices->filter(
-                    fn (Invoice $invoice) => $invoice->payment_status === $paymentStatus
-                );
-            }
+        // Returned status can be expressed directly with relation existence
+        // checks, so it also stays on the database side.
+        if ($status === 'returned') {
+            $query->whereDoesntHave('invoiceItems', fn ($itemQuery) => $itemQuery->whereColumn('quantity', '>', 'returned_quantity'))
+                ->whereDoesntHave('additionalItems', fn ($itemQuery) => $itemQuery->whereColumn('quantity', '>', 'returned_quantity'))
+                ->whereDoesntHave('customItems', fn ($itemQuery) => $itemQuery->whereColumn('quantity', '>', 'returned_quantity'));
+        } elseif ($status === 'not_returned') {
+            $query->where(function ($returnQuery) {
+                $returnQuery->whereHas('invoiceItems', fn ($itemQuery) => $itemQuery->whereColumn('quantity', '>', 'returned_quantity'))
+                    ->orWhereHas('additionalItems', fn ($itemQuery) => $itemQuery->whereColumn('quantity', '>', 'returned_quantity'))
+                    ->orWhereHas('customItems', fn ($itemQuery) => $itemQuery->whereColumn('quantity', '>', 'returned_quantity'));
+            });
+        }
+
+        // Non-MySQL installations retain the original calculated-status path.
+        if ((!$paymentStatus || !app(InvoicePaymentStatusQuery::class)->supportsSql()) && in_array($status, ['returned', 'not_returned'], true)) {
+            $invoices = $query->get();
 
             if ($status === 'returned') {
                 $invoices = $invoices->filter(fn (Invoice $invoice) => $invoice->returned);
@@ -141,6 +156,14 @@ class InvoicesDataTable extends DataTable
             }
 
             return $invoices->values();
+        }
+
+        if ($paymentStatus && !app(InvoicePaymentStatusQuery::class)->supportsSql()) {
+            $invoices = $query->get();
+
+            return $invoices->filter(
+                fn (Invoice $invoice) => $invoice->payment_status === $paymentStatus
+            )->values();
         }
 
         return $query->orderByDesc('invoices.id');
