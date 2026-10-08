@@ -28,42 +28,49 @@ class DashbboardController extends Controller
         $customersCount = Customer::count();
         $invoicesCount = Invoice::where('category_id', $category->id)->count();
 
-        // ✅ Load invoices with payments
-        // $invoices = Invoice::where('category_id', $category->id)->with('payments')->get();
-        $invoices = Invoice::where('category_id', $category->id)
-            ->with([
-                'category',
-                'invoiceItems',
-                'customItems',
-                'additionalItems',
-                'payments',
-                'returnDetails.invoiceItem',
-                'returnDetails.additionalItem',
-                'returnDetails.customItem',
-            ])
-            ->get();
-
         $totalPaid = 0;
         $totalPartiallyPaid = 0;
         $totalUnpaid = 0;
         $overdueCount = 0;
         $now = now();
 
-        foreach ($invoices as $invoice) {
-            $paymentStatus = $invoice->payment_status;
+        Invoice::query()
+            ->where('category_id', $category->id)
+            ->select(['id', 'category_id', 'total_discount', 'deposit', 'rental_end_date'])
+            ->with([
+                'category:id,name',
+                'invoiceItems:id,invoice_id,price,quantity,rental_start_date,rental_end_date,days',
+                'customItems:id,invoice_id,price,quantity,rental_start_date,rental_end_date,days',
+                'additionalItems:id,invoice_id,price,quantity,rental_start_date,rental_end_date,days',
+                'payments:id,invoice_id,amount',
+                'returnDetails:id,invoice_id,invoice_item_id,additional_item_id,custom_item_id,days_used',
+                'returnDetails.invoiceItem:id,price,rental_start_date,rental_end_date,days',
+                'returnDetails.additionalItem:id,price,rental_start_date,rental_end_date,days',
+                'returnDetails.customItem:id,price,rental_start_date,rental_end_date,days',
+            ])
+            ->chunkById(500, function ($invoices) use (
+                &$totalPaid,
+                &$totalPartiallyPaid,
+                &$totalUnpaid,
+                &$overdueCount,
+                $now
+            ) {
+                foreach ($invoices as $invoice) {
+                    $paymentStatus = $invoice->payment_status;
 
-            if ($paymentStatus === 'fully_paid') {
-                $totalPaid++;
-            } elseif ($paymentStatus === 'partially_paid') {
-                $totalPartiallyPaid++;
-            } elseif ($paymentStatus === 'unpaid') {
-                $totalUnpaid++;
-            }
+                    if ($paymentStatus === 'fully_paid') {
+                        $totalPaid++;
+                    } elseif ($paymentStatus === 'partially_paid') {
+                        $totalPartiallyPaid++;
+                    } elseif ($paymentStatus === 'unpaid') {
+                        $totalUnpaid++;
+                    }
 
-            if ($invoice->rental_end_date < $now && $paymentStatus !== 'fully_paid') {
-                $overdueCount++;
-            }
-        }
+                    if ($invoice->rental_end_date < $now && $paymentStatus !== 'fully_paid') {
+                        $overdueCount++;
+                    }
+                }
+            });
 
         // Not Returned
         $notReturnedCount = Invoice::where('category_id', $category->id)
