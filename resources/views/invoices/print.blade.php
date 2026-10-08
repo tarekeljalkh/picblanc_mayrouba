@@ -254,7 +254,11 @@
     };
 
     window.onafterprint = function () {
-        window.close();
+        @if (!empty($returnToInvoice))
+            window.location.href = @json(route('invoices.show', $invoice->id));
+        @else
+            window.close();
+        @endif
     };
 </script>
 @endpush

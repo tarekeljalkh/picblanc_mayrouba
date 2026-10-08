@@ -202,7 +202,10 @@ class InvoiceController extends Controller
             }
 
             DB::commit();
-            return redirect()->route('invoices.show', $invoice->id)->with('success', 'Invoice created successfully');
+            return redirect()->route('invoices.print', [
+                'id' => $invoice->id,
+                'return_to_invoice' => 1,
+            ]);
         } catch (\Exception $e) {
             DB::rollBack();
             //  Log::error('Store Invoice Exception:', [
@@ -513,7 +516,9 @@ class InvoiceController extends Controller
         // Ensure totals are calculated using the revised logic
         $totals = $invoice->calculateTotals();
 
-        return view('invoices.print', compact('invoice', 'totals'));
+        $returnToInvoice = request()->boolean('return_to_invoice');
+
+        return view('invoices.print', compact('invoice', 'totals', 'returnToInvoice'));
     }
 
     /**
