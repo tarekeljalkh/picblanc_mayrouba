@@ -127,8 +127,11 @@ class InvoicesDataTable extends DataTable
         // Payment status used to be filtered by loading every invoice and all of
         // its relations into PHP. MySQL can evaluate the same calculation while
         // preserving server-side pagination.
-        if ($paymentStatus && app(InvoicePaymentStatusQuery::class)->supportsSql()) {
-            app(InvoicePaymentStatusQuery::class)->applyStatus($query, $paymentStatus, $selectedCategory);
+        $paymentStatusQuery = app(InvoicePaymentStatusQuery::class);
+        $usesSqlPaymentStatus = $paymentStatus && $paymentStatusQuery->supportsSql();
+
+        if ($usesSqlPaymentStatus) {
+            $paymentStatusQuery->applyStatus($query, $paymentStatus, $selectedCategory);
         }
 
         // Returned status can be expressed directly with relation existence
@@ -146,7 +149,7 @@ class InvoicesDataTable extends DataTable
         }
 
         // Non-MySQL installations retain the original calculated-status path.
-        if ((!$paymentStatus || !app(InvoicePaymentStatusQuery::class)->supportsSql()) && in_array($status, ['returned', 'not_returned'], true)) {
+        if (!$usesSqlPaymentStatus && in_array($status, ['returned', 'not_returned'], true)) {
             $invoices = $query->get();
 
             if ($status === 'returned') {
@@ -158,7 +161,7 @@ class InvoicesDataTable extends DataTable
             return $invoices->values();
         }
 
-        if ($paymentStatus && !app(InvoicePaymentStatusQuery::class)->supportsSql()) {
+        if ($paymentStatus && !$usesSqlPaymentStatus) {
             $invoices = $query->get();
 
             return $invoices->filter(
