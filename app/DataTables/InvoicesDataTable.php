@@ -128,7 +128,8 @@ class InvoicesDataTable extends DataTable
         // its relations into PHP. MySQL can evaluate the same calculation while
         // preserving server-side pagination.
         $paymentStatusQuery = app(InvoicePaymentStatusQuery::class);
-        $usesSqlPaymentStatus = $paymentStatus && $paymentStatusQuery->supportsSql();
+        $supportsSqlStatuses = $paymentStatusQuery->supportsSql();
+        $usesSqlPaymentStatus = $paymentStatus && $supportsSqlStatuses;
 
         if ($usesSqlPaymentStatus) {
             $paymentStatusQuery->applyStatus($query, $paymentStatus, $selectedCategory);
@@ -149,7 +150,7 @@ class InvoicesDataTable extends DataTable
         }
 
         // Non-MySQL installations retain the original calculated-status path.
-        if (!$usesSqlPaymentStatus && in_array($status, ['returned', 'not_returned'], true)) {
+        if (!$supportsSqlStatuses && in_array($status, ['returned', 'not_returned'], true)) {
             $invoices = $query->get();
 
             if ($status === 'returned') {
