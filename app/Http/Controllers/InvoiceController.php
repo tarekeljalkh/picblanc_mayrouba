@@ -202,10 +202,8 @@ class InvoiceController extends Controller
             }
 
             DB::commit();
-            return redirect()->route('invoices.print', [
-                'id' => $invoice->id,
-                'return_to_invoice' => 1,
-            ]);
+            return redirect()->route('invoices.show', $invoice->id)
+                ->with('success', 'Invoice created successfully');
         } catch (\Exception $e) {
             DB::rollBack();
             //  Log::error('Store Invoice Exception:', [

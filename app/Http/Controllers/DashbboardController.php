@@ -132,11 +132,12 @@ class DashbboardController extends Controller
 
         $from = Carbon::parse($fromDate)->startOfDay();
         $to = Carbon::parse($toDate)->endOfDay();
+        $category = Category::where('name', $selectedCategory)->firstOrFail();
 
         // 🧾 Sum all payments grouped by method (using payment_date)
         $paymentSums = InvoicePayment::whereBetween('payment_date', [$from, $to])
-            ->whereHas('invoice', function ($query) use ($selectedCategory, $isAdmin, $user) {
-                $query->whereHas('category', fn($q) => $q->where('name', $selectedCategory));
+            ->whereHas('invoice', function ($query) use ($category, $isAdmin, $user) {
+                $query->where('category_id', $category->id);
                 if (!$isAdmin) {
                     $query->where('user_id', $user->id);
                 }
@@ -148,30 +149,54 @@ class DashbboardController extends Controller
         $totalPaidByCash = $paymentSums['cash'] ?? 0;
         $totalPaidByCreditCard = $paymentSums['credit_card'] ?? 0;
 
-        // 🧮 Unpaid balances
-        $invoices = Invoice::with([
-            'payments',
-            'category',
-            'invoiceItems',
-            'customItems',
-            'additionalItems',
-            'returnDetails.invoiceItem',
-            'returnDetails.additionalItem',
-            'returnDetails.customItem',
-        ])
-            ->whereHas('category', fn($q) => $q->where('name', $selectedCategory))
-            ->when(!$isAdmin, fn($q) => $q->where('user_id', $user->id))
-            ->get();
-
-        $totalUnpaidInvoices = 0;
-
-        foreach ($invoices as $invoice) {
-            $totals = $invoice->calculateTotals();
-            $balanceDue = $totals['balanceDue'] ?? 0;
-
-            if ($balanceDue > 0) {
-                $totalUnpaidInvoices += $balanceDue;
+        // 🧮 Sum unpaid balances in SQL, applying the same date-range rules as
+        // the original trial-balance calculation without loading every invoice.
+        $invoiceDateFilter = function ($query) use ($selectedCategory, $from, $to): void {
+            if ($selectedCategory === 'season') {
+                $query->whereBetween('created_at', [$from, $to]);
+                return;
             }
+
+            $query->where(function ($dateQuery) use ($from, $to): void {
+                $dateQuery->whereBetween('rental_start_date', [$from, $to])
+                    ->orWhereBetween('rental_end_date', [$from, $to])
+                    ->orWhere(function ($overlappingQuery) use ($from, $to): void {
+                        $overlappingQuery
+                            ->where('rental_start_date', '<=', $from)
+                            ->where('rental_end_date', '>=', $to);
+                    });
+            });
+        };
+
+        $totalUnpaidInvoices = app(InvoicePaymentStatusQuery::class)->unpaidBalanceSum(
+            $category->id,
+            $selectedCategory,
+            $isAdmin ? null : $user->id,
+            $invoiceDateFilter
+        );
+
+        // Keep a chunked fallback for non-MySQL installations.
+        if ($totalUnpaidInvoices === null) {
+            $totalUnpaidInvoices = 0;
+            $invoiceQuery = Invoice::with([
+                'payments',
+                'category',
+                'invoiceItems',
+                'customItems',
+                'additionalItems',
+                'returnDetails.invoiceItem',
+                'returnDetails.additionalItem',
+                'returnDetails.customItem',
+            ])
+                ->where('category_id', $category->id)
+                ->when(!$isAdmin, fn ($query) => $query->where('user_id', $user->id));
+
+            $invoiceDateFilter($invoiceQuery);
+            $invoiceQuery->chunkById(500, function ($invoices) use (&$totalUnpaidInvoices): void {
+                foreach ($invoices as $invoice) {
+                    $totalUnpaidInvoices += max(0, $invoice->calculateTotals()['balanceDue'] ?? 0);
+                }
+            });
         }
 
         // ✅ Final data

@@ -61,6 +61,36 @@ class InvoicePaymentStatusQuery
     }
 
     /**
+     * Sum unpaid balances in SQL instead of hydrating every invoice and all of
+     * its item, payment, and return relations in PHP.
+     */
+    public function unpaidBalanceSum(
+        int $categoryId,
+        string $categoryName,
+        ?int $userId = null,
+        ?callable $filter = null
+    ): ?float {
+        if (!$this->supportsSql()) {
+            return null;
+        }
+
+        [$finalTotal, $paidAmount] = $this->amountExpressions($categoryName);
+        $difference = "({$finalTotal} - {$paidAmount})";
+
+        $query = Invoice::query()
+            ->where('category_id', $categoryId)
+            ->when($userId !== null, fn (Builder $query) => $query->where('user_id', $userId));
+
+        if ($filter !== null) {
+            $filter($query);
+        }
+
+        return (float) ($query
+            ->selectRaw("COALESCE(SUM(GREATEST(0, {$difference})), 0) AS total_unpaid")
+            ->value('total_unpaid') ?? 0);
+    }
+
+    /**
      * Build the final-total and payments expressions used by the model accessor.
      * These are intentionally MySQL-specific and are only used when supportsSql()
      * is true; SQLite and other drivers retain the existing model-based fallback.

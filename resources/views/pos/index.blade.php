@@ -504,8 +504,9 @@
                             payment_amount: $('#payment-amount').val(),
                         },
                         success: function(response) {
-                            window.location.href = '{{ route('invoices.show', ':id') }}'.replace(
+                            const printUrl = '{{ route('invoices.print', ':id') }}'.replace(
                                 ':id', response.invoice_id);
+                            window.location.href = printUrl + '?return_to_invoice=1';
                         },
                         error: function() {
                             alert('Error processing checkout.');

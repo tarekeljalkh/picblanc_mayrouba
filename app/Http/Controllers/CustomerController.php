@@ -106,7 +106,7 @@ class CustomerController extends Controller
                 'unique:customers,phone2,' . $id,      // Exclude current customer ID for phone2
                 'different:phone'                      // Ensure phone2 is different from phone
             ],
-                    'address' => 'required|string',
+                    'address' => 'nullable|string',
             'deposit_card' => 'nullable|image|max:2048', // Optional image file upload
         ]);
 
