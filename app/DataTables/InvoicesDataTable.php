@@ -31,7 +31,7 @@ class InvoicesDataTable extends DataTable
                 return $phone . ($phone2 !== '' ? '<br>' . $phone2 : '');
             })
             ->addColumn('payment_status', function (Invoice $invoice): string {
-                $status = $invoice->payment_status;
+                $status = $this->paymentStatusForRow($invoice);
                 $badgeClass = match ($status) {
                     'fully_paid' => 'bg-success',
                     'partially_paid' => 'bg-warning',
@@ -43,7 +43,11 @@ class InvoicesDataTable extends DataTable
                     e(ucfirst(str_replace('_', ' ', $status))) . '</span>';
             })
             ->addColumn('returned', function (Invoice $invoice): string {
-                return $invoice->returned
+                $returned = array_key_exists('calculated_returned', $invoice->getAttributes())
+                    ? (bool) $invoice->calculated_returned
+                    : $invoice->returned;
+
+                return $returned
                     ? '<span class="badge bg-success">Yes</span>'
                     : '<span class="badge bg-danger">No</span>';
             })
@@ -74,19 +78,31 @@ class InvoicesDataTable extends DataTable
             'end_date' => 'nullable|date|after_or_equal:start_date',
         ]);
 
-        $query = $model->newQuery()
-            ->with([
-                'customer:id,name,phone,phone2',
+        $paymentStatusQuery = app(InvoicePaymentStatusQuery::class);
+        $supportsSqlStatuses = $paymentStatusQuery->supportsSql();
+
+        $with = [
+            'customer:id,name,phone,phone2',
+            'category:id,name',
+        ];
+
+        // MySQL calculates the visible status columns in SQL. The full
+        // relation graph is only needed by the non-MySQL compatibility path.
+        if (!$supportsSqlStatuses) {
+            $with = array_merge($with, [
                 'invoiceItems:id,invoice_id,price,quantity,returned_quantity,rental_start_date,rental_end_date,days',
                 'customItems:id,invoice_id,price,quantity,returned_quantity,rental_start_date,rental_end_date,days',
                 'additionalItems:id,invoice_id,price,quantity,returned_quantity,rental_start_date,rental_end_date,days',
                 'payments:id,invoice_id,amount',
-                'category:id,name',
                 'returnDetails:id,invoice_id,invoice_item_id,additional_item_id,custom_item_id,returned_quantity,days_used',
                 'returnDetails.invoiceItem:id,price,rental_start_date,rental_end_date,days',
                 'returnDetails.additionalItem:id,price,rental_start_date,rental_end_date,days',
                 'returnDetails.customItem:id,price,rental_start_date,rental_end_date,days',
-            ])
+            ]);
+        }
+
+        $query = $model->newQuery()
+            ->with($with)
             ->select([
                 'invoices.id',
                 'invoices.customer_id',
@@ -101,6 +117,34 @@ class InvoicesDataTable extends DataTable
             ->whereHas('category', function ($categoryQuery) use ($selectedCategory) {
                 $categoryQuery->where('name', $selectedCategory);
             });
+
+        if ($supportsSqlStatuses) {
+            [$finalTotal, $paidAmount] = $paymentStatusQuery->statusExpressions($selectedCategory);
+            $returnedExpression = <<<'SQL'
+CASE WHEN
+    NOT EXISTS (
+        SELECT 1 FROM invoice_items ii_return
+        WHERE ii_return.invoice_id = invoices.id
+          AND ii_return.deleted_at IS NULL
+          AND ii_return.quantity > ii_return.returned_quantity
+    )
+    AND NOT EXISTS (
+        SELECT 1 FROM additional_items ai_return
+        WHERE ai_return.invoice_id = invoices.id
+          AND ai_return.quantity > ai_return.returned_quantity
+    )
+    AND NOT EXISTS (
+        SELECT 1 FROM custom_items ci_return
+        WHERE ci_return.invoice_id = invoices.id
+          AND ci_return.quantity > ci_return.returned_quantity
+    )
+THEN 1 ELSE 0 END
+SQL;
+
+            $query->selectRaw("{$finalTotal} AS calculated_final_total")
+                ->selectRaw("{$paidAmount} AS calculated_paid_amount")
+                ->selectRaw("({$returnedExpression}) AS calculated_returned");
+        }
 
         if (!empty($dateFilters['start_date']) || !empty($dateFilters['end_date'])) {
             if ($selectedCategory === 'season') {
@@ -127,8 +171,6 @@ class InvoicesDataTable extends DataTable
         // Payment status used to be filtered by loading every invoice and all of
         // its relations into PHP. MySQL can evaluate the same calculation while
         // preserving server-side pagination.
-        $paymentStatusQuery = app(InvoicePaymentStatusQuery::class);
-        $supportsSqlStatuses = $paymentStatusQuery->supportsSql();
         $usesSqlPaymentStatus = $paymentStatus && $supportsSqlStatuses;
 
         if ($usesSqlPaymentStatus) {
@@ -171,6 +213,27 @@ class InvoicesDataTable extends DataTable
         }
 
         return $query->orderByDesc('invoices.id');
+    }
+
+    private function paymentStatusForRow(Invoice $invoice): string
+    {
+        if (array_key_exists('calculated_final_total', $invoice->getAttributes())) {
+            $finalTotal = (float) $invoice->calculated_final_total;
+            $paidAmount = (float) $invoice->calculated_paid_amount;
+            $balanceDue = $finalTotal - $paidAmount;
+
+            if ($paidAmount <= 0 && $balanceDue > 1) {
+                return 'unpaid';
+            }
+
+            if ($balanceDue <= 1) {
+                return 'fully_paid';
+            }
+
+            return 'partially_paid';
+        }
+
+        return $invoice->payment_status;
     }
 
     public function html(): HtmlBuilder

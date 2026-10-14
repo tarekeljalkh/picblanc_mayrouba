@@ -31,6 +31,17 @@ class InvoicePaymentStatusQuery
     }
 
     /**
+     * Expose the SQL expressions used to calculate payment status so list
+     * pages can render the status without hydrating every invoice relation.
+     *
+     * @return array{string,string}
+     */
+    public function statusExpressions(string $categoryName): array
+    {
+        return $this->amountExpressions($categoryName);
+    }
+
+    /**
      * Return dashboard counts in one aggregate query.
      *
      * @return array{fully_paid:int, partially_paid:int, unpaid:int, overdue:int}|null
