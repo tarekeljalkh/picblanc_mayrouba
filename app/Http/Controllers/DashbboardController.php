@@ -98,20 +98,28 @@ class DashbboardController extends Controller
                         });
                 }
 
-                $notReturnedCount = Invoice::where('category_id', $category->id)
-                    ->where(function ($query) {
-                        $query->whereHas('invoiceItems', fn($q) => $q->whereColumn('quantity', '>', 'returned_quantity'))
-                            ->orWhereHas('additionalItems', fn($q) => $q->whereColumn('quantity', '>', 'returned_quantity'))
-                            ->orWhereHas('customItems', fn($q) => $q->whereColumn('quantity', '>', 'returned_quantity'));
-                    })
-                    ->distinct()
-                    ->count();
+                // An invoice is not returned when any active item still has
+                // quantity outstanding. Build that ID set once; returned and
+                // not-returned invoices are complements of each other.
+                $unreturnedInvoiceIds = DB::table('invoice_items')
+                    ->select('invoice_id')
+                    ->whereNull('deleted_at')
+                    ->whereColumn('quantity', '>', 'returned_quantity')
+                    ->unionAll(
+                        DB::table('additional_items')
+                            ->select('invoice_id')
+                            ->whereColumn('quantity', '>', 'returned_quantity')
+                    )
+                    ->unionAll(
+                        DB::table('custom_items')
+                            ->select('invoice_id')
+                            ->whereColumn('quantity', '>', 'returned_quantity')
+                    );
 
-                $returnedCount = Invoice::where('category_id', $category->id)
-                    ->whereDoesntHave('invoiceItems', fn($query) => $query->whereColumn('quantity', '>', 'returned_quantity'))
-                    ->whereDoesntHave('additionalItems', fn($query) => $query->whereColumn('quantity', '>', 'returned_quantity'))
-                    ->whereDoesntHave('customItems', fn($query) => $query->whereColumn('quantity', '>', 'returned_quantity'))
+                $notReturnedCount = Invoice::where('category_id', $category->id)
+                    ->whereIn('id', $unreturnedInvoiceIds)
                     ->count();
+                $returnedCount = $invoicesCount - $notReturnedCount;
 
                 $totalRevenue = InvoicePayment::whereHas(
                     'invoice',

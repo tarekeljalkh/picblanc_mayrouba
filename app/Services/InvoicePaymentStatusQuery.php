@@ -53,14 +53,22 @@ class InvoicePaymentStatusQuery
         }
 
         [$finalTotal, $paidAmount] = $this->amountExpressions($categoryName);
-        $difference = "({$finalTotal} - {$paidAmount})";
-
-        $row = Invoice::query()
+        $invoiceAmounts = Invoice::query()
             ->where('category_id', $categoryId)
-            ->selectRaw("SUM(CASE WHEN {$difference} <= 1 THEN 1 ELSE 0 END) AS fully_paid")
-            ->selectRaw("SUM(CASE WHEN {$paidAmount} > 0 AND {$difference} > 1 THEN 1 ELSE 0 END) AS partially_paid")
-            ->selectRaw("SUM(CASE WHEN {$paidAmount} <= 0 AND {$difference} > 1 THEN 1 ELSE 0 END) AS unpaid")
-            ->selectRaw("SUM(CASE WHEN rental_end_date < ? AND {$difference} > 1 THEN 1 ELSE 0 END) AS overdue", [now()])
+            ->select(['invoices.id', 'invoices.rental_end_date'])
+            ->selectRaw("{$finalTotal} AS final_total")
+            ->selectRaw("{$paidAmount} AS paid_amount");
+
+        // Calculate each invoice's totals once. The previous query repeated
+        // the correlated item, return, and payment subqueries for every CASE
+        // expression, which made dashboard loads grow sharply with invoice
+        // volume.
+        $row = DB::query()
+            ->fromSub($invoiceAmounts, 'invoice_amounts')
+            ->selectRaw('SUM(CASE WHEN (final_total - paid_amount) <= 1 THEN 1 ELSE 0 END) AS fully_paid')
+            ->selectRaw('SUM(CASE WHEN paid_amount > 0 AND (final_total - paid_amount) > 1 THEN 1 ELSE 0 END) AS partially_paid')
+            ->selectRaw('SUM(CASE WHEN paid_amount <= 0 AND (final_total - paid_amount) > 1 THEN 1 ELSE 0 END) AS unpaid')
+            ->selectRaw('SUM(CASE WHEN rental_end_date < ? AND (final_total - paid_amount) > 1 THEN 1 ELSE 0 END) AS overdue', [now()])
             ->first();
 
         return [
