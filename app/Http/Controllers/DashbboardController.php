@@ -10,6 +10,8 @@ use App\Models\Product;
 use App\Services\InvoicePaymentStatusQuery;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 class DashbboardController extends Controller
 {
@@ -25,82 +27,111 @@ class DashbboardController extends Controller
             abort(404, 'Category not found.');
         }
 
-        // Fetch total counts
-        $customersCount = Customer::count();
-        $invoicesCount = Invoice::where('category_id', $category->id)->count();
+        // The app can switch databases by year, so never share dashboard
+        // metrics between two year's databases.
+        $databaseKey = preg_replace('/[^A-Za-z0-9_.-]/', '_', DB::connection()->getDatabaseName()) ?: 'default';
 
-        $statusCounts = app(InvoicePaymentStatusQuery::class)->counts($category->id, $category->name);
+        // Customers are category-independent, while the remaining dashboard
+        // values are category-specific. Keep the cache short-lived because
+        // payments and returns can change these numbers during the day.
+        $customersCount = Cache::remember(
+            "dashboard.customers.count.{$databaseKey}",
+            now()->addSeconds(10),
+            fn () => Customer::count()
+        );
 
-        if ($statusCounts !== null) {
-            $totalPaid = $statusCounts['fully_paid'];
-            $totalPartiallyPaid = $statusCounts['partially_paid'];
-            $totalUnpaid = $statusCounts['unpaid'];
-            $overdueCount = $statusCounts['overdue'];
-        } else {
-            $totalPaid = 0;
-            $totalPartiallyPaid = 0;
-            $totalUnpaid = 0;
-            $overdueCount = 0;
-            $now = now();
+        $dashboardMetrics = Cache::remember(
+            "dashboard.metrics.{$databaseKey}.{$category->id}",
+            now()->addSeconds(5),
+            function () use ($category): array {
+                $invoicesCount = Invoice::where('category_id', $category->id)->count();
+                $statusCounts = app(InvoicePaymentStatusQuery::class)->counts($category->id, $category->name);
 
-            Invoice::query()
-                ->where('category_id', $category->id)
-                ->select(['id', 'category_id', 'total_discount', 'deposit', 'rental_end_date'])
-                ->with([
-                    'category:id,name',
-                    'invoiceItems:id,invoice_id,price,quantity,rental_start_date,rental_end_date,days',
-                    'customItems:id,invoice_id,price,quantity,rental_start_date,rental_end_date,days',
-                    'additionalItems:id,invoice_id,price,quantity,rental_start_date,rental_end_date,days',
-                    'payments:id,invoice_id,amount',
-                    'returnDetails:id,invoice_id,invoice_item_id,additional_item_id,custom_item_id,days_used',
-                    'returnDetails.invoiceItem:id,price,rental_start_date,rental_end_date,days',
-                    'returnDetails.additionalItem:id,price,rental_start_date,rental_end_date,days',
-                    'returnDetails.customItem:id,price,rental_start_date,rental_end_date,days',
-                ])
-                ->chunkById(500, function ($invoices) use (
-                    &$totalPaid,
-                    &$totalPartiallyPaid,
-                    &$totalUnpaid,
-                    &$overdueCount,
-                    $now
-                ) {
-                    foreach ($invoices as $invoice) {
-                        $paymentStatus = $invoice->payment_status;
+                if ($statusCounts !== null) {
+                    $totalPaid = $statusCounts['fully_paid'];
+                    $totalPartiallyPaid = $statusCounts['partially_paid'];
+                    $totalUnpaid = $statusCounts['unpaid'];
+                    $overdueCount = $statusCounts['overdue'];
+                } else {
+                    $totalPaid = 0;
+                    $totalPartiallyPaid = 0;
+                    $totalUnpaid = 0;
+                    $overdueCount = 0;
+                    $now = now();
 
-                        if ($paymentStatus === 'fully_paid') {
-                            $totalPaid++;
-                        } elseif ($paymentStatus === 'partially_paid') {
-                            $totalPartiallyPaid++;
-                        } elseif ($paymentStatus === 'unpaid') {
-                            $totalUnpaid++;
-                        }
+                    Invoice::query()
+                        ->where('category_id', $category->id)
+                        ->select(['id', 'category_id', 'total_discount', 'deposit', 'rental_end_date'])
+                        ->with([
+                            'category:id,name',
+                            'invoiceItems:id,invoice_id,price,quantity,rental_start_date,rental_end_date,days',
+                            'customItems:id,invoice_id,price,quantity,rental_start_date,rental_end_date,days',
+                            'additionalItems:id,invoice_id,price,quantity,rental_start_date,rental_end_date,days',
+                            'payments:id,invoice_id,amount',
+                            'returnDetails:id,invoice_id,invoice_item_id,additional_item_id,custom_item_id,days_used',
+                            'returnDetails.invoiceItem:id,price,rental_start_date,rental_end_date,days',
+                            'returnDetails.additionalItem:id,price,rental_start_date,rental_end_date,days',
+                            'returnDetails.customItem:id,price,rental_start_date,rental_end_date,days',
+                        ])
+                        ->chunkById(500, function ($invoices) use (
+                            &$totalPaid,
+                            &$totalPartiallyPaid,
+                            &$totalUnpaid,
+                            &$overdueCount,
+                            $now
+                        ) {
+                            foreach ($invoices as $invoice) {
+                                $paymentStatus = $invoice->payment_status;
 
-                        if ($invoice->rental_end_date < $now && $paymentStatus !== 'fully_paid') {
-                            $overdueCount++;
-                        }
-                    }
-                });
-        }
+                                if ($paymentStatus === 'fully_paid') {
+                                    $totalPaid++;
+                                } elseif ($paymentStatus === 'partially_paid') {
+                                    $totalPartiallyPaid++;
+                                } elseif ($paymentStatus === 'unpaid') {
+                                    $totalUnpaid++;
+                                }
 
-        // Not Returned
-        $notReturnedCount = Invoice::where('category_id', $category->id)
-            ->where(function ($query) {
-                $query->whereHas('invoiceItems', fn($q) => $q->whereColumn('quantity', '>', 'returned_quantity'))
-                    ->orWhereHas('additionalItems', fn($q) => $q->whereColumn('quantity', '>', 'returned_quantity'))
-                    ->orWhereHas('customItems', fn($q) => $q->whereColumn('quantity', '>', 'returned_quantity'));
-            })
-            ->distinct()
-            ->count();
+                                if ($invoice->rental_end_date < $now && $paymentStatus !== 'fully_paid') {
+                                    $overdueCount++;
+                                }
+                            }
+                        });
+                }
 
-        // Returned
-        $returnedCount = Invoice::where('category_id', $category->id)
-            ->whereDoesntHave('invoiceItems', fn($query) => $query->whereColumn('quantity', '>', 'returned_quantity'))
-            ->whereDoesntHave('additionalItems', fn($query) => $query->whereColumn('quantity', '>', 'returned_quantity'))
-            ->whereDoesntHave('customItems', fn($query) => $query->whereColumn('quantity', '>', 'returned_quantity'))
-            ->count();
+                $notReturnedCount = Invoice::where('category_id', $category->id)
+                    ->where(function ($query) {
+                        $query->whereHas('invoiceItems', fn($q) => $q->whereColumn('quantity', '>', 'returned_quantity'))
+                            ->orWhereHas('additionalItems', fn($q) => $q->whereColumn('quantity', '>', 'returned_quantity'))
+                            ->orWhereHas('customItems', fn($q) => $q->whereColumn('quantity', '>', 'returned_quantity'));
+                    })
+                    ->distinct()
+                    ->count();
 
-        // Total revenue
-        $totalRevenue = InvoicePayment::whereHas('invoice', fn($query) => $query->where('category_id', $category->id))->sum('amount');
+                $returnedCount = Invoice::where('category_id', $category->id)
+                    ->whereDoesntHave('invoiceItems', fn($query) => $query->whereColumn('quantity', '>', 'returned_quantity'))
+                    ->whereDoesntHave('additionalItems', fn($query) => $query->whereColumn('quantity', '>', 'returned_quantity'))
+                    ->whereDoesntHave('customItems', fn($query) => $query->whereColumn('quantity', '>', 'returned_quantity'))
+                    ->count();
+
+                $totalRevenue = InvoicePayment::whereHas(
+                    'invoice',
+                    fn($query) => $query->where('category_id', $category->id)
+                )->sum('amount');
+
+                return compact(
+                    'invoicesCount',
+                    'totalPaid',
+                    'totalPartiallyPaid',
+                    'totalUnpaid',
+                    'notReturnedCount',
+                    'returnedCount',
+                    'overdueCount',
+                    'totalRevenue'
+                );
+            }
+        );
+
+        extract($dashboardMetrics, EXTR_OVERWRITE);
 
         return view('dashboard', compact(
             'customersCount',
