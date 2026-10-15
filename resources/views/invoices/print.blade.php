@@ -249,20 +249,16 @@
 
 @push('scripts')
 <script>
-    const embeddedPrint = @json(request()->boolean('embedded'));
+    window.onload = function () {
+        setTimeout(() => { window.print(); }, 300);
+    };
 
-    if (!embeddedPrint) {
-        window.onload = function () {
-            setTimeout(() => { window.print(); }, 300);
-        };
-
-        window.onafterprint = function () {
-            @if (!empty($returnToInvoice))
-                window.location.href = @json(route('invoices.show', $invoice->id));
-            @else
-                window.close();
-            @endif
-        };
-    }
+    window.onafterprint = function () {
+        @if (!empty($returnToInvoice))
+            window.location.href = @json(route('invoices.show', $invoice->id));
+        @else
+            window.close();
+        @endif
+    };
 </script>
 @endpush

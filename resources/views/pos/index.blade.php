@@ -523,49 +523,7 @@
                         success: function(response) {
                             const printUrl = '{{ route('invoices.print', ':id') }}'.replace(
                                 ':id', response.invoice_id);
-                            const invoiceUrl = '{{ route('invoices.show', ':id') }}'.replace(
-                                ':id', response.invoice_id);
-                            const printFrame = document.createElement('iframe');
-                            let printFinished = false;
-
-                            // Print the receipt without navigating the visible
-                            // POS page to the receipt view.
-                            printFrame.title = 'Invoice print frame';
-                            printFrame.style.position = 'fixed';
-                            printFrame.style.left = '-10000px';
-                            printFrame.style.top = '0';
-                            printFrame.style.width = '80mm';
-                            printFrame.style.height = '1px';
-                            printFrame.style.border = '0';
-                            printFrame.style.opacity = '0';
-
-                            const finishPrinting = function() {
-                                if (printFinished) {
-                                    return;
-                                }
-
-                                printFinished = true;
-                                printFrame.remove();
-                                window.location.href = invoiceUrl;
-                            };
-
-                            printFrame.addEventListener('load', function() {
-                                const printWindow = printFrame.contentWindow;
-
-                                printWindow.addEventListener('afterprint', finishPrinting, {
-                                    once: true,
-                                });
-                                printWindow.focus();
-                                printWindow.print();
-
-                                // Kiosk printing returns immediately. This
-                                // fallback also handles browsers that do not
-                                // dispatch afterprint for iframe documents.
-                                setTimeout(finishPrinting, 2000);
-                            });
-
-                            document.body.appendChild(printFrame);
-                            printFrame.src = printUrl + '?embedded=1';
+                            window.location.href = printUrl + '?return_to_invoice=1';
                         },
                         error: function() {
                             alert('Error processing checkout.');
