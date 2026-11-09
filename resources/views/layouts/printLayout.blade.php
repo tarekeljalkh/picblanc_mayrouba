@@ -13,8 +13,8 @@
         }
 
         @page {
-            size: 80mm auto !important;
-            margin: 0 !important;
+            size: 80mm auto;
+            margin: 0;
         }
 
         html, body {

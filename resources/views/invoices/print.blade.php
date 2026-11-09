@@ -22,8 +22,8 @@
     }
 
     @page {
-        size: 80mm auto !important;
-        margin: 0 !important;
+        size: 80mm auto;
+        margin: 0;
     }
 
     .invoice-preview {
@@ -42,8 +42,8 @@
         min-height: 0 !important;
         max-height: none !important;
         padding: 0 !important;
-        break-inside: avoid !important;
-        page-break-inside: avoid !important;
+        break-inside: auto !important;
+        page-break-inside: auto !important;
     }
 
     .invoice-preview-header img {
@@ -61,6 +61,12 @@
     table {
         width: 100% !important;
         border-collapse: collapse !important;
+        break-inside: auto !important;
+        page-break-inside: auto !important;
+    }
+
+    tr {
+        break-inside: avoid !important;
         page-break-inside: avoid !important;
     }
 
@@ -75,8 +81,13 @@
     }
 
     .no-break {
-        page-break-inside: avoid !important;
-        break-inside: avoid !important;
+        page-break-inside: auto !important;
+        break-inside: auto !important;
+    }
+
+    .footer-text {
+        break-before: avoid !important;
+        page-break-before: avoid !important;
     }
 
     .text-right {
@@ -256,8 +267,43 @@
 
 @push('scripts')
 <script>
+    function setReceiptPageSize() {
+        const receipt = document.querySelector('.invoice-preview-card');
+
+        if (!receipt) {
+            return;
+        }
+
+        // Chrome uses a fixed default page height when printing to PDF. Set a
+        // custom page height from the rendered receipt so the complete receipt
+        // is treated as one continuous page before the printer cuts it.
+        const heightInMillimetres = Math.ceil(
+            receipt.getBoundingClientRect().height * 25.4 / 96
+        ) + 4;
+
+        let pageStyle = document.getElementById('dynamic-receipt-page-size');
+
+        if (!pageStyle) {
+            pageStyle = document.createElement('style');
+            pageStyle.id = 'dynamic-receipt-page-size';
+            document.head.appendChild(pageStyle);
+        }
+
+        pageStyle.textContent = `
+            @media print {
+                @page {
+                    size: 80mm ${heightInMillimetres}mm;
+                    margin: 0;
+                }
+            }
+        `;
+    }
+
     window.onload = function () {
-        setTimeout(() => { window.print(); }, 300);
+        setTimeout(() => {
+            setReceiptPageSize();
+            window.print();
+        }, 300);
     };
 
     window.onafterprint = function () {
