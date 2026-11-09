@@ -19,6 +19,8 @@
 
         html, body {
             width: 80mm !important;
+            height: auto !important;
+            min-height: 0 !important;
             margin: 0 !important;
             padding: 0 !important;
 
@@ -31,8 +33,16 @@
         .invoice-preview {
             width: 80mm !important;
             max-width: 80mm !important;
+            height: auto !important;
+            min-height: 0 !important;
             margin: 0 auto !important;
             padding: 0 !important;
+        }
+
+        .invoice-preview-card {
+            height: auto !important;
+            min-height: 0 !important;
+            max-height: none !important;
         }
 
         .center {
