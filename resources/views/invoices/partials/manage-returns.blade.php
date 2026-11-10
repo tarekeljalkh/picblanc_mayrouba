@@ -1,9 +1,9 @@
-<form action="{{ route('invoices.process-returns', $invoice->id) }}" method="POST">
+<form id="manage-returns-form" action="{{ route('invoices.process-returns', $invoice->id) }}" method="POST">
     @csrf
 
     <div class="mb-2">
-        <input type="checkbox" id="return-all-checkbox" class="form-check-input me-1">
-        <label for="return-all-checkbox" class="form-check-label">Return All Items</label>
+        <input type="checkbox" id="manage-return-all-checkbox" class="form-check-input me-1">
+        <label for="manage-return-all-checkbox" class="form-check-label">Return All Items</label>
     </div>
 
     <div class="table-responsive">
@@ -152,9 +152,16 @@
     <script src="{{ asset('assets/vendor/libs/flatpickr/flatpickr.js') }}"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            const form = document.getElementById('manage-returns-form');
+            if (!form) {
+                return;
+            }
+
+            const returnAllCheckbox = document.getElementById('manage-return-all-checkbox');
+            const returnCheckboxes = form.querySelectorAll('.return-checkbox');
 
             function initializeFlatpickr() {
-                document.querySelectorAll('.return-date').forEach(input => {
+                form.querySelectorAll('.return-date').forEach(input => {
                     const startDate = input.getAttribute('data-start-date');
 
                     flatpickr(input, {
@@ -166,64 +173,6 @@
                     });
                 });
             }
-
-            initializeFlatpickr();
-
-            document.getElementById('return-all-checkbox').addEventListener('change', function() {
-                const isChecked = this.checked;
-
-                document.querySelectorAll('.return-checkbox').forEach(cb => {
-                    if (!cb.disabled) {
-                        cb.checked = isChecked;
-
-                        const row = cb.closest('tr');
-                        const quantityInput = row.querySelector('.return-quantity');
-                        const dateInput = row.querySelector('.return-date');
-                        const daysOfUseInput = row.querySelector('.days-of-use');
-                        const rentalEndDate = cb.dataset.rentalEndDate;
-
-                        if (isChecked) {
-                            quantityInput.removeAttribute('disabled');
-                            dateInput.removeAttribute('disabled');
-                            daysOfUseInput?.removeAttribute('disabled');
-
-                            quantityInput.value = quantityInput.getAttribute('max');
-
-                            const formattedDate = rentalEndDate || new Date().toISOString().split(
-                                'T')[0];
-                            dateInput.value = formattedDate;
-                            calculateDaysOfUse(dateInput);
-
-                            flatpickr(dateInput, {
-                                enableTime: false,
-                                dateFormat: 'Y-m-d',
-                                minDate: dateInput.getAttribute('data-start-date') || null,
-                                onChange: function() {
-                                    calculateDaysOfUse(dateInput);
-                                },
-                            });
-
-                            if (daysOfUseInput && !daysOfUseInput.value) {
-                                daysOfUseInput.value = 1;
-                            }
-
-                        } else {
-                            cb.checked = false;
-
-                            quantityInput.setAttribute('disabled', true);
-                            quantityInput.value = '';
-
-                            dateInput.setAttribute('disabled', true);
-                            dateInput.value = '';
-
-                            if (daysOfUseInput) {
-                                daysOfUseInput.setAttribute('disabled', true);
-                                daysOfUseInput.value = '';
-                            }
-                        }
-                    }
-                });
-            });
 
             function calculateDaysOfUse(input) {
                 const row = input.closest('tr');
@@ -241,40 +190,65 @@
                 }
             }
 
-        });
+            function getToday() {
+                const today = new Date();
+                const year = today.getFullYear();
+                const month = String(today.getMonth() + 1).padStart(2, '0');
+                const day = String(today.getDate()).padStart(2, '0');
 
-        // "Return All" checkbox logic
-        document.getElementById('return-all-checkbox').addEventListener('change', function() {
-            const isChecked = this.checked;
+                return `${year}-${month}-${day}`;
+            }
 
-            document.querySelectorAll('.return-checkbox').forEach(cb => {
-                if (!cb.disabled) {
-                    cb.checked = isChecked;
-                    cb.dispatchEvent(new Event('change'));
+            function setRowState(checkbox, isChecked, populateDefaults = false) {
+                const row = checkbox.closest('tr');
+                const quantityInput = row.querySelector('.return-quantity');
+                const dateInput = row.querySelector('.return-date');
+                const daysOfUseInput = row.querySelector('.days-of-use');
 
-                    const row = cb.closest('tr');
-                    const quantityInput = row.querySelector('.return-quantity');
-                    const maxQuantity = quantityInput.getAttribute('max');
-                    quantityInput.value = isChecked ? maxQuantity : '';
+                [quantityInput, dateInput, daysOfUseInput].filter(Boolean).forEach(input => {
+                    input.disabled = !isChecked;
+                });
 
-                    const dateInput = row.querySelector('.return-date');
-                    const rentalEndDate = cb.dataset.rentalEndDate; // ✅ Correct now
-
-                    if (isChecked && dateInput) {
-                        const formatted = rentalEndDate ? rentalEndDate : new Date().toISOString().split(
-                            'T')[0];
-                        dateInput.value = formatted;
-                        calculateDaysOfUse(dateInput);
-                    }
-
-                    const daysOfUseInput = row.querySelector('.days-of-use');
-                    if (isChecked && daysOfUseInput) {
-                        daysOfUseInput.value = 1;
-                    } else if (daysOfUseInput) {
-                        daysOfUseInput.value = '';
-                    }
+                if (!isChecked) {
+                    [quantityInput, dateInput, daysOfUseInput].filter(Boolean).forEach(input => {
+                        input.value = '';
+                    });
+                    return;
                 }
+
+                if (populateDefaults || !quantityInput.value) {
+                    quantityInput.value = quantityInput.getAttribute('max');
+                }
+
+                if (dateInput && (populateDefaults || !dateInput.value)) {
+                    dateInput.value = checkbox.dataset.rentalEndDate || getToday();
+                }
+
+                if (dateInput) {
+                    calculateDaysOfUse(dateInput);
+                }
+            }
+
+            returnCheckboxes.forEach(checkbox => {
+                checkbox.addEventListener('change', function() {
+                    setRowState(this, this.checked, this.checked);
+
+                    returnAllCheckbox.checked = returnCheckboxes.length > 0 &&
+                        Array.from(returnCheckboxes).every(item => item.checked);
+                });
+
+                // Restore the enabled state after a validation error without overwriting old values.
+                setRowState(checkbox, checkbox.checked);
             });
+
+            returnAllCheckbox.addEventListener('change', function() {
+                returnCheckboxes.forEach(checkbox => {
+                    checkbox.checked = this.checked;
+                    setRowState(checkbox, this.checked, this.checked);
+                });
+            });
+
+            initializeFlatpickr();
         });
     </script>
 @endpush

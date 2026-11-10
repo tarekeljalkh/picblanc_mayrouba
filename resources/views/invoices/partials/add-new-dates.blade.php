@@ -1,9 +1,9 @@
-<form action="{{ route('invoices.add-dates', $invoice->id) }}" method="POST">
+<form id="add-new-dates-form" action="{{ route('invoices.add-dates', $invoice->id) }}" method="POST">
     @csrf
 
     <div class="mb-2">
         <input type="checkbox" id="return-all-checkbox" class="form-check-input me-1">
-        <label for="return-all-checkbox" class="form-check-label">Return All Items</label>
+        <label for="return-all-checkbox" class="form-check-label">Select All Items</label>
     </div>
 
     <div class="table-responsive">
@@ -111,23 +111,35 @@
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('add-new-dates-form');
+    const selectAllCheckbox = form.querySelector('#return-all-checkbox');
+    const itemCheckboxes = form.querySelectorAll('.return-checkbox');
+
+    function syncSelectAllCheckbox() {
+        selectAllCheckbox.checked = itemCheckboxes.length > 0 &&
+            Array.from(itemCheckboxes).every(checkbox => checkbox.checked);
+    }
+
     // Enable/disable date inputs when checkbox toggled
-    document.querySelectorAll('.return-checkbox').forEach(cb => {
+    itemCheckboxes.forEach(cb => {
         cb.addEventListener('change', function() {
             const row = cb.closest('tr');
             row.querySelectorAll('.rental-start-date, .rental-end-date')
                 .forEach(el => el.disabled = !cb.checked);
+            syncSelectAllCheckbox();
         });
     });
 
     // "Return All" checkbox logic
-    document.getElementById('return-all-checkbox').addEventListener('change', function() {
+    selectAllCheckbox.addEventListener('change', function() {
         const isChecked = this.checked;
-        document.querySelectorAll('.return-checkbox').forEach(cb => {
+        itemCheckboxes.forEach(cb => {
             cb.checked = isChecked;
             cb.dispatchEvent(new Event('change'));
         });
     });
+
+    syncSelectAllCheckbox();
 });
 </script>
 @endpush
