@@ -69,7 +69,7 @@
             <div>
                 <img src="{{ public_path('logo_croped.png') }}" alt="Logo" width="150">
                 <p>Mayrouba Rental Shop</p>
-                <p>Tel: 71 72 12 36</p>
+                <p>Tel: 03788733</p>
             </div>
             <div>
                 <h5>Rental Agreement #{{ $invoice->id }}</h5>
@@ -222,7 +222,7 @@
         <!-- Conditions -->
         <p><strong>CONDITION:</strong> I declare having received the merchandise mentioned above in good condition and
             agree to return it on time. I will reimburse the value of any missing, damaged, or broken article.</p>
-        <p>Mayrouba - Tel: 71788733</p>
+        <p>Mayrouba - Tel: 03788733</p>
         <p>Warde - Tel: 70100015</p>
         <p>Mzaar Intercontinental Hotel - Tel: 71788733</p>
 
